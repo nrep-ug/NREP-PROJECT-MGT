@@ -1,0 +1,3 @@
+- Protected routes
+- use TanStack Query hooks
+- for the case of colors, lets use Dark Teal shade (#054653) as the primary color, and Vibrant Teal (#14B8A6) for secondary color.

@@ -1,0 +1,34 @@
+[
+  {
+    "email": "admin@nrep.ug",
+    "username": "admin",
+    "firstName": "System",
+    "lastName": "Administrator",
+    "otherNames": "",
+    "roles": ["admin"]
+  },
+  {
+    "email": "info@nrep.ug",
+    "username": "pmgr",
+    "firstName": "Project",
+    "lastName": "Manager",
+    "otherNames": "",
+    "roles": ["manager"]
+  },
+  {
+    "email": "dmaiku@nrep.ug",
+    "username": "dmaiku",
+    "firstName": "Derrick",
+    "lastName": "Locha",
+    "otherNames": "Mayiku",
+    "roles": ["staff"]
+  },
+  {
+    "email": "d.maiku@example.ug",
+    "username": "clientrep",
+    "firstName": "Client",
+    "lastName": "Representative",
+    "otherNames": "",
+    "roles": ["client"]
+  }
+]

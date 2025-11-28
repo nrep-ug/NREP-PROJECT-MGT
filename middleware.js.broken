@@ -1,0 +1,160 @@
+import { NextResponse } from 'next/server';
+
+// Define route patterns
+// Staff-only routes - clients attempting to access these will be redirected to /client/dashboard
+const staffOnlyRoutes = [
+  '/admin',           // Admin panel and all sub-routes
+  '/dashboard',       // Staff dashboard
+  '/projects',        // Project management (staff view)
+  '/clients',         // Client management
+  '/timesheets',      // Timesheet management
+];
+
+// Client-only routes - staff attempting to access these will be redirected to /dashboard
+const clientOnlyRoutes = [
+  '/client',          // Client portal and all sub-routes
+];
+
+// Public routes accessible to everyone
+const publicRoutes = [
+  '/',                // Home page
+  '/login',           // Login page
+  '/logout',          // Logout page
+  '/auth',            // Auth callbacks (invitations, etc.)
+  '/api',             // API routes (protected at API level)
+  '/_next',           // Next.js internals
+  '/favicon.ico',     // Static files
+];
+
+export async function middleware(request) {
+  const { pathname } = request.nextUrl;
+
+  // Skip middleware for static files
+  if (pathname.includes('.')) {
+    return NextResponse.next();
+  }
+
+  // Skip middleware for specific public routes (exact match or startsWith for paths like /api, /_next)
+  const isPublicRoute = publicRoutes.some(route => {
+    if (route === '/') {
+      return pathname === '/'; // Exact match for home page
+    }
+    return pathname.startsWith(route);
+  });
+
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  try {
+    // Get user session info from Appwrite
+    const appwriteEndpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
+    const appwriteProjectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
+
+    if (!appwriteEndpoint || !appwriteProjectId) {
+      console.error('[Middleware] Missing Appwrite config');
+      // Allow through on config error to avoid breaking the app
+      return NextResponse.next();
+    }
+
+    // Get all cookies and find the Appwrite session cookie
+    const cookies = request.cookies;
+    let sessionCookie = null;
+
+    // Log all cookies for debugging
+    const allCookieNames = [];
+    cookies.getAll().forEach(cookie => {
+      allCookieNames.push(cookie.name);
+    });
+    console.log('[Middleware] All cookies present:', allCookieNames);
+
+    // Try different possible cookie names
+    const possibleCookieNames = [
+      `a_session_${appwriteProjectId}`,
+      `a_session_${appwriteProjectId}_legacy`,
+      'a_session_console',
+    ];
+
+    for (const cookieName of possibleCookieNames) {
+      const cookie = cookies.get(cookieName);
+      if (cookie) {
+        sessionCookie = cookie;
+        console.log('[Middleware] Found session cookie:', cookieName);
+        break;
+      }
+    }
+
+    if (!sessionCookie) {
+      // No session - redirect to login for protected routes
+      console.log('[Middleware] No session cookie found for:', pathname);
+      console.log('[Middleware] Tried these cookie names:', possibleCookieNames);
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    console.log('[Middleware] Found session cookie:', sessionCookie.name);
+
+    // Call Appwrite API to get user info
+    // We need to pass the cookie in the request
+    const response = await fetch(`${appwriteEndpoint}/account`, {
+      method: 'GET',
+      headers: {
+        'X-Appwrite-Project': appwriteProjectId,
+        'Cookie': `${sessionCookie.name}=${sessionCookie.value}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.log('[Middleware] Invalid session for:', pathname, '- Status:', response.status);
+      // Invalid session - redirect to login
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    const userData = await response.json();
+    const labels = userData.labels || [];
+
+    // Determine user role from labels
+    const isAdmin = labels.includes('admin');
+    const isStaff = labels.includes('staff') || isAdmin;
+    const isClient = labels.includes('client');
+
+    console.log('[Middleware] Access check:', {
+      path: pathname,
+      email: userData.email,
+      isClient,
+      isStaff,
+    });
+
+    // Check if client is trying to access staff-only routes
+    if (isClient && staffOnlyRoutes.some(route => pathname.startsWith(route))) {
+      console.log('[Middleware] Blocking client from staff route:', pathname);
+      return NextResponse.redirect(new URL('/client/dashboard', request.url));
+    }
+
+    // Check if staff is trying to access client-only routes
+    if (isStaff && clientOnlyRoutes.some(route => pathname.startsWith(route))) {
+      console.log('[Middleware] Blocking staff from client route:', pathname);
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    // Allow the request to proceed
+    return NextResponse.next();
+  } catch (error) {
+    console.error('[Middleware] Error:', error.message);
+
+    // On error, allow request through to avoid breaking the app
+    // This could happen due to network issues or API problems
+    return NextResponse.next();
+  }
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+};

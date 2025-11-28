@@ -1,0 +1,697 @@
+/**
+ * Timesheet Reports & Analytics API
+ * GET: Generate various reports and analytics with RBAC
+ *
+ * Data Structure:
+ * - Timesheets (pms_timesheets): Weekly timesheet records with status (draft, submitted, approved, rejected)
+ * - Entries (pms_timesheet_entries): Individual time entries linked to a parent timesheet
+ *
+ * Important: Reports only include entries from timesheets with status 'submitted' or 'approved'.
+ *            Draft and rejected timesheets are excluded from analytics.
+ *
+ * Role-based access (per RBAC_ARCHITECTURE.md):
+ * - Admin (label: 'admin'): Can see all timesheets from all projects and all staff
+ * - Manager (project team role: 'manager'): Can see timesheets from projects they manage + their own
+ * - Staff (label: 'staff'): Can only see their own timesheets
+ *
+ * Note: Manager role is determined by checking project team memberships, not labels.
+ *       A staff member with 'manager' role in any project team is considered a manager.
+ *
+ * Performance Optimizations:
+ * - Parallel batch processing for team membership checks (batches of 10)
+ * - Maximum limits on data fetching (1000 timesheets, 5000 entries)
+ * - Response caching (60s with 5min stale-while-revalidate)
+ * - Reduced query limits for projects (200) and accounts (200)
+ * - Active-only account filtering
+ *
+ * Recommended Database Indexes (for Appwrite admin):
+ * - pms_timesheets: organizationId, status, weekStart, accountId
+ * - pms_timesheet_entries: timesheetId, workDate, projectId
+ * - pms_projects: organizationId
+ * - pms_users: organizationId, status, accountId
+ *
+ * Query params:
+ *   - accountId (required) - User requesting the report
+ *   - organizationId (required)
+ *   - labels (required) - JSON stringified array of user labels from session (e.g., ['admin', 'staff'])
+ *   - type: 'summary' | 'by-project' | 'by-user' | 'trends'
+ *   - startDate: YYYY-MM-DD (optional)
+ *   - endDate: YYYY-MM-DD (optional)
+ *   - projectId: filter by project (optional)
+ *   - userId: filter by user (optional)
+ *   - export: 'csv' to export as CSV (optional)
+ */
+
+import { NextResponse } from 'next/server';
+import { adminDatabases, Query, DB_ID, adminTeams } from '@/lib/appwriteAdmin';
+import moment from 'moment-timezone';
+
+export const dynamic = 'force-dynamic';
+
+const COL_ENTRIES = 'pms_timesheet_entries';
+const COL_TIMESHEETS = 'pms_timesheets';
+const COL_PROJECTS = 'pms_projects';
+const COL_ACCOUNTS = 'pms_users';
+
+/**
+ * GET /api/timesheets/reports
+ * Generate reports and analytics with RBAC
+ */
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const accountId = searchParams.get('accountId');
+    const organizationId = searchParams.get('organizationId');
+    const labelsParam = searchParams.get('labels');
+    const type = searchParams.get('type') || 'summary';
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const projectId = searchParams.get('projectId');
+    const userId = searchParams.get('userId');
+    const exportFormat = searchParams.get('export');
+
+    if (!accountId || !organizationId || !labelsParam) {
+      return NextResponse.json(
+        { error: 'accountId, organizationId, and labels are required' },
+        { status: 400 }
+      );
+    }
+
+    // Parse labels array from JSON string
+    let userLabels = [];
+    try {
+      userLabels = JSON.parse(labelsParam);
+      if (!Array.isArray(userLabels)) {
+        userLabels = [labelsParam]; // Fallback if it's not an array
+      }
+    } catch (err) {
+      userLabels = [labelsParam]; // Fallback if parsing fails
+    }
+
+    // Check if user is admin (from labels)
+    const isAdmin = userLabels.includes('admin');
+
+    // Check if user is a manager of any project (query project teams)
+    // Note: 'manager' is a project team role, NOT a label
+    // Even admins can be managers of specific projects, so we check for everyone
+    let managedProjectIds = [];
+    let isManager = false;
+
+    // Optimized: Fetch projects in parallel batches and check memberships more efficiently
+    const projectsForManagerCheck = await adminDatabases.listDocuments(DB_ID, COL_PROJECTS, [
+      Query.equal('organizationId', organizationId),
+      Query.limit(100) // Limit to first 100 projects for performance
+    ]);
+
+    // Batch check team memberships - process in parallel batches of 10
+    const batchSize = 10;
+    const projectsToCheck = projectsForManagerCheck.documents;
+
+    for (let i = 0; i < projectsToCheck.length; i += batchSize) {
+      const batch = projectsToCheck.slice(i, i + batchSize);
+
+      // Process batch in parallel
+      const membershipChecks = await Promise.allSettled(
+        batch.map(project =>
+          adminTeams.listMemberships(project.projectTeamId)
+            .then(teamMembers => ({
+              projectId: project.$id,
+              members: teamMembers.memberships
+            }))
+            .catch(() => null)
+        )
+      );
+
+      // Check if user is a manager in any of these projects
+      for (const result of membershipChecks) {
+        if (result.status === 'fulfilled' && result.value) {
+          const { projectId, members } = result.value;
+          const userMembership = members.find(
+            m => m.userId === accountId && m.roles.includes('manager')
+          );
+          if (userMembership) {
+            managedProjectIds.push(projectId);
+            isManager = true;
+          }
+        }
+      }
+    }
+
+    // Step 1: Build timesheet filters based on role
+    const timesheetFilters = [
+      Query.equal('organizationId', organizationId),
+      // Only include submitted and approved timesheets in reports
+      Query.equal('status', ['submitted', 'approved'])
+    ];
+
+    // Date range filter on weekStart
+    if (startDate) {
+      timesheetFilters.push(Query.greaterThanEqual('weekStart', startDate));
+    }
+    if (endDate) {
+      timesheetFilters.push(Query.lessThanEqual('weekStart', endDate));
+    }
+
+    // Role-based filtering for timesheets
+    if (!isAdmin) {
+      if (isManager) {
+        // Manager: Can see timesheets from managed projects' team members + own timesheets
+        // We need to filter by userId if specified, otherwise we'll filter entries later
+        if (userId) {
+          timesheetFilters.push(Query.equal('accountId', userId));
+        }
+      } else {
+        // Staff: Only own timesheets
+        timesheetFilters.push(Query.equal('accountId', accountId));
+      }
+    } else {
+      // Admin: Apply user filter if specified
+      if (userId) {
+        timesheetFilters.push(Query.equal('accountId', userId));
+      }
+    }
+
+    // Step 2: Fetch timesheets with maximum limit for performance
+    let allTimesheets = [];
+    let offset = 0;
+    const limit = 100;
+    const maxTimesheets = 1000; // Prevent excessive data fetching
+    let hasMore = true;
+
+    while (hasMore && allTimesheets.length < maxTimesheets) {
+      // Build complete query array for this iteration
+      const queries = timesheetFilters.concat([
+        Query.limit(limit),
+        Query.offset(offset),
+        Query.orderDesc('weekStart')
+      ]);
+
+      const response = await adminDatabases.listDocuments(DB_ID, COL_TIMESHEETS, queries);
+
+      allTimesheets = allTimesheets.concat(response.documents);
+      offset += limit;
+      hasMore = response.documents.length === limit && allTimesheets.length < maxTimesheets;
+    }
+
+    // Step 3: If no timesheets found, return empty data
+    if (allTimesheets.length === 0) {
+      return NextResponse.json({
+        success: true,
+        type,
+        role: isAdmin ? 'admin' : isManager ? 'manager' : 'staff',
+        isAdmin,
+        isManager,
+        managedProjectsCount: managedProjectIds.length,
+        managedProjects: managedProjectIds,
+        filters: {
+          startDate: startDate || 'all',
+          endDate: endDate || 'all',
+          projectId: projectId || 'all',
+          userId: userId || 'all'
+        },
+        data: type === 'summary' ? { summary: getEmptySummary(), topProjects: [], topUsers: [] } : []
+      });
+    }
+
+    // Step 4: Get timesheet IDs and create accountId mapping
+    const timesheetIds = allTimesheets.map(ts => ts.$id);
+    const timesheetAccountMap = {}; // Map timesheetId -> accountId
+    allTimesheets.forEach(ts => {
+      timesheetAccountMap[ts.$id] = ts.accountId;
+    });
+
+    // Step 5: Fetch entries for these timesheets
+    // Note: No need to filter by organizationId since timesheets are already filtered by org
+    const entryFilters = [
+      Query.equal('timesheetId', timesheetIds)
+    ];
+
+    // Apply date filter on workDate
+    if (startDate) {
+      entryFilters.push(Query.greaterThanEqual('workDate', startDate));
+    }
+    if (endDate) {
+      entryFilters.push(Query.lessThanEqual('workDate', endDate));
+    }
+
+    // Apply project filter if specified
+    if (projectId) {
+      entryFilters.push(Query.equal('projectId', projectId));
+    }
+
+    let allEntries = [];
+    offset = 0;
+    const maxEntries = 5000; // Limit total entries for performance
+    hasMore = true;
+
+    while (hasMore && allEntries.length < maxEntries) {
+      // Build complete query array for this iteration
+      const queries = entryFilters.concat([
+        Query.limit(limit),
+        Query.offset(offset),
+        Query.orderDesc('workDate')
+      ]);
+
+      const response = await adminDatabases.listDocuments(DB_ID, COL_ENTRIES, queries);
+
+      allEntries = allEntries.concat(response.documents);
+      offset += limit;
+      hasMore = response.documents.length === limit && allEntries.length < maxEntries;
+    }
+
+    // Step 6: Add accountId to entries from parent timesheet
+    allEntries = allEntries.map(entry => ({
+      ...entry,
+      accountId: timesheetAccountMap[entry.timesheetId]
+    }));
+
+    // Step 7: Additional filtering for managers (only entries from managed projects + own entries)
+    if (isManager && !isAdmin && !userId && !projectId) {
+      allEntries = allEntries.filter(entry => {
+        return entry.accountId === accountId || managedProjectIds.includes(entry.projectId);
+      });
+    }
+
+    // Step 8: If manager viewing specific project, ensure they manage it
+    if (isManager && !isAdmin && projectId && !managedProjectIds.includes(projectId)) {
+      // Not a managed project, can only see own entries
+      allEntries = allEntries.filter(entry => entry.accountId === accountId);
+    }
+
+    // Step 9: Fetch related data (projects and accounts) - optimized with limits
+    const [projectsResponse, accountsResponse] = await Promise.all([
+      adminDatabases.listDocuments(DB_ID, COL_PROJECTS, [
+        Query.equal('organizationId', organizationId),
+        Query.limit(200) // Reduced from 500 for faster queries
+      ]),
+      adminDatabases.listDocuments(DB_ID, COL_ACCOUNTS, [
+        Query.equal('organizationId', organizationId),
+        Query.equal('status', 'active'), // Only fetch active accounts
+        Query.limit(200) // Reduced from 500 for faster queries
+      ])
+    ]);
+
+    const projects = projectsResponse.documents;
+    const accounts = accountsResponse.documents;
+
+    // Helper functions
+    const getProjectName = (projId) => {
+      const proj = projects.find(p => p.$id === projId);
+      return proj ? `${proj.code} - ${proj.name}` : projId;
+    };
+
+    const getUserName = (accId) => {
+      // Note: accId is the Appwrite auth user ID, stored in accountId field, not document $id
+      const acc = accounts.find(a => a.accountId === accId);
+      return acc ? `${acc.firstName} ${acc.lastName}` : accId;
+    };
+
+    // Generate report based on type
+    let reportData;
+
+    switch (type) {
+      case 'summary':
+        reportData = generateSummaryReport(allEntries, projects, accounts);
+        break;
+
+      case 'by-project':
+        reportData = generateByProjectReport(allEntries, projects, getProjectName);
+        break;
+
+      case 'by-user':
+        reportData = generateByUserReport(allEntries, accounts, getUserName);
+        break;
+
+      case 'trends':
+        reportData = generateTrendsReport(allEntries);
+        break;
+
+      default:
+        return NextResponse.json(
+          { error: `Unknown report type: ${type}` },
+          { status: 400 }
+        );
+    }
+
+    // Handle CSV export
+    if (exportFormat === 'csv') {
+      const csv = generateCSV(reportData, type);
+      return new NextResponse(csv, {
+        headers: {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': `attachment; filename="timesheet-report-${type}-${Date.now()}.csv"`
+        }
+      });
+    }
+
+    // Return primary role for display
+    // Note: An admin can also be a project manager
+    const primaryRole = isAdmin ? 'admin' : isManager ? 'manager' : 'staff';
+
+    return NextResponse.json({
+      success: true,
+      type,
+      role: primaryRole,
+      isAdmin,
+      isManager,
+      managedProjectsCount: managedProjectIds.length,
+      managedProjects: managedProjectIds, // Array of project IDs user manages
+      filters: {
+        startDate: startDate || 'all',
+        endDate: endDate || 'all',
+        projectId: projectId || 'all',
+        userId: userId || 'all'
+      },
+      data: reportData
+    }, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=300'
+      }
+    });
+  } catch (error) {
+    console.error('[API /timesheets/reports GET]', error);
+    return NextResponse.json(
+      {
+        error: error.message || 'Failed to generate report',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Get empty summary for cases with no data
+ */
+function getEmptySummary() {
+  return {
+    totalHours: '0.0',
+    billableHours: '0.0',
+    nonBillableHours: '0.0',
+    billablePercentage: 0,
+    totalEntries: 0,
+    uniqueUsers: 0,
+    uniqueProjects: 0,
+    avgHoursPerUser: 0,
+    thisWeekHours: '0.0',
+    thisMonthHours: '0.0'
+  };
+}
+
+/**
+ * Generate summary report
+ */
+function generateSummaryReport(entries, projects, accounts) {
+  const totalHours = entries.reduce((sum, e) => sum + e.hours, 0);
+  const billableHours = entries.filter(e => e.billable).reduce((sum, e) => sum + e.hours, 0);
+  const nonBillableHours = totalHours - billableHours;
+  const billablePercentage = totalHours > 0 ? (billableHours / totalHours * 100).toFixed(1) : 0;
+
+  // Unique users and projects
+  const uniqueUsers = [...new Set(entries.map(e => e.accountId))];
+  const uniqueProjects = [...new Set(entries.map(e => e.projectId))];
+
+  // Average hours per user
+  const avgHoursPerUser = uniqueUsers.length > 0 ? (totalHours / uniqueUsers.length).toFixed(1) : 0;
+
+  // This week's hours
+  const thisWeekStart = moment().startOf('week');
+  const thisWeekEnd = moment().endOf('week');
+  const thisWeekHours = entries
+    .filter(e => {
+      const date = moment(e.workDate);
+      return date.isBetween(thisWeekStart, thisWeekEnd, null, '[]');
+    })
+    .reduce((sum, e) => sum + e.hours, 0);
+
+  // This month's hours
+  const thisMonthStart = moment().startOf('month');
+  const thisMonthEnd = moment().endOf('month');
+  const thisMonthHours = entries
+    .filter(e => {
+      const date = moment(e.workDate);
+      return date.isBetween(thisMonthStart, thisMonthEnd, null, '[]');
+    })
+    .reduce((sum, e) => sum + e.hours, 0);
+
+  return {
+    summary: {
+      totalHours: totalHours.toFixed(1),
+      billableHours: billableHours.toFixed(1),
+      nonBillableHours: nonBillableHours.toFixed(1),
+      billablePercentage: parseFloat(billablePercentage),
+      totalEntries: entries.length,
+      uniqueUsers: uniqueUsers.length,
+      uniqueProjects: uniqueProjects.length,
+      avgHoursPerUser: parseFloat(avgHoursPerUser),
+      thisWeekHours: thisWeekHours.toFixed(1),
+      thisMonthHours: thisMonthHours.toFixed(1)
+    },
+    topProjects: getTopProjects(entries, projects, 5),
+    topUsers: getTopUsers(entries, accounts, 5)
+  };
+}
+
+/**
+ * Generate by-project report
+ */
+function generateByProjectReport(entries, projects, getProjectName) {
+  const projectMap = {};
+
+  entries.forEach(entry => {
+    const projId = entry.projectId;
+    if (!projectMap[projId]) {
+      projectMap[projId] = {
+        projectId: projId,
+        projectName: getProjectName(projId),
+        totalHours: 0,
+        billableHours: 0,
+        nonBillableHours: 0,
+        entries: 0,
+        users: new Set()
+      };
+    }
+
+    projectMap[projId].totalHours += entry.hours;
+    projectMap[projId].entries += 1;
+    projectMap[projId].users.add(entry.accountId);
+
+    if (entry.billable) {
+      projectMap[projId].billableHours += entry.hours;
+    } else {
+      projectMap[projId].nonBillableHours += entry.hours;
+    }
+  });
+
+  // Convert to array and calculate percentages
+  const projectData = Object.values(projectMap).map(proj => ({
+    ...proj,
+    users: proj.users.size,
+    billablePercentage: proj.totalHours > 0 ?
+      ((proj.billableHours / proj.totalHours) * 100).toFixed(1) : 0,
+    totalHours: proj.totalHours.toFixed(1),
+    billableHours: proj.billableHours.toFixed(1),
+    nonBillableHours: proj.nonBillableHours.toFixed(1)
+  }));
+
+  // Sort by total hours descending
+  projectData.sort((a, b) => parseFloat(b.totalHours) - parseFloat(a.totalHours));
+
+  return projectData;
+}
+
+/**
+ * Generate by-user report
+ */
+function generateByUserReport(entries, accounts, getUserName) {
+  const userMap = {};
+
+  entries.forEach(entry => {
+    const userId = entry.accountId;
+    if (!userMap[userId]) {
+      userMap[userId] = {
+        userId: userId,
+        userName: getUserName(userId),
+        totalHours: 0,
+        billableHours: 0,
+        nonBillableHours: 0,
+        entries: 0,
+        projects: new Set()
+      };
+    }
+
+    userMap[userId].totalHours += entry.hours;
+    userMap[userId].entries += 1;
+    userMap[userId].projects.add(entry.projectId);
+
+    if (entry.billable) {
+      userMap[userId].billableHours += entry.hours;
+    } else {
+      userMap[userId].nonBillableHours += entry.hours;
+    }
+  });
+
+  // Convert to array and calculate percentages
+  const userData = Object.values(userMap).map(user => ({
+    ...user,
+    projects: user.projects.size,
+    billablePercentage: user.totalHours > 0 ?
+      ((user.billableHours / user.totalHours) * 100).toFixed(1) : 0,
+    totalHours: user.totalHours.toFixed(1),
+    billableHours: user.billableHours.toFixed(1),
+    nonBillableHours: user.nonBillableHours.toFixed(1)
+  }));
+
+  // Sort by total hours descending
+  userData.sort((a, b) => parseFloat(b.totalHours) - parseFloat(a.totalHours));
+
+  return userData;
+}
+
+/**
+ * Generate trends report (weekly data)
+ */
+function generateTrendsReport(entries) {
+  const weekMap = {};
+
+  entries.forEach(entry => {
+    const weekStart = moment(entry.workDate).startOf('week').format('YYYY-MM-DD');
+
+    if (!weekMap[weekStart]) {
+      weekMap[weekStart] = {
+        weekStart,
+        totalHours: 0,
+        billableHours: 0,
+        nonBillableHours: 0,
+        entries: 0
+      };
+    }
+
+    weekMap[weekStart].totalHours += entry.hours;
+    weekMap[weekStart].entries += 1;
+
+    if (entry.billable) {
+      weekMap[weekStart].billableHours += entry.hours;
+    } else {
+      weekMap[weekStart].nonBillableHours += entry.hours;
+    }
+  });
+
+  // Convert to array and format
+  const trendData = Object.values(weekMap).map(week => ({
+    ...week,
+    totalHours: week.totalHours.toFixed(1),
+    billableHours: week.billableHours.toFixed(1),
+    nonBillableHours: week.nonBillableHours.toFixed(1)
+  }));
+
+  // Sort by week chronologically
+  trendData.sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+
+  return trendData;
+}
+
+/**
+ * Get top projects by hours
+ */
+function getTopProjects(entries, projects, limit = 5) {
+  const projectHours = {};
+
+  entries.forEach(entry => {
+    if (!projectHours[entry.projectId]) {
+      projectHours[entry.projectId] = 0;
+    }
+    projectHours[entry.projectId] += entry.hours;
+  });
+
+  const sorted = Object.entries(projectHours)
+    .map(([projectId, hours]) => {
+      const project = projects.find(p => p.$id === projectId);
+      return {
+        projectId,
+        projectName: project ? `${project.code} - ${project.name}` : projectId,
+        hours: hours.toFixed(1)
+      };
+    })
+    .sort((a, b) => parseFloat(b.hours) - parseFloat(a.hours))
+    .slice(0, limit);
+
+  return sorted;
+}
+
+/**
+ * Get top users by hours
+ */
+function getTopUsers(entries, accounts, limit = 5) {
+  const userHours = {};
+
+  entries.forEach(entry => {
+    if (!userHours[entry.accountId]) {
+      userHours[entry.accountId] = 0;
+    }
+    userHours[entry.accountId] += entry.hours;
+  });
+
+  const sorted = Object.entries(userHours)
+    .map(([userId, hours]) => {
+      const account = accounts.find(a => a.accountId === userId);
+      return {
+        userId,
+        userName: account ? `${account.firstName} ${account.lastName}` : userId,
+        hours: hours.toFixed(1)
+      };
+    })
+    .sort((a, b) => parseFloat(b.hours) - parseFloat(a.hours))
+    .slice(0, limit);
+
+  return sorted;
+}
+
+/**
+ * Generate CSV from report data
+ */
+function generateCSV(data, type) {
+  let csv = '';
+
+  switch (type) {
+    case 'by-project':
+      csv = 'Project,Total Hours,Billable Hours,Non-Billable Hours,Billable %,Entries,Users\n';
+      data.forEach(row => {
+        csv += `"${row.projectName}",${row.totalHours},${row.billableHours},${row.nonBillableHours},${row.billablePercentage},${row.entries},${row.users}\n`;
+      });
+      break;
+
+    case 'by-user':
+      csv = 'User,Total Hours,Billable Hours,Non-Billable Hours,Billable %,Entries,Projects\n';
+      data.forEach(row => {
+        csv += `"${row.userName}",${row.totalHours},${row.billableHours},${row.nonBillableHours},${row.billablePercentage},${row.entries},${row.projects}\n`;
+      });
+      break;
+
+    case 'trends':
+      csv = 'Week Start,Total Hours,Billable Hours,Non-Billable Hours,Entries\n';
+      data.forEach(row => {
+        csv += `${row.weekStart},${row.totalHours},${row.billableHours},${row.nonBillableHours},${row.entries}\n`;
+      });
+      break;
+
+    case 'summary':
+      csv = 'Metric,Value\n';
+      csv += `Total Hours,${data.summary.totalHours}\n`;
+      csv += `Billable Hours,${data.summary.billableHours}\n`;
+      csv += `Non-Billable Hours,${data.summary.nonBillableHours}\n`;
+      csv += `Billable Percentage,${data.summary.billablePercentage}%\n`;
+      csv += `Total Entries,${data.summary.totalEntries}\n`;
+      csv += `Unique Users,${data.summary.uniqueUsers}\n`;
+      csv += `Unique Projects,${data.summary.uniqueProjects}\n`;
+      csv += `Average Hours Per User,${data.summary.avgHoursPerUser}\n`;
+      csv += `This Week Hours,${data.summary.thisWeekHours}\n`;
+      csv += `This Month Hours,${data.summary.thisMonthHours}\n`;
+      break;
+
+    default:
+      csv = 'No data\n';
+  }
+
+  return csv;
+}

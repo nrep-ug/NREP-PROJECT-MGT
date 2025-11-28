@@ -1,0 +1,369 @@
+:root {
+  --primary-color: #054653;
+  --secondary-color: #14B8A6;
+  --success-color: #198754;
+  --danger-color: #dc3545;
+  --warning-color: #ffc107;
+  --info-color: #0dcaf0;
+
+  /* Bootstrap overrides */
+  --bs-primary: #054653;
+  --bs-primary-rgb: 5, 70, 83;
+  --bs-secondary: #14B8A6;
+  --bs-secondary-rgb: 20, 184, 166;
+}
+
+/* Bootstrap component overrides */
+.bg-primary {
+  background-color: #054653 !important;
+}
+
+.bg-secondary {
+  background-color: #14B8A6 !important;
+}
+
+.text-primary {
+  color: #054653 !important;
+}
+
+.text-secondary {
+  color: #14B8A6 !important;
+}
+
+.btn-primary {
+  background-color: #054653 !important;
+  border-color: #054653 !important;
+}
+
+.btn-primary:hover {
+  background-color: #043840 !important;
+  border-color: #043840 !important;
+}
+
+.btn-secondary {
+  background-color: #14B8A6 !important;
+  border-color: #14B8A6 !important;
+}
+
+.btn-secondary:hover {
+  background-color: #0f9488 !important;
+  border-color: #0f9488 !important;
+}
+
+.border-primary {
+  border-color: #054653 !important;
+}
+
+.border-secondary {
+  border-color: #14B8A6 !important;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Modern Sidebar Styles */
+.modern-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1040;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Sidebar styles handled via inline styles in component */
+
+/* Navigation scrollbar styles */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Sidebar Link Styles - Removed to allow inline styles in component */
+.sidebar-link {
+  text-decoration: none !important;
+}
+
+/* Sidebar footer and toggle styles handled via inline styles in component */
+
+/* Mobile Overlay */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1039;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Main Content */
+.main-content {
+  margin-left: 260px;
+  padding: 20px;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 100vh;
+}
+
+/* Mobile Styles */
+@media (max-width: 991.98px) {
+  .modern-sidebar {
+    transform: translateX(-100%);
+  }
+
+  .modern-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding-top: 70px;
+  }
+
+  .sidebar-toggle {
+    display: flex;
+  }
+}
+
+/* Desktop Collapsed State */
+@media (min-width: 992px) {
+  .main-content {
+    margin-left: 260px;
+  }
+
+  .modern-sidebar {
+    transform: translateX(0);
+  }
+
+  /* When sidebar is collapsed on desktop */
+  .modern-sidebar[style*="width: 80px"]~.main-content {
+    margin-left: 80px;
+  }
+}
+
+.kanban-board {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding-bottom: 20px;
+}
+
+.kanban-column {
+  flex: 0 0 300px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.kanban-card {
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.kanban-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.badge-priority-low {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.badge-priority-medium {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.badge-priority-high {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.badge-priority-critical {
+  background-color: #dc3545;
+  color: white;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-planned {
+  background-color: #e7f3ff;
+  color: #004085;
+}
+
+.status-active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-on_hold {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-completed {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-cancelled {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.calendar-widget {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.react-calendar {
+  width: 100%;
+  border: none;
+  font-family: inherit;
+}
+
+.table-hover tbody tr {
+  cursor: pointer;
+}
+
+.embed-container {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.embed-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.version-timeline {
+  position: relative;
+  padding-left: 30px;
+}
+
+.version-timeline::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #dee2e6;
+}
+
+.version-item {
+  position: relative;
+  padding: 10px 0;
+}
+
+.version-item::before {
+  content: '';
+  position: absolute;
+  left: -24px;
+  top: 15px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #054653;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px #054653;
+}
+
+.timesheet-grid {
+  overflow-x: auto;
+}
+
+.timesheet-cell {
+  min-width: 80px;
+  text-align: center;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+/* Modern Tab Styling */
+.nav-tabs {
+  border-bottom: 2px solid #e9ecef;
+}
+
+.nav-tabs .nav-link {
+  color: #6c757d;
+  font-weight: 500;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.nav-tabs .nav-link:hover {
+  color: #054653;
+  background-color: transparent;
+  border-bottom-color: rgba(5, 70, 83, 0.3);
+}
+
+.nav-tabs .nav-link.active {
+  color: #054653;
+  background-color: transparent;
+  border-bottom-color: #054653;
+  font-weight: 600;
+}
