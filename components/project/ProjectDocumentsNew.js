@@ -1120,7 +1120,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
               />
               {currentFolder && (
                 <Form.Text className="text-muted">
-                  This folder will be created inside "{currentFolder.name}"
+                  This folder will be created inside `&quot;{currentFolder.name}`&quot;
                 </Form.Text>
               )}
             </Form.Group>
@@ -1366,7 +1366,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
         </Modal.Header>
         <Modal.Body>
           <p className="text-muted mb-3">
-            Upload a new version of "{selectedDoc?.title}". The old version will be kept in version history.
+            Upload a new version of `&quot;{selectedDoc?.title}`&quot;. The old version will be kept in version history.
           </p>
           <Form>
             <Form.Group>
@@ -1410,7 +1410,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
           {selectedDoc ? (
             <>
               <p>
-                Are you sure you want to delete <strong>"{selectedDoc?.title}"</strong>?
+                Are you sure you want to delete <strong>`&quot;{selectedDoc?.title}`&quot;</strong>?
               </p>
               <div className="alert alert-warning">
                 <i className="bi bi-exclamation-triangle me-2"></i>
@@ -1420,7 +1420,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
           ) : (
             <>
               <p>
-                Are you sure you want to delete the folder <strong>"{selectedFolder?.name}"</strong>?
+                Are you sure you want to delete the folder <strong>`&quot;{selectedFolder?.name}`&quot;</strong>?
               </p>
               <div className="alert alert-warning">
                 <i className="bi bi-exclamation-triangle me-2"></i>

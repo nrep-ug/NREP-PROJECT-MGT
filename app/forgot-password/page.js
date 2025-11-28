@@ -100,14 +100,14 @@ export default function ForgotPasswordPage() {
               </div>
               <h2 style={{ textAlign: 'center' }}>Check Your Email</h2>
               <p style={{ textAlign: 'center' }}>
-                We've sent a password recovery link to <strong>{email}</strong>
+                We&apos;ve sent a password recovery link to <strong>{email}</strong>
               </p>
             </div>
 
             <Alert variant="success" className="mb-4">
               <Alert.Heading className="h6">
                 <i className="bi bi-info-circle me-2"></i>
-                What's Next?
+                What&apos;s Next?
               </Alert.Heading>
               <hr />
               <ul className="mb-0" style={{ fontSize: '0.875rem', paddingLeft: '1.25rem' }}>
@@ -120,7 +120,7 @@ export default function ForgotPasswordPage() {
 
             <div style={{ textAlign: 'center' }}>
               <p className="text-muted mb-3" style={{ fontSize: '0.875rem' }}>
-                Didn't receive the email?
+                Didn&apos;t receive the email?
               </p>
               <Button
                 variant="outline-secondary"
@@ -177,7 +177,7 @@ export default function ForgotPasswordPage() {
           </h1>
 
           <p className="hero-subtitle">
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your email address and we&apos;ll send you a link to reset your password.
           </p>
 
           <div className="hero-features">
@@ -218,7 +218,7 @@ export default function ForgotPasswordPage() {
         <div className="login-form-container">
           <div className="form-header">
             <h2>Forgot Password?</h2>
-            <p>No worries, we'll send you reset instructions</p>
+            <p>No worries, we&apos;ll send you reset instructions</p>
           </div>
 
           {error && (

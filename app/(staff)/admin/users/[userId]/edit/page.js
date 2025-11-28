@@ -359,7 +359,7 @@ export default function EditUserPage() {
                         <option value="suspended">Suspended</option>
                       </Form.Select>
                       <Form.Text className="text-muted">
-                        Control user's account status
+                        Control user&apos;s account status
                       </Form.Text>
                     </Form.Group>
                   </Col>
@@ -409,8 +409,8 @@ export default function EditUserPage() {
                           />
                           <Form.Text className="text-muted d-block mt-2" style={{ marginLeft: '1.6rem' }}>
                             <i className="bi bi-info-circle me-1"></i>
-                            Administrators have full access to all system features. This will add the 'admin' label
-                            to the user's account while maintaining the 'staff' label. The role array will be updated
+                            Administrators have full access to all system features. This will add the &quot;admin&quot; label
+                            to the user&apos;s account while maintaining the &quot;staff&quot; label. The role array will be updated
                             to {isAdmin ? "['staff']" : "['staff', 'admin']"}.
                           </Form.Text>
                         </Form.Group>
@@ -511,11 +511,11 @@ export default function EditUserPage() {
         </Alert.Heading>
         <hr />
         <p className="mb-0 small">
-          <strong>Staff Users:</strong> All staff users have the 'staff' label. When you assign admin privileges,
-          the 'admin' label is added (role becomes ['staff', 'admin']). When you remove admin privileges,
-          only the 'admin' label is removed (role becomes ['staff']).
+          <strong>Staff Users:</strong> All staff users have the &quot;staff&quot; label. When you assign admin privileges,
+          the &quot;admin&quot; label is added (role becomes [&quot;staff&quot;, &quot;admin&quot;]). When you remove admin privileges,
+          only the &quot;admin&quot; label is removed (role becomes [&quot;staff&quot;]).
           <br /><br />
-          <strong>Client Users:</strong> Client users have only the 'client' label (role is ['client']).
+          <strong>Client Users:</strong> Client users have only the &quot;client&quot; label (role is [&quot;client&quot;]).
         </p>
       </Alert>
     </AppLayout>
