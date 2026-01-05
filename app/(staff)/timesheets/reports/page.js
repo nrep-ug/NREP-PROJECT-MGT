@@ -10,7 +10,7 @@ import moment from 'moment-timezone';
 // Lazy load chart wrapper components to reduce initial bundle size
 const ProjectBarChart = lazy(() => import('@/components/charts/ProjectBarChart'));
 const UserBarChart = lazy(() => import('@/components/charts/UserBarChart'));
-const BillablePieChart = lazy(() => import('@/components/charts/BillablePieChart'));
+
 const TrendsLineChart = lazy(() => import('@/components/charts/TrendsLineChart'));
 
 // Chart loading fallback component
@@ -633,28 +633,10 @@ export default function TimesheetReportsPage() {
               )}
 
               {/* Billable vs Non-Billable - Pie Chart */}
-              <Col xs={12} lg={userRole === 'staff' ? 12 : 6}>
-                <Card>
-                  <Card.Header>
-                    <strong>Billable vs Non-Billable</strong>
-                  </Card.Header>
-                  <Card.Body>
-                    {summaryData.summary.totalHours > 0 ? (
-                      <Suspense fallback={<ChartLoader />}>
-                        <BillablePieChart
-                          billableHours={summaryData.summary.billableHours}
-                          nonBillableHours={summaryData.summary.nonBillableHours}
-                        />
-                      </Suspense>
-                    ) : (
-                      <div className="text-center text-muted py-5">No data available</div>
-                    )}
-                  </Card.Body>
-                </Card>
-              </Col>
+
 
               {/* Weekly Trends - Line Chart */}
-              <Col xs={12} lg={userRole === 'staff' ? 12 : 6}>
+              <Col xs={12}>
                 <Card>
                   <Card.Header className="d-flex justify-content-between align-items-center">
                     <strong>Weekly Trends</strong>
