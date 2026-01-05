@@ -18,13 +18,17 @@ export default function ProjectDocuments({ project, user, showToast, canModify }
     setUploading(true);
     try {
       // 1. Upload to Storage
-      const uploadedFile = await storage.createFile(BUCKET_DOCS, ID.unique(), file);
+      const docId = ID.unique();
+      console.log('documentId:', docId);
+      const uploadedFile = await storage.createFile(BUCKET_DOCS, docId, file);
+      console.log('Uploaded file:', uploadedFile);
 
       // 2. Register document via API
       const response = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          documentId: docId,
           projectId: project.$id,
           organizationId: project.organizationId,
           projectTeamId: project.projectTeamId,
@@ -51,11 +55,12 @@ export default function ProjectDocuments({ project, user, showToast, canModify }
 
   const handleDownload = async (doc) => {
     try {
+      console.log('Downloading document:', doc);
       // Get latest version
       const versions = await databases.listDocuments(
         DB_ID,
         COLLECTIONS.DOCUMENT_VERSIONS,
-        [Query.equal('documentId', doc.$id), Query.orderDesc('versionNo'), Query.limit(1)]
+        [Query.equal('documentId', doc.documentId), Query.orderDesc('versionNo'), Query.limit(1)]
       );
 
       if (versions.documents.length > 0) {

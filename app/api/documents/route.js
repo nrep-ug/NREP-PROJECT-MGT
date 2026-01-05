@@ -142,10 +142,17 @@ export async function GET(request) {
   }
 }
 
+/**
+ * 
+ * POST /api/documents
+ * Register a new document and its initial version
+ * Expects JSON body with document and version details
+ */
 export async function POST(request) {
   try {
     const body = await request.json();
     const {
+      documentId,
       projectId,
       organizationId,
       projectTeamId,
@@ -163,7 +170,9 @@ export async function POST(request) {
       clientList = []
     } = body;
 
-    if (!projectId || !organizationId || !projectTeamId || !uploaderId || !title || !fileId || !mimeType || !sizeBytes) {
+    console.log('Registering document:', body);
+
+    if ( !documentId || !projectId || !organizationId || !projectTeamId || !uploaderId || !title || !fileId || !mimeType || !sizeBytes) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -175,6 +184,7 @@ export async function POST(request) {
       COL_DOCUMENTS,
       ID.unique(),
       {
+        documentId,
         projectId,
         uploaderId,
         title,
@@ -195,7 +205,7 @@ export async function POST(request) {
       COL_VERSIONS,
       ID.unique(),
       {
-        documentId: document.$id,
+        documentId: documentId,
         versionNo: 1,
         fileId,
         mimeType,

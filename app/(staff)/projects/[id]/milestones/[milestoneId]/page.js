@@ -59,7 +59,7 @@ export default function MilestoneDetailPage() {
       setTasks(tasksResponse.documents);
     } catch (err) {
       console.error('Failed to load data:', err);
-      showToast('Failed to load milestone. You may not have permission to view it.', 'danger');
+      showToast('Failed to load Activity Schedule. You may not have permission to view it.', 'danger');
     } finally {
       setLoading(false);
     }
@@ -99,7 +99,7 @@ export default function MilestoneDetailPage() {
     return user.isAdmin; // Or check if user is project manager
   };
 
-  // Calculate milestone progress based on tasks
+  // Calculate Activity Schedule progress based on tasks
   const calculateProgress = () => {
     if (tasks.length === 0) return 0;
     const completedTasks = tasks.filter(t => t.status === 'done').length;
@@ -134,9 +134,9 @@ export default function MilestoneDetailPage() {
   };
 
   const handleQuickStatusUpdate = async (newStatus) => {
-    // Prevent closing milestone if there are incomplete tasks
+    // Prevent closing Activity Schedule if there are incomplete tasks
     if (newStatus === 'closed' && hasIncompleteTasks()) {
-      showToast('Cannot close milestone. There are still incomplete tasks linked to this milestone.', 'warning');
+      showToast('Cannot close Activity Schedule. There are still incomplete tasks linked to this Activity Schedule.', 'warning');
       return;
     }
 
@@ -153,22 +153,22 @@ export default function MilestoneDetailPage() {
 
       // Update local state
       setMilestone(prev => ({ ...prev, status: newStatus }));
-      showToast('Milestone status updated successfully!', 'success');
+      showToast('Activity Schedule status updated successfully!', 'success');
 
       // Reload data to ensure consistency
       setTimeout(() => {
         loadData();
       }, 500);
     } catch (err) {
-      console.error('Failed to update milestone status:', err);
-      showToast(err.message || 'Failed to update milestone status', 'danger');
+      console.error('Failed to update Activity Schedule status:', err);
+      showToast(err.message || 'Failed to update Activity Schedule status', 'danger');
     }
   };
 
   if (authLoading || loading) {
     return (
       <AppLayout user={user}>
-        <LoadingSpinner message="Loading milestone..." />
+        <LoadingSpinner message="Loading Activity Schedule..." />
       </AppLayout>
     );
   }
@@ -178,7 +178,7 @@ export default function MilestoneDetailPage() {
       <AppLayout user={user}>
         <Alert variant="danger">
           <i className="bi bi-exclamation-triangle me-2"></i>
-          Milestone not found or you don&apos;t have permission to access it.
+          Activity Schedule not found or you don&apos;t have permission to access it.
         </Alert>
       </AppLayout>
     );
@@ -337,12 +337,12 @@ export default function MilestoneDetailPage() {
         </Col>
       </Row>
 
-      {/* Milestone Details & Tasks */}
+      {/* Activity Schedule Details & Tasks */}
       <Row>
         <Col lg={4}>
           <Card className="border-0 shadow-sm mb-4">
             <Card.Header className="bg-white">
-              <h5 className="mb-0">Milestone Details</h5>
+              <h5 className="mb-0">Activity Schedule Details</h5>
             </Card.Header>
             <Card.Body>
               {milestone.description && (
@@ -441,7 +441,7 @@ export default function MilestoneDetailPage() {
                     <i className="bi bi-inbox" style={{ fontSize: '3rem', opacity: 0.3 }}></i>
                   </div>
                   <h6>No Tasks Yet</h6>
-                  <p className="text-muted mb-3">Create tasks to track work for this milestone</p>
+                  <p className="text-muted mb-3">Create tasks to track work for this Activity Schedule</p>
                   <Button
                     size="sm"
                     variant="primary"

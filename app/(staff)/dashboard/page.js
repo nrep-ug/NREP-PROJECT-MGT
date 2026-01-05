@@ -45,7 +45,7 @@ export default function DashboardPage() {
       const onHold = projectsResponse.documents.filter(p => p.status === 'on_hold').length;
       setStats({ total, active, completed, onHold });
 
-      // Load upcoming milestones
+      // Load upcoming Activity Schedule
       const milestonesResponse = await databases.listDocuments(
         DB_ID,
         COLLECTIONS.MILESTONES,
@@ -181,15 +181,15 @@ export default function DashboardPage() {
           </Card>
         </Col>
 
-        {/* Upcoming Milestones */}
+        {/* Upcoming Activity Schedules */}
         <Col md={4}>
           <Card>
             <Card.Header>
-              <h5 className="mb-0">Upcoming Milestones</h5>
+              <h5 className="mb-0">Upcoming Activity Schedules</h5>
             </Card.Header>
             <Card.Body>
               {milestones.length === 0 ? (
-                <p className="text-muted text-center py-3">No upcoming milestones</p>
+                <p className="text-muted text-center py-3">No upcoming Activity Schedules</p>
               ) : (
                 <div>
                   {milestones.map((milestone) => (

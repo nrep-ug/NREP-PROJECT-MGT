@@ -77,7 +77,7 @@ export default function EditMilestonePage() {
       });
     } catch (err) {
       console.error('Failed to load data:', err);
-      showToast('Failed to load milestone. You may not have permission to view it.', 'danger');
+      showToast('Failed to load Activity Schedule. You may not have permission to view it.', 'danger');
     } finally {
       setLoading(false);
     }
@@ -96,14 +96,14 @@ export default function EditMilestonePage() {
     // Validate start date against project dates
     if (formData.startDate && project.startDate) {
       if (new Date(formData.startDate) < new Date(project.startDate)) {
-        showToast('Milestone start date cannot be before project start date', 'warning');
+        showToast('Activity Schedule start date cannot be before project start date', 'warning');
         return false;
       }
     }
 
     if (formData.startDate && project.endDate) {
       if (new Date(formData.startDate) > new Date(project.endDate)) {
-        showToast('Milestone start date cannot be after project end date', 'warning');
+        showToast('Activity Schedule start date cannot be after project end date', 'warning');
         return false;
       }
     }
@@ -111,14 +111,14 @@ export default function EditMilestonePage() {
     // Validate due date against project dates
     if (formData.dueDate && project.startDate) {
       if (new Date(formData.dueDate) < new Date(project.startDate)) {
-        showToast('Milestone due date cannot be before project start date', 'warning');
+        showToast('Activity Schedule due date cannot be before project start date', 'warning');
         return false;
       }
     }
 
     if (formData.dueDate && project.endDate) {
       if (new Date(formData.dueDate) > new Date(project.endDate)) {
-        showToast('Milestone due date cannot be after project end date', 'warning');
+        showToast('Activity Schedule due date cannot be after project end date', 'warning');
         return false;
       }
     }
@@ -126,7 +126,7 @@ export default function EditMilestonePage() {
     // Validate start date vs due date
     if (formData.startDate && formData.dueDate) {
       if (new Date(formData.startDate) > new Date(formData.dueDate)) {
-        showToast('Milestone start date cannot be after due date', 'warning');
+        showToast('Activity Schedule start date cannot be after due date', 'warning');
         return false;
       }
     }
@@ -138,7 +138,7 @@ export default function EditMilestonePage() {
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      showToast('Milestone name is required', 'warning');
+      showToast('Activity Schedule name is required', 'warning');
       return;
     }
 
@@ -146,9 +146,9 @@ export default function EditMilestonePage() {
       return;
     }
 
-    // Prevent closing milestone if there are incomplete tasks
+    // Prevent closing Activity Schedule if there are incomplete tasks
     if (formData.status === 'closed' && hasIncompleteTasks()) {
-      showToast('Cannot close milestone. There are still incomplete tasks linked to this milestone. Please complete or reassign all tasks first.', 'warning');
+      showToast('Cannot close Activity Schedule. There are still incomplete tasks linked to this Activity Schedule. Please complete or reassign all tasks first.', 'warning');
       return;
     }
 
@@ -170,20 +170,20 @@ export default function EditMilestonePage() {
         }
       );
 
-      showToast('Milestone updated successfully!', 'success');
+      showToast('Activity Schedule updated successfully!', 'success');
 
       setTimeout(() => {
         router.push(`/projects/${project.$id}?tab=milestones`);
       }, 1000);
     } catch (err) {
-      console.error('Failed to update milestone:', err);
-      showToast(err.message || 'Failed to update milestone', 'danger');
+      console.error('Failed to update Activity Schedule:', err);
+      showToast(err.message || 'Failed to update Activity Schedule', 'danger');
       setSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this milestone? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this Activity Schedule? This action cannot be undone.')) {
       return;
     }
 
@@ -194,14 +194,14 @@ export default function EditMilestonePage() {
         params.milestoneId
       );
 
-      showToast('Milestone deleted successfully!', 'success');
+      showToast('Activity Schedule deleted successfully!', 'success');
 
       setTimeout(() => {
         router.push(`/projects/${project.$id}?tab=milestones`);
       }, 1000);
     } catch (err) {
-      console.error('Failed to delete milestone:', err);
-      showToast(err.message || 'Failed to delete milestone', 'danger');
+      console.error('Failed to delete Activity Schedule:', err);
+      showToast(err.message || 'Failed to delete Activity Schedule', 'danger');
     }
   };
 
@@ -218,7 +218,7 @@ export default function EditMilestonePage() {
       <AppLayout user={user}>
         <Alert variant="danger">
           <i className="bi bi-exclamation-triangle me-2"></i>
-          Milestone not found or you don&apos;t have permission to access it.
+          Activity Schedule not found or you don&apos;t have permission to access it.
         </Alert>
       </AppLayout>
     );
@@ -231,7 +231,7 @@ export default function EditMilestonePage() {
       <div className="mb-4">
         <div className="d-flex justify-content-between align-items-center">
           <div>
-            <h2>Edit Milestone</h2>
+            <h2>Edit Activity Schedule</h2>
             <p className="text-muted mb-0">
               Project: <strong>{project.name}</strong> ({project.code})
             </p>
@@ -248,7 +248,7 @@ export default function EditMilestonePage() {
           <i className="bi bi-info-circle me-2"></i>
           <strong>Project Timeline:</strong> {new Date(project.startDate).toLocaleDateString()} - {new Date(project.endDate).toLocaleDateString()}
           <br />
-          <small>Milestone dates must fall within this project timeline.</small>
+          <small>Activity Schedule dates must fall within this project timeline.</small>
         </Alert>
       )}
 
@@ -257,7 +257,7 @@ export default function EditMilestonePage() {
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
               <Form.Label>
-                Milestone Name <span className="text-danger">*</span>
+                Activity Schedule Name <span className="text-danger">*</span>
               </Form.Label>
               <Form.Control
                 type="text"
@@ -278,7 +278,7 @@ export default function EditMilestonePage() {
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                placeholder="Enter milestone description (optional)"
+                placeholder="Enter Activity Schedule description (optional)"
                 disabled={submitting}
               />
             </Form.Group>
@@ -302,7 +302,7 @@ export default function EditMilestonePage() {
                   {hasIncompleteTasks() && formData.status !== 'closed' && (
                     <Form.Text className="text-warning">
                       <i className="bi bi-exclamation-triangle me-1"></i>
-                      Cannot close milestone while tasks are incomplete ({tasks.filter(t => t.status !== 'done').length} remaining)
+                      Cannot close Activity Schedule while tasks are incomplete ({tasks.filter(t => t.status !== 'done').length} remaining)
                     </Form.Text>
                   )}
                 </Form.Group>
@@ -359,7 +359,7 @@ export default function EditMilestonePage() {
                 disabled={submitting}
               />
               <Form.Text className="text-muted">
-                Only fill this if the milestone has been completed
+                Only fill this if the Activity Schedule has been completed
               </Form.Text>
             </Form.Group>
 
@@ -370,7 +370,7 @@ export default function EditMilestonePage() {
                 disabled={submitting}
               >
                 <i className="bi bi-trash me-2"></i>
-                Delete Milestone
+                Delete Activity Schedule
               </Button>
 
               <div className="d-flex gap-2">
@@ -394,7 +394,7 @@ export default function EditMilestonePage() {
                   ) : (
                     <>
                       <i className="bi bi-check-circle me-2"></i>
-                      Update Milestone
+                      Update Activity Schedule
                     </>
                   )}
                 </Button>

@@ -59,14 +59,14 @@ export default function NewMilestonePage() {
     // Validate start date against project dates
     if (formData.startDate && project.startDate) {
       if (new Date(formData.startDate) < new Date(project.startDate)) {
-        showToast('Milestone start date cannot be before project start date', 'warning');
+        showToast('Activity Schedule start date cannot be before project start date', 'warning');
         return false;
       }
     }
 
     if (formData.startDate && project.endDate) {
       if (new Date(formData.startDate) > new Date(project.endDate)) {
-        showToast('Milestone start date cannot be after project end date', 'warning');
+        showToast('Activity Schedule start date cannot be after project end date', 'warning');
         return false;
       }
     }
@@ -74,14 +74,14 @@ export default function NewMilestonePage() {
     // Validate due date against project dates
     if (formData.dueDate && project.startDate) {
       if (new Date(formData.dueDate) < new Date(project.startDate)) {
-        showToast('Milestone due date cannot be before project start date', 'warning');
+        showToast('Activity Schedule due date cannot be before project start date', 'warning');
         return false;
       }
     }
 
     if (formData.dueDate && project.endDate) {
       if (new Date(formData.dueDate) > new Date(project.endDate)) {
-        showToast('Milestone due date cannot be after project end date', 'warning');
+        showToast('Activity Schedule due date cannot be after project end date', 'warning');
         return false;
       }
     }
@@ -89,7 +89,7 @@ export default function NewMilestonePage() {
     // Validate start date vs due date
     if (formData.startDate && formData.dueDate) {
       if (new Date(formData.startDate) > new Date(formData.dueDate)) {
-        showToast('Milestone start date cannot be after due date', 'warning');
+        showToast('Activity Schedule start date cannot be after due date', 'warning');
         return false;
       }
     }
@@ -101,7 +101,7 @@ export default function NewMilestonePage() {
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      showToast('Milestone name is required', 'warning');
+      showToast('Activity Schedule name is required', 'warning');
       return;
     }
 
@@ -138,14 +138,14 @@ export default function NewMilestonePage() {
         ]
       );
 
-      showToast('Milestone created successfully!', 'success');
+      showToast('Activity Schedule created successfully!', 'success');
 
       setTimeout(() => {
         router.push(`/projects/${project.$id}?tab=milestones`);
       }, 1000);
     } catch (err) {
-      console.error('Failed to create milestone:', err);
-      showToast(err.message || 'Failed to create milestone', 'danger');
+      console.error('Failed to create Activity Schedule:', err);
+      showToast(err.message || 'Failed to create Activity Schedule', 'danger');
       setSubmitting(false);
     }
   };
@@ -176,7 +176,7 @@ export default function NewMilestonePage() {
       <div className="mb-4">
         <div className="d-flex justify-content-between align-items-center">
           <div>
-            <h2>Create New Milestone</h2>
+            <h2>Create New Activity Schedule</h2>
             <p className="text-muted mb-0">
               Project: <strong>{project.name}</strong> ({project.code})
             </p>
@@ -193,7 +193,7 @@ export default function NewMilestonePage() {
           <i className="bi bi-info-circle me-2"></i>
           <strong>Project Timeline:</strong> {new Date(project.startDate).toLocaleDateString()} - {new Date(project.endDate).toLocaleDateString()}
           <br />
-          <small>Milestone dates must fall within this project timeline.</small>
+          <small>Activity Schedule dates must fall within this project timeline.</small>
         </Alert>
       )}
 
@@ -202,7 +202,7 @@ export default function NewMilestonePage() {
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
               <Form.Label>
-                Milestone Name <span className="text-danger">*</span>
+                Activity Schedule Name <span className="text-danger">*</span>
               </Form.Label>
               <Form.Control
                 type="text"
@@ -223,7 +223,7 @@ export default function NewMilestonePage() {
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                placeholder="Enter milestone description (optional)"
+                placeholder="Enter Activity Schedule description (optional)"
                 disabled={submitting}
               />
             </Form.Group>
@@ -296,7 +296,7 @@ export default function NewMilestonePage() {
                 disabled={submitting}
               />
               <Form.Text className="text-muted">
-                Only fill this if the milestone has been completed
+                Only fill this if the Activity Schedule has been completed
               </Form.Text>
             </Form.Group>
 
@@ -316,12 +316,12 @@ export default function NewMilestonePage() {
                 {submitting ? (
                   <>
                     <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Creating Milestone...
+                    Creating Activity Schedule...
                   </>
                 ) : (
                   <>
                     <i className="bi bi-check-circle me-2"></i>
-                    Create Milestone
+                    Create Activity Schedule
                   </>
                 )}
               </Button>

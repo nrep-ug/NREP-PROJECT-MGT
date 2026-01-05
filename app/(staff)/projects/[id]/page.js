@@ -288,7 +288,7 @@ function ProjectDetailContent() {
               title={
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <i className="bi bi-flag"></i>
-                  <span className="d-none d-sm-inline">Milestones</span>
+                  <span className="d-none d-sm-inline">Activity Schedule</span>
                 </span>
               }
             >

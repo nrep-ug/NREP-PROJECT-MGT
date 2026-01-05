@@ -148,13 +148,16 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
     setUploading(true);
     try {
       // 1. Upload to Storage
-      const uploadedFile = await storage.createFile(BUCKET_DOCS, ID.unique(), uploadFile);
+      const docId = ID.unique();
+      console.log('Uploading document with ID:', docId);
+      const uploadedFile = await storage.createFile(BUCKET_DOCS, docId, uploadFile);
 
       // 2. Register document via API
       const response = await fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          documentId: docId,
           projectId: project.$id,
           organizationId: project.organizationId,
           projectTeamId: project.projectTeamId,
@@ -327,7 +330,8 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
     setUploading(true);
     try {
       // 1. Upload new file to Storage
-      const uploadedFile = await storage.createFile(BUCKET_DOCS, ID.unique(), replaceFile);
+      const docId = ID.unique();
+      const uploadedFile = await storage.createFile(BUCKET_DOCS, docId, replaceFile);
 
       // 2. Create new version via API
       const response = await fetch(`/api/documents/${selectedDoc.$id}/version`, {

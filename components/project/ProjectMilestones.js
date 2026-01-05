@@ -167,7 +167,7 @@ export default function ProjectMilestones({ project, user, showToast, canModify 
       {/* Header with Actions */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <div className="d-flex align-items-center gap-2">
-          <h5 className="mb-0">Milestones</h5>
+          <h5 className="mb-0">Activity Schedule</h5>
           <Badge bg="secondary">{filteredMilestones.length}</Badge>
         </div>
 
@@ -179,7 +179,7 @@ export default function ProjectMilestones({ project, user, showToast, canModify 
             </InputGroup.Text>
             <Form.Control
               type="text"
-              placeholder="Search milestones..."
+              placeholder="Search Activity Schedule..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -197,7 +197,7 @@ export default function ProjectMilestones({ project, user, showToast, canModify 
             <option value="closed">Closed</option>
           </Form.Select>
 
-          {/* Add Milestone Button */}
+          {/* Add Activity Schedule Button */}
           {canModify && (
             <Button
               variant="primary"
@@ -205,7 +205,7 @@ export default function ProjectMilestones({ project, user, showToast, canModify 
               onClick={() => router.push(`/projects/${project.$id}/milestones/new`)}
             >
               <i className="bi bi-plus-circle me-1"></i>
-              <span className="d-none d-sm-inline">New Milestone</span>
+              <span className="d-none d-sm-inline">New Activity Schedule</span>
             </Button>
           )}
         </div>
@@ -329,11 +329,11 @@ export default function ProjectMilestones({ project, user, showToast, canModify 
           <div className="mb-3">
             <i className="bi bi-flag" style={{ fontSize: '4rem', opacity: 0.3 }}></i>
           </div>
-          <h5>{searchTerm || statusFilter !== 'all' ? 'No milestones found' : 'No Milestones Yet'}</h5>
+          <h5>{searchTerm || statusFilter !== 'all' ? 'No Activity Schedules found' : 'No Activity Schedules Yet'}</h5>
           <p className="text-muted mb-3">
             {searchTerm || statusFilter !== 'all'
               ? 'Try adjusting your search or filter criteria'
-              : 'Create your first milestone to track project progress'}
+              : 'Create your first Activity Schedule to track project progress'}
           </p>
           {!searchTerm && statusFilter === 'all' && canModify && (
             <Button
@@ -341,7 +341,7 @@ export default function ProjectMilestones({ project, user, showToast, canModify 
               onClick={() => router.push(`/projects/${project.$id}/milestones/new`)}
             >
               <i className="bi bi-plus-circle me-2"></i>
-              Create Milestone
+              Create Activity Schedule
             </Button>
           )}
         </div>
