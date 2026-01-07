@@ -297,7 +297,7 @@ function NewTaskContent() {
       {selectedMilestone ? (
         <Alert variant="info" className="mb-3">
           <i className="bi bi-flag me-2"></i>
-          <strong>Milestone Timeline:</strong> {selectedMilestone.name}
+          <strong>Activity Schedule:</strong> {selectedMilestone.name}
           {selectedMilestone.startDate && selectedMilestone.dueDate && (
             <>
               {' - '}
@@ -305,7 +305,7 @@ function NewTaskContent() {
             </>
           )}
           <br />
-          <small>Task dates must fall within this milestone timeline.</small>
+          <small>Task dates must fall within this Activity schedule.</small>
         </Alert>
       ) : project.startDate && project.endDate ? (
         <Alert variant="info" className="mb-3">
@@ -320,14 +320,14 @@ function NewTaskContent() {
         <Card.Body>
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-3">
-              <Form.Label>Milestone</Form.Label>
+              <Form.Label>Activity Schedule</Form.Label>
               <Form.Select
                 name="milestoneId"
                 value={formData.milestoneId}
                 onChange={handleChange}
                 disabled={submitting}
               >
-                <option value="">No milestone (optional)</option>
+                <option value="">No Activity Schedule (optional)</option>
                 {milestones.map((milestone) => (
                   <option key={milestone.$id} value={milestone.$id}>
                     {milestone.name}
@@ -338,7 +338,7 @@ function NewTaskContent() {
                 ))}
               </Form.Select>
               <Form.Text className="text-muted">
-                Link this task to a milestone (optional)
+                Link this task to an activity schedule (optional)
               </Form.Text>
             </Form.Group>
 

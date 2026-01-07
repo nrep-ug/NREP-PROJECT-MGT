@@ -162,14 +162,14 @@ export default function TaskDetailPage() {
     if (selectedMilestone) {
       if (formData.startDate && selectedMilestone.startDate) {
         if (new Date(formData.startDate) < new Date(selectedMilestone.startDate)) {
-          showToast('Task start date cannot be before milestone start date', 'warning');
+          showToast('Task start date cannot be before activity schedule start date', 'warning');
           return false;
         }
       }
 
       if (formData.dueDate && selectedMilestone.dueDate) {
         if (new Date(formData.dueDate) > new Date(selectedMilestone.dueDate)) {
-          showToast('Task due date cannot be after milestone due date', 'warning');
+          showToast('Task due date cannot be after activity schedule due date', 'warning');
           return false;
         }
       }
@@ -353,7 +353,7 @@ export default function TaskDetailPage() {
               {milestone && (
                 <>
                   {' • '}
-                  Milestone: <strong>{milestone.name}</strong>
+                  Activity Schedule: <strong>{milestone.name}</strong>
                 </>
               )}
             </p>
@@ -416,14 +416,14 @@ export default function TaskDetailPage() {
           <Card.Body>
             <Form onSubmit={handleSubmit}>
               <Form.Group className="mb-3">
-                <Form.Label>Milestone</Form.Label>
+                <Form.Label>Activity Schedule</Form.Label>
                 <Form.Select
                   name="milestoneId"
                   value={formData.milestoneId}
                   onChange={handleChange}
                   disabled={submitting}
                 >
-                  <option value="">No milestone (optional)</option>
+                  <option value="">No activity schedule (optional)</option>
                   {milestones.map((ms) => (
                     <option key={ms.$id} value={ms.$id}>
                       {ms.name}
@@ -713,7 +713,7 @@ export default function TaskDetailPage() {
 
                 {milestone && (
                   <div className="mb-3">
-                    <h6 className="text-muted mb-2">Linked Milestone</h6>
+                    <h6 className="text-muted mb-2">Linked Activity Schedule</h6>
                     <Badge bg="primary" className="fs-6">
                       {milestone.name}
                     </Badge>
