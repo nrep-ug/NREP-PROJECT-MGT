@@ -326,7 +326,6 @@ function TimesheetEntryContent() {
 
       if (entryId) {
         // Update existing entry
-        console.log('PUT /timesheets/entries/[id] payload:', payload);
         const response = await fetch(`/api/timesheets/entries/${entryId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

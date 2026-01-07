@@ -45,7 +45,6 @@ export async function PUT(request, { params }) {
   try {
     const { id } = params;
     const body = await request.json();
-    console.log('PUT /timesheets/entries/[id] body:', body);
     const { projectId, taskId, workDate, hours, notes, billable, requesterId, title, endTime, startTime } = body;
 
     if (!requesterId) {
