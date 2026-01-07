@@ -95,7 +95,7 @@ export default function DashboardPage() {
     <AppLayout user={user}>
       <div className="mb-4">
         <h2>Dashboard</h2>
-        <p className="text-muted">Welcome back, {user?.name || user?.email}</p>
+        <p className="text-muted">Welcome back, {user?.firstName || user?.email}!</p>
       </div>
 
       {/* Stats Cards */}
