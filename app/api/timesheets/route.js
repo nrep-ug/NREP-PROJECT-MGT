@@ -149,6 +149,8 @@ export async function POST(request) {
     const body = await request.json();
     const { accountId, organizationId, weekStart, entries } = body;
 
+    console.log('POST /timesheets body:', entries);
+
     if (!accountId || !organizationId || !weekStart) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -193,6 +195,7 @@ export async function POST(request) {
         }
 
         const entryData = {
+          title: entry.title,
           timesheetId: timesheet.$id,
           projectId: entry.projectId,
           taskId: entry.taskId || null,

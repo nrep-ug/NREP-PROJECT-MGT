@@ -39,6 +39,7 @@ function TimesheetEntryContent() {
     projectId: preselectedProject || '',
     taskId: '',
     workDate: preselectedDate || formatDate(new Date(), 'YYYY-MM-DD'),
+    title: '',
     startTime: '',
     endTime: '',
     hours: '',
@@ -151,6 +152,7 @@ function TimesheetEntryContent() {
           projectId: data.entry.projectId,
           taskId: data.entry.taskId || '',
           workDate: workDate,
+          title: data.entry.title || '',
           startTime: startTime,
           endTime: endTime,
           hours: data.entry.hours,
@@ -247,6 +249,11 @@ function TimesheetEntryContent() {
     e.preventDefault();
 
     // Validation
+    if (!entryForm.title) {
+      showToast('Please enter a Title', 'warning');
+      return;
+    }
+
     if (!entryForm.startTime || !entryForm.endTime) {
       showToast('Please enter Start and End Time', 'warning');
       return;
@@ -310,6 +317,7 @@ function TimesheetEntryContent() {
       const payload = {
         ...entryForm,
         taskId: entryForm.taskId || null,
+        title: entryForm.title,
         hours,
         startTime: isoStartTime,
         endTime: isoEndTime,
@@ -318,6 +326,7 @@ function TimesheetEntryContent() {
 
       if (entryId) {
         // Update existing entry
+        console.log('PUT /timesheets/entries/[id] payload:', payload);
         const response = await fetch(`/api/timesheets/entries/${entryId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -432,6 +441,18 @@ function TimesheetEntryContent() {
           )}
 
           <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-4">
+              <Form.Label>Title *</Form.Label>
+              <Form.Control
+                type="text"
+                value={entryForm.title}
+                onChange={(e) => setEntryForm({ ...entryForm, title: e.target.value })}
+                placeholder="e.g., Development, Meeting, etc."
+                required
+                size="lg"
+              />
+            </Form.Group>
+
             <Form.Group className="mb-4">
               <Form.Label>Project *</Form.Label>
               <Form.Select

@@ -45,7 +45,8 @@ export async function PUT(request, { params }) {
   try {
     const { id } = params;
     const body = await request.json();
-    const { projectId, taskId, workDate, hours, notes, billable, requesterId } = body;
+    console.log('PUT /timesheets/entries/[id] body:', body);
+    const { projectId, taskId, workDate, hours, notes, billable, requesterId, title, endTime, startTime } = body;
 
     if (!requesterId) {
       return NextResponse.json({ error: 'requesterId is required' }, { status: 401 });
@@ -95,6 +96,9 @@ export async function PUT(request, { params }) {
     if (hours !== undefined) updateData.hours = hours;
     if (notes !== undefined) updateData.notes = notes || null;
     if (billable !== undefined) updateData.billable = billable;
+    if (title !== undefined) updateData.title = title;
+    if (startTime !== undefined) updateData.startTime = startTime || null;
+    if (endTime !== undefined) updateData.endTime = endTime || null;
 
     // Update the entry
     const updatedEntry = await adminDatabases.updateDocument(
