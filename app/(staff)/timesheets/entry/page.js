@@ -39,6 +39,8 @@ function TimesheetEntryContent() {
     projectId: preselectedProject || '',
     taskId: '',
     workDate: preselectedDate || formatDate(new Date(), 'YYYY-MM-DD'),
+    startTime: '',
+    endTime: '',
     hours: '',
     notes: '',
     billable: true,
@@ -60,6 +62,22 @@ function TimesheetEntryContent() {
       loadTasksForProject(entryForm.projectId);
     }
   }, [entryForm.projectId]);
+
+  // Auto-calculate hours when start or end time changes
+  useEffect(() => {
+    if (entryForm.startTime && entryForm.endTime) {
+      const start = new Date(`1970-01-01T${entryForm.startTime}`);
+      const end = new Date(`1970-01-01T${entryForm.endTime}`);
+
+      if (end > start) {
+        const diffMs = end - start;
+        const diffHrs = diffMs / (1000 * 60 * 60);
+        // Round to 2 decimal places
+        const roundedHrs = Math.round(diffHrs * 100) / 100;
+        setEntryForm(prev => ({ ...prev, hours: roundedHrs.toString() }));
+      }
+    }
+  }, [entryForm.startTime, entryForm.endTime]);
 
   const loadProjects = async () => {
     try {
@@ -114,10 +132,27 @@ function TimesheetEntryContent() {
       const data = await response.json();
 
       if (response.ok && data.entry) {
+        const workDate = formatDate(data.entry.workDate, 'YYYY-MM-DD');
+
+        let startTime = '';
+        let endTime = '';
+
+        if (data.entry.startTime) {
+          const startDate = new Date(data.entry.startTime);
+          startTime = startDate.toISOString().substr(11, 5);
+        }
+
+        if (data.entry.endTime) {
+          const endDate = new Date(data.entry.endTime);
+          endTime = endDate.toISOString().substr(11, 5);
+        }
+
         setEntryForm({
           projectId: data.entry.projectId,
           taskId: data.entry.taskId || '',
-          workDate: formatDate(data.entry.workDate, 'YYYY-MM-DD'), // Convert ISO to YYYY-MM-DD
+          workDate: workDate,
+          startTime: startTime,
+          endTime: endTime,
           hours: data.entry.hours,
           notes: data.entry.notes || '',
           billable: data.entry.billable
@@ -158,7 +193,9 @@ function TimesheetEntryContent() {
       taskId: template.taskId || '',
       hours: template.hours,
       notes: template.notes || '',
-      billable: template.billable
+      billable: template.billable,
+      startTime: '', // Reset times when applying template as they are specific to day
+      endTime: ''
     });
 
     showToast(`Template "${template.name}" applied!`, 'success');
@@ -209,11 +246,17 @@ function TimesheetEntryContent() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validation
+    if (!entryForm.startTime || !entryForm.endTime) {
+      showToast('Please enter Start and End Time', 'warning');
+      return;
+    }
+
     const hours = parseFloat(entryForm.hours);
 
     // Validation
     if (!hours || hours <= 0) {
-      showToast('Please enter valid hours', 'warning');
+      showToast('Invalid hours calculated', 'warning');
       return;
     }
 
@@ -225,6 +268,14 @@ function TimesheetEntryContent() {
     if (!entryForm.projectId) {
       showToast('Please select a project', 'warning');
       return;
+    }
+
+    // Validate Start/End time logic if provided
+    if (entryForm.startTime && entryForm.endTime) {
+      if (entryForm.startTime >= entryForm.endTime) {
+        showToast('End time must be after start time', 'warning');
+        return;
+      }
     }
 
     // Check total hours for the day (excluding current entry if editing)
@@ -245,17 +296,32 @@ function TimesheetEntryContent() {
     try {
       setLoading(true);
 
+      // Construct ISO DateTimes for start/end
+      let isoStartTime = null;
+      let isoEndTime = null;
+
+      if (entryForm.startTime) {
+        isoStartTime = new Date(`${entryForm.workDate}T${entryForm.startTime}`).toISOString();
+      }
+      if (entryForm.endTime) {
+        isoEndTime = new Date(`${entryForm.workDate}T${entryForm.endTime}`).toISOString();
+      }
+
+      const payload = {
+        ...entryForm,
+        taskId: entryForm.taskId || null,
+        hours,
+        startTime: isoStartTime,
+        endTime: isoEndTime,
+        requesterId: user.authUser.$id
+      };
+
       if (entryId) {
         // Update existing entry
         const response = await fetch(`/api/timesheets/entries/${entryId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...entryForm,
-            taskId: entryForm.taskId || null,
-            hours,
-            requesterId: user.authUser.$id
-          }),
+          body: JSON.stringify(payload),
         });
 
         const data = await response.json();
@@ -274,11 +340,7 @@ function TimesheetEntryContent() {
             accountId: user.authUser.$id,
             organizationId: user.organizationId,
             weekStart: weekStartRaw, // Use ISO format for API
-            entries: [{
-              ...entryForm,
-              taskId: entryForm.taskId || null,
-              hours
-            }]
+            entries: [payload]
           }),
         });
 
@@ -417,7 +479,7 @@ function TimesheetEntryContent() {
             )}
 
             <Row className="g-3">
-              <Col xs={12} md={6}>
+              <Col xs={12} md={4}>
                 <Form.Group className="mb-4">
                   <Form.Label>Date *</Form.Label>
                   <Form.Control
@@ -430,30 +492,50 @@ function TimesheetEntryContent() {
                     size="lg"
                   />
                   <Form.Text className="text-muted d-block">
-                    Date must be within the current week ({formatDate(weekStartRaw)} - {formatDate(weekEndRaw)})
+                    Within week ({formatDate(weekStartRaw)} - {formatDate(weekEndRaw)})
                   </Form.Text>
                 </Form.Group>
               </Col>
-              <Col xs={12} md={6}>
+              <Col xs={12} md={4}>
                 <Form.Group className="mb-4">
-                  <Form.Label>Hours *</Form.Label>
+                  <Form.Label>Start Time *</Form.Label>
                   <Form.Control
-                    type="number"
-                    value={entryForm.hours}
-                    onChange={(e) => setEntryForm({ ...entryForm, hours: e.target.value })}
-                    min="0.5"
-                    max="24"
-                    step="0.5"
-                    placeholder="8.0"
-                    required
+                    type="time"
+                    value={entryForm.startTime}
+                    onChange={(e) => setEntryForm({ ...entryForm, startTime: e.target.value })}
                     size="lg"
+                    required
                   />
-                  <Form.Text className="text-muted">
-                    Enter hours between 0.5 and 24
-                  </Form.Text>
+                </Form.Group>
+              </Col>
+              <Col xs={12} md={4}>
+                <Form.Group className="mb-4">
+                  <Form.Label>End Time *</Form.Label>
+                  <Form.Control
+                    type="time"
+                    value={entryForm.endTime}
+                    onChange={(e) => setEntryForm({ ...entryForm, endTime: e.target.value })}
+                    size="lg"
+                    required
+                  />
                 </Form.Group>
               </Col>
             </Row>
+
+            <Form.Group className="mb-4">
+              <Form.Label>Total Hours</Form.Label>
+              <Form.Control
+                type="number"
+                value={entryForm.hours}
+                readOnly
+                className="bg-light"
+                placeholder="0.0"
+                size="lg"
+              />
+              <Form.Text className="text-muted">
+                Auto-calculated from Start/End time.
+              </Form.Text>
+            </Form.Group>
 
             <Form.Group className="mb-4">
               <Form.Label>Notes</Form.Label>

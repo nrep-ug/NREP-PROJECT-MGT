@@ -200,6 +200,8 @@ export async function POST(request) {
           hours: entry.hours,
           notes: entry.notes || null,
           billable: entry.billable !== undefined ? entry.billable : true,
+          startTime: entry.startTime || null,
+          endTime: entry.endTime || null
         };
 
         const created = await adminDatabases.createDocument(
