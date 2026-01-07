@@ -64,6 +64,7 @@ export default function TimesheetReportsPage() {
   const [trendsData, setTrendsData] = useState([]);
   const [projects, setProjects] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [trendFrequency, setTrendFrequency] = useState('weekly');
 
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658'];
@@ -158,7 +159,7 @@ export default function TimesheetReportsPage() {
       }
 
       // Load trends
-      const trendsRes = await fetch(`/api/timesheets/reports?${params.toString()}&type=trends`);
+      const trendsRes = await fetch(`/api/timesheets/reports?${params.toString()}&type=trends&frequency=${filters.trendFrequency || 'weekly'}`);
       const trendsJson = await trendsRes.json();
       if (!trendsRes.ok) throw new Error(trendsJson.error);
       setTrendsData(trendsJson.data);
@@ -177,7 +178,9 @@ export default function TimesheetReportsPage() {
       startDate,
       endDate,
       selectedProject,
-      selectedUser
+      selectedProject,
+      selectedUser,
+      trendFrequency
     };
     setAppliedFilters(newFilters);
     setLoading(true); // Show loading spinner
@@ -195,6 +198,10 @@ export default function TimesheetReportsPage() {
         type,
         export: 'csv'
       });
+
+      if (type === 'trends') {
+        params.append('frequency', appliedFilters.trendFrequency || 'weekly');
+      }
 
       if (appliedFilters.selectedProject) params.append('projectId', appliedFilters.selectedProject);
       if (appliedFilters.selectedUser) params.append('userId', appliedFilters.selectedUser);
@@ -230,8 +237,11 @@ export default function TimesheetReportsPage() {
       startDate: defaultStartDate,
       endDate: defaultEndDate,
       selectedProject: '',
-      selectedUser: ''
+      selectedProject: '',
+      selectedUser: '',
+      trendFrequency: 'weekly'
     };
+    setTrendFrequency('weekly');
     setAppliedFilters(resetFilters);
     setLoading(true); // Show loading spinner
     await loadReports(resetFilters);
@@ -636,10 +646,31 @@ export default function TimesheetReportsPage() {
 
 
               {/* Weekly Trends - Line Chart */}
+              {/* General Trends Chart */}
               <Col xs={12}>
                 <Card>
-                  <Card.Header className="d-flex justify-content-between align-items-center">
-                    <strong>Weekly Trends</strong>
+                  <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div className="d-flex align-items-center gap-2">
+                      <strong>Trends Analysis</strong>
+                      <Form.Select
+                        size="sm"
+                        style={{ width: 'auto' }}
+                        value={trendFrequency}
+                        onChange={(e) => {
+                          const newFreq = e.target.value;
+                          setTrendFrequency(newFreq);
+                          // Update only the frequency in applied filters and reload
+                          const newFilters = { ...appliedFilters, trendFrequency: newFreq };
+                          setAppliedFilters(newFilters);
+                          loadReports(newFilters);
+                        }}
+                      >
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                      </Form.Select>
+                    </div>
                     <Button
                       variant="outline-primary"
                       size="sm"
@@ -651,7 +682,7 @@ export default function TimesheetReportsPage() {
                   <Card.Body>
                     {trendsData.length > 0 ? (
                       <Suspense fallback={<ChartLoader />}>
-                        <TrendsLineChart data={trendsData} />
+                        <TrendsLineChart data={trendsData} frequency={trendFrequency} />
                       </Suspense>
                     ) : (
                       <div className="text-center text-muted py-5">No data available</div>

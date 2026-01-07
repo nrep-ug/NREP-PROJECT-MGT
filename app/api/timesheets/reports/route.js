@@ -68,6 +68,7 @@ export async function GET(request) {
     const endDate = searchParams.get('endDate');
     const projectId = searchParams.get('projectId');
     const userId = searchParams.get('userId');
+    const frequency = searchParams.get('frequency') || 'weekly';
     const exportFormat = searchParams.get('export');
 
     if (!accountId || !organizationId || !labelsParam) {
@@ -323,7 +324,7 @@ export async function GET(request) {
         break;
 
       case 'trends':
-        reportData = generateTrendsReport(allEntries);
+        reportData = generateTrendsReport(allEntries, frequency, startDate, endDate);
         break;
 
       default:
@@ -549,44 +550,121 @@ function generateByUserReport(entries, accounts, getUserName) {
 }
 
 /**
- * Generate trends report (weekly data)
+ * Generate trends report (configurable frequency)
+ * Fills in missing periods with 0 values
  */
-function generateTrendsReport(entries) {
-  const weekMap = {};
+function generateTrendsReport(entries, frequency = 'weekly', startDate, endDate) {
+  const groupMap = {};
 
-  entries.forEach(entry => {
-    const weekStart = moment(entry.workDate).startOf('week').format('YYYY-MM-DD');
+  // 1. Determine date range
+  let start = startDate ? moment(startDate) : moment().subtract(30, 'days');
+  let end = endDate ? moment(endDate) : moment();
 
-    if (!weekMap[weekStart]) {
-      weekMap[weekStart] = {
-        weekStart,
-        totalHours: 0,
-        billableHours: 0,
-        nonBillableHours: 0,
-        entries: 0
-      };
+  // If no explicit dates and we have entries, rely on entry dates if needed, 
+  // but usually reports have a default range. 
+  // If we want to strictly follow the data range when no filter is applied:
+  if (!startDate && entries.length > 0) {
+    const sorted = [...entries].sort((a, b) => new Date(a.workDate) - new Date(b.workDate));
+    start = moment(sorted[0].workDate);
+    end = moment(sorted[sorted.length - 1].workDate);
+  }
+
+  // Adjust start/end to period boundaries
+  switch (frequency) {
+    case 'weekly':
+      start.startOf('isoWeek');
+      end.endOf('isoWeek');
+      break;
+    case 'monthly':
+      start.startOf('month');
+      end.endOf('month');
+      break;
+    case 'yearly':
+      start.startOf('year');
+      end.endOf('year');
+      break;
+    default: // daily
+      // no adjustment needed
+      break;
+  }
+
+  // 2. Initialize all periods with 0
+  const current = start.clone();
+  while (current.isSameOrBefore(end)) {
+    let periodStart;
+
+    switch (frequency) {
+      case 'daily':
+        periodStart = current.format('YYYY-MM-DD');
+        current.add(1, 'days');
+        break;
+      case 'monthly':
+        periodStart = current.format('YYYY-MM-DD');
+        current.add(1, 'months');
+        break;
+      case 'yearly':
+        periodStart = current.format('YYYY');
+        current.add(1, 'years');
+        break;
+      case 'weekly':
+      default:
+        periodStart = current.format('YYYY-MM-DD');
+        current.add(1, 'weeks');
+        break;
     }
 
-    weekMap[weekStart].totalHours += entry.hours;
-    weekMap[weekStart].entries += 1;
+    groupMap[periodStart] = {
+      periodStart,
+      totalHours: 0,
+      billableHours: 0,
+      nonBillableHours: 0,
+      entries: 0
+    };
+  }
 
-    if (entry.billable) {
-      weekMap[weekStart].billableHours += entry.hours;
-    } else {
-      weekMap[weekStart].nonBillableHours += entry.hours;
+  // 3. Populate with actual data
+  entries.forEach(entry => {
+    let periodStart;
+    const date = moment(entry.workDate);
+
+    switch (frequency) {
+      case 'daily':
+        periodStart = date.format('YYYY-MM-DD');
+        break;
+      case 'monthly':
+        periodStart = date.startOf('month').format('YYYY-MM-DD');
+        break;
+      case 'yearly':
+        periodStart = date.startOf('year').format('YYYY');
+        break;
+      case 'weekly':
+      default:
+        periodStart = date.startOf('isoWeek').format('YYYY-MM-DD');
+        break;
+    }
+
+    if (groupMap[periodStart]) {
+      groupMap[periodStart].totalHours += entry.hours;
+      groupMap[periodStart].entries += 1;
+
+      if (entry.billable) {
+        groupMap[periodStart].billableHours += entry.hours;
+      } else {
+        groupMap[periodStart].nonBillableHours += entry.hours;
+      }
     }
   });
 
   // Convert to array and format
-  const trendData = Object.values(weekMap).map(week => ({
-    ...week,
-    totalHours: week.totalHours.toFixed(1),
-    billableHours: week.billableHours.toFixed(1),
-    nonBillableHours: week.nonBillableHours.toFixed(1)
+  const trendData = Object.values(groupMap).map(group => ({
+    ...group,
+    totalHours: group.totalHours.toFixed(1),
+    billableHours: group.billableHours.toFixed(1),
+    nonBillableHours: group.nonBillableHours.toFixed(1)
   }));
 
-  // Sort by week chronologically
-  trendData.sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+  // Sort chronologically
+  trendData.sort((a, b) => a.periodStart.localeCompare(b.periodStart));
 
   return trendData;
 }
@@ -669,9 +747,9 @@ function generateCSV(data, type) {
       break;
 
     case 'trends':
-      csv = 'Week Start,Total Hours,Billable Hours,Non-Billable Hours,Entries\n';
+      csv = 'Period Start,Total Hours,Billable Hours,Non-Billable Hours,Entries\n';
       data.forEach(row => {
-        csv += `${row.weekStart},${row.totalHours},${row.billableHours},${row.nonBillableHours},${row.entries}\n`;
+        csv += `${row.periodStart},${row.totalHours},${row.billableHours},${row.nonBillableHours},${row.entries}\n`;
       });
       break;
 
