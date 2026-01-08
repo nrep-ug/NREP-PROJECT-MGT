@@ -441,7 +441,7 @@ function TimesheetEntryContent() {
 
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-4">
-              <Form.Label>Title *</Form.Label>
+              <Form.Label>Activity Title *</Form.Label>
               <Form.Control
                 type="text"
                 value={entryForm.title}
