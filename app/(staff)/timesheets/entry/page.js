@@ -439,6 +439,31 @@ function TimesheetEntryContent() {
             </Alert>
           )}
 
+          <Form.Group className="mb-4">
+            <Form.Label>Project *</Form.Label>
+            <Form.Select
+              value={entryForm.projectId}
+              onChange={(e) => {
+                const projectId = e.target.value;
+                setEntryForm({ ...entryForm, projectId, taskId: '' });
+              }}
+              required
+              size="lg"
+            >
+              <option value="">Select a project...</option>
+              {projects.map((p) => (
+                <option key={p.$id} value={p.$id}>
+                  {p.code ? `[${p.code}] ` : ''}{p.name}
+                </option>
+              ))}
+            </Form.Select>
+            {projects.length === 0 && (
+              <Form.Text className="text-danger">
+                No active projects available. Please contact your administrator.
+              </Form.Text>
+            )}
+          </Form.Group>
+
           <Form onSubmit={handleSubmit}>
             <Form.Group className="mb-4">
               <Form.Label>Activity Title *</Form.Label>
@@ -450,31 +475,6 @@ function TimesheetEntryContent() {
                 required
                 size="lg"
               />
-            </Form.Group>
-
-            <Form.Group className="mb-4">
-              <Form.Label>Project *</Form.Label>
-              <Form.Select
-                value={entryForm.projectId}
-                onChange={(e) => {
-                  const projectId = e.target.value;
-                  setEntryForm({ ...entryForm, projectId, taskId: '' });
-                }}
-                required
-                size="lg"
-              >
-                <option value="">Select a project...</option>
-                {projects.map((p) => (
-                  <option key={p.$id} value={p.$id}>
-                    {p.code ? `[${p.code}] ` : ''}{p.name}
-                  </option>
-                ))}
-              </Form.Select>
-              {projects.length === 0 && (
-                <Form.Text className="text-danger">
-                  No active projects available. Please contact your administrator.
-                </Form.Text>
-              )}
             </Form.Group>
 
             {entryForm.projectId && (
