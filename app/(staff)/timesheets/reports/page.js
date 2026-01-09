@@ -6,6 +6,8 @@ import { Container, Row, Col, Card, Button, Form, Table, Badge, Alert, Spinner }
 import { useAuth } from '@/hooks/useAuth';
 import AppLayout from '@/components/AppLayout';
 import moment from 'moment-timezone';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 // Lazy load chart wrapper components to reduce initial bundle size
 const ProjectBarChart = lazy(() => import('@/components/charts/ProjectBarChart'));
@@ -65,6 +67,7 @@ export default function TimesheetReportsPage() {
   const [projects, setProjects] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [trendFrequency, setTrendFrequency] = useState('weekly');
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658'];
@@ -247,6 +250,262 @@ export default function TimesheetReportsPage() {
     await loadReports(resetFilters);
   };
 
+  const handleDownloadPDF = async () => {
+    const element = document.getElementById('report-content');
+    if (!element) return;
+
+    try {
+      setIsGeneratingPDF(true);
+      // Wait a bit for any re-renders
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const canvas = await html2canvas(element, {
+        scale: 2, // Improve quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 1400, // Increased width for better chart rendering
+        onclone: (clonedDoc) => {
+          // Hide elements we don't want in the PDF
+          const description = clonedDoc.getElementById('report-description');
+          if (description) description.style.display = 'none';
+
+          const buttons = clonedDoc.querySelectorAll('button');
+          buttons.forEach(btn => btn.style.display = 'none');
+
+          // Also hide links that look like buttons (e.g. Back to Timesheets if it was a link)
+          const links = clonedDoc.querySelectorAll('.btn');
+          links.forEach(link => link.style.display = 'none');
+
+          // Prevent all data containers from being split across pages
+          const cards = clonedDoc.querySelectorAll('.card');
+          cards.forEach(card => {
+            card.style.pageBreakInside = 'avoid';
+            card.style.breakInside = 'avoid';
+            card.style.display = 'block';
+            card.style.marginBottom = '25px';
+          });
+
+          // Prevent tables from being split
+          const tables = clonedDoc.querySelectorAll('table');
+          tables.forEach(table => {
+            table.style.pageBreakInside = 'avoid';
+            table.style.breakInside = 'avoid';
+          });
+
+          // Prevent rows containing data from being split
+          const rows = clonedDoc.querySelectorAll('.row');
+          rows.forEach(row => {
+            row.style.pageBreakInside = 'avoid';
+            row.style.breakInside = 'avoid';
+          });
+
+          // Calculate page breaks and add spacing to prevent content splitting
+          // A4 page height at 1400px width is approximately 1980px
+          const pageHeightPx = 1980;
+          const headerHeightPx = 100; // Approximate header height in pixels
+          const marginPx = 40;
+          const availablePageHeight = pageHeightPx - headerHeightPx - (marginPx * 2);
+
+          let currentPageHeight = 0;
+
+          // Get all major content blocks (cards and rows that are direct children of container)
+          const reportContent = clonedDoc.getElementById('report-content');
+          if (reportContent) {
+            const contentBlocks = Array.from(reportContent.children).filter(child => {
+              // Include rows and major container elements
+              return child.classList.contains('row') ||
+                     child.tagName === 'CARD' ||
+                     child.classList.contains('mb-4') ||
+                     child.classList.contains('mb-3');
+            });
+
+            contentBlocks.forEach((block, index) => {
+              const blockRect = block.getBoundingClientRect();
+              const blockHeight = blockRect.height;
+
+              // Check if adding this block would overflow the current page
+              if (currentPageHeight + blockHeight > availablePageHeight && currentPageHeight > 0) {
+                // Add spacing to push this block to the next page
+                const spacingNeeded = availablePageHeight - currentPageHeight + 50;
+                const currentMarginTop = parseFloat(window.getComputedStyle(block).marginTop) || 0;
+                block.style.marginTop = `${currentMarginTop + spacingNeeded}px`;
+                currentPageHeight = blockHeight; // Reset for new page
+              } else {
+                currentPageHeight += blockHeight;
+                // Add any existing bottom margin
+                const marginBottom = parseFloat(window.getComputedStyle(block).marginBottom) || 0;
+                currentPageHeight += marginBottom;
+              }
+            });
+          }
+
+          // Make all chart columns full-width for better rendering in PDF
+          // Find all columns that contain charts and make them full width
+          const chartRows = clonedDoc.querySelectorAll('.recharts-responsive-container');
+          chartRows.forEach(container => {
+            const col = container.closest('.col-xs-12, .col-lg-6');
+            if (col) {
+              // Make the column full width
+              col.style.flex = '0 0 100%';
+              col.style.maxWidth = '100%';
+              col.style.marginBottom = '1rem';
+            }
+
+            // Reduce padding on card body to minimize white space
+            const cardBody = container.closest('.card-body');
+            if (cardBody) {
+              cardBody.style.paddingLeft = '8px';
+              cardBody.style.paddingRight = '8px';
+            }
+          });
+
+          // Fix chart overflow by constraining to parent card body width
+          // This needs to run after the columns are resized
+          const chartContainers = clonedDoc.querySelectorAll('.recharts-responsive-container');
+          chartContainers.forEach(container => {
+            // Find the parent card body
+            const cardBody = container.closest('.card-body');
+            if (cardBody) {
+              // Force a reflow to get the updated width after column resize
+              const cardBodyWidth = cardBody.offsetWidth;
+
+              // Use minimal padding to reduce white space
+              const paddingLeft = 8;
+              const paddingRight = 8;
+              // Use 98% of available width to maximize chart space
+              const availableWidth = (cardBodyWidth - paddingLeft - paddingRight) * 0.98;
+
+              // Set explicit width on the chart container and center it
+              container.style.width = `${availableWidth}px`;
+              container.style.maxWidth = `${availableWidth}px`;
+              container.style.overflow = 'hidden';
+              container.style.display = 'block';
+              container.style.margin = '0 auto';
+
+              // Also constrain internal elements
+              const wrapper = container.querySelector('.recharts-wrapper');
+              if (wrapper) {
+                wrapper.style.width = `${availableWidth}px`;
+                wrapper.style.maxWidth = `${availableWidth}px`;
+                wrapper.style.margin = '0 auto';
+              }
+
+              const surface = container.querySelector('.recharts-surface');
+              if (surface) {
+                surface.style.maxWidth = `${availableWidth}px`;
+                // Update the width attribute to match available width
+                surface.setAttribute('width', Math.floor(availableWidth));
+              }
+            }
+          });
+        }
+      });
+
+      // 2. Load the logo image
+      const logoImg = new Image();
+      logoImg.src = '/images/logo.png';
+      await new Promise((resolve) => {
+        logoImg.onload = resolve;
+        logoImg.onerror = () => {
+          console.warn('Logo failed to load, generating PDF without it.');
+          resolve();
+        };
+      });
+
+      // Convert to JPEG with compression for smaller file size
+      // Quality: 0.92 provides good balance between quality and file size
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+        compress: true // Enable PDF compression
+      });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      // Header Config
+      const headerHeight = 25; // Space for header in mm
+      const margin = 10;
+
+      // Function to add header
+      const addHeader = (doc) => {
+        // Add Header Text (Top Left of Header zone)
+        doc.setFontSize(16);
+        doc.setTextColor(40, 40, 40); // Dark grey
+        doc.text('National Renewable Energy Platform', margin, 18);
+
+        // Add Logo (Top Right)
+        if (logoImg.complete && logoImg.naturalHeight !== 0) {
+          // Assuming logo is rectangular, let's fit it within a certain height/width
+          const logoWidth = 30; // mm
+          const logoRatio = logoImg.width / logoImg.height;
+          const logoHeight = logoWidth / logoRatio;
+
+          // Position logo at top right, slightly padded
+          doc.addImage(logoImg, 'PNG', pdfWidth - margin - logoWidth, 5, logoWidth, logoHeight);
+        }
+
+        // Add a line separator
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, headerHeight, pdfWidth - margin, headerHeight);
+      };
+
+      // Add Report Content Image with multi-page support
+      const imgProps = pdf.getImageProperties(imgData);
+      const contentWidth = pdfWidth - (margin * 2);
+      const contentHeight = (imgProps.height * contentWidth) / imgProps.width; // Total height in PDF mm
+
+      let heightLeft = contentHeight;
+      let position = headerHeight + 5; // Start below header on first page
+
+      let firstPage = true;
+
+      while (heightLeft > 0) {
+        if (!firstPage) {
+          pdf.addPage();
+          position = margin; // Reset position for new page (Top of page, no header)
+        }
+
+        // Add Header only on first page
+        if (firstPage) {
+          addHeader(pdf);
+        }
+
+        const shift = contentHeight - heightLeft;
+
+        // Image printing:
+        // Page 1: y = position (30mm)
+        // Page 2: y = position (10mm) - shift (amount already printed)
+        pdf.addImage(imgData, 'PNG', margin, position - shift, contentWidth, contentHeight);
+
+        // Mask the top area (header zone) only on first page if needed
+        // But mainly we need to ensure cleanliness.
+        if (firstPage) {
+          pdf.setFillColor(255, 255, 255);
+          pdf.rect(0, 0, pdfWidth, headerHeight + 2, 'F');
+          addHeader(pdf); // Redraw
+        }
+
+        // Calculate Height used on this page
+        const pageContentHeight = firstPage
+          ? pdfHeight - (headerHeight + 5) - margin
+          : pdfHeight - (margin * 2);
+
+        heightLeft -= pageContentHeight;
+        firstPage = false;
+      }
+
+      pdf.save(`timesheet-report-${moment().format('YYYY-MM-DD')}.pdf`);
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert('Failed to generate PDF');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   if (authLoading || (loading && !summaryData)) {
     return (
       <AppLayout user={user}>
@@ -263,14 +522,14 @@ export default function TimesheetReportsPage() {
 
   return (
     <AppLayout user={user}>
-      <Container fluid className="py-4 px-3 px-md-4">
+      <Container fluid className="py-4 px-3 px-md-4" id="report-content">
         {/* Header */}
         <Row className="mb-4">
           <Col>
             <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
               <div>
                 <h2>Timesheet Reports & Analytics</h2>
-                <p className="text-muted mb-0">
+                <p className="text-muted mb-0" id="report-description">
                   {userRole === 'admin' && 'Viewing all organization timesheets'}
                   {userRole === 'manager' && 'Viewing managed projects and your timesheets'}
                   {userRole === 'staff' && 'Viewing your timesheets'}
@@ -290,6 +549,18 @@ export default function TimesheetReportsPage() {
                 <Button variant="outline-info" size="sm" onClick={() => router.push('/timesheets/templates')}>
                   <i className="bi bi-lightning-charge me-2"></i>
                   Templates
+                </Button>
+                <Button
+                  variant="outline-primary"
+                  onClick={handleDownloadPDF}
+                  disabled={isGeneratingPDF}
+                >
+                  {isGeneratingPDF ? (
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  ) : (
+                    <i className="bi bi-file-earmark-pdf me-2"></i>
+                  )}
+                  {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
                 </Button>
                 <Button variant="outline-secondary" onClick={() => router.push('/timesheets')}>
                   <i className="bi bi-arrow-left me-2"></i>
