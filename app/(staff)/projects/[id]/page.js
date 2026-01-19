@@ -16,6 +16,7 @@ import ProjectMilestones from '@/components/project/ProjectMilestones';
 import ProjectDocumentsNew from '@/components/project/ProjectDocumentsNew';
 import ProjectEmbeds from '@/components/project/ProjectEmbeds';
 import ProjectStaffAssignment from '@/components/project/ProjectStaffAssignment';
+import ProjectComponents from '@/components/project/ProjectComponents';
 
 function ProjectDetailContent() {
   const params = useParams();
@@ -33,7 +34,7 @@ function ProjectDetailContent() {
   // Set active tab from URL query parameter
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['overview', 'team', 'tasks', 'milestones', 'documents', 'embeds'].includes(tab)) {
+    if (tab && ['overview', 'team', 'tasks', 'milestones', 'documents', 'embeds', 'components'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -315,6 +316,17 @@ function ProjectDetailContent() {
               }
             >
               <ProjectEmbeds project={project} user={user} showToast={showToast} canModify={canModify} />
+            </Tab>
+            <Tab
+              eventKey="components"
+              title={
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <i className="bi bi-boxes"></i>
+                  <span className="d-none d-sm-inline">Components</span>
+                </span>
+              }
+            >
+              <ProjectComponents project={project} user={user} showToast={showToast} canModify={canModify} teamMembers={teamMembers} />
             </Tab>
           </Tabs>
         </Card.Body>

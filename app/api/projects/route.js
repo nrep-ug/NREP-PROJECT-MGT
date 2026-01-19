@@ -10,6 +10,7 @@ import { verifyAdminAccess } from '@/lib/authHelpers';
 import { getProjectDocPermissions } from '@/lib/rbac';
 
 const COL_PROJECTS = 'pms_projects';
+const COL_COMPONENTS = 'pms_project_components';
 
 export async function GET(request) {
   try {
@@ -49,7 +50,8 @@ export async function POST(request) {
       status,
       budgetAmount,
       createdBy,
-      requesterId // ID of the user making the request (for authorization)
+      requesterId, // ID of the user making the request (for authorization)
+      components // Array of components to create
     } = body;
 
     if (!organizationId || !code || !name || !createdBy) {
@@ -120,6 +122,31 @@ export async function POST(request) {
     } catch (error) {
       // User might already be a member or doesn't exist yet
       // Silently continue if membership creation fails
+    }
+
+    // 4. Create project components if provided
+    if (components && Array.isArray(components) && components.length > 0) {
+      for (const component of components) {
+        if (component.name && component.name.trim()) {
+          try {
+            await adminDatabases.createDocument(
+              DB_ID,
+              COL_COMPONENTS,
+              ID.unique(),
+              {
+                projectId: project.$id,
+                name: component.name.trim(),
+                description: component.description?.trim() || null,
+                leaderId: null // Not captured during project creation
+              },
+              permissions // Use same permissions as project
+            );
+          } catch (error) {
+            console.error('[API /projects POST] Failed to create component:', error);
+            // Continue creating other components even if one fails
+          }
+        }
+      }
     }
 
     return NextResponse.json({ project }, { status: 201 });
