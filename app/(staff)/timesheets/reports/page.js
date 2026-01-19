@@ -315,9 +315,9 @@ export default function TimesheetReportsPage() {
             const contentBlocks = Array.from(reportContent.children).filter(child => {
               // Include rows and major container elements
               return child.classList.contains('row') ||
-                     child.tagName === 'CARD' ||
-                     child.classList.contains('mb-4') ||
-                     child.classList.contains('mb-3');
+                child.tagName === 'CARD' ||
+                child.classList.contains('mb-4') ||
+                child.classList.contains('mb-3');
             });
 
             contentBlocks.forEach((block, index) => {
@@ -431,21 +431,31 @@ export default function TimesheetReportsPage() {
 
       // Function to add header
       const addHeader = (doc) => {
-        // Add Header Text (Top Left of Header zone)
-        doc.setFontSize(16);
-        doc.setTextColor(40, 40, 40); // Dark grey
-        doc.text('National Renewable Energy Platform', margin, 18);
+        // Add Timestamp at the very top right
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120); // Light grey
+        const timestamp = `Generated: ${moment().format('MMM DD, YYYY [at] h:mm A')}`;
+        const timestampWidth = doc.getTextWidth(timestamp);
+        doc.text(timestamp, pdfWidth - margin - timestampWidth, 8);
 
-        // Add Logo (Top Right)
+
+        // Add Logo (Top Left)
         if (logoImg.complete && logoImg.naturalHeight !== 0) {
-          // Assuming logo is rectangular, let's fit it within a certain height/width
-          const logoWidth = 30; // mm
+          const logoWidth = 20; // mm - reduced size for subtler appearance
           const logoRatio = logoImg.width / logoImg.height;
           const logoHeight = logoWidth / logoRatio;
 
-          // Position logo at top right, slightly padded
-          doc.addImage(logoImg, 'PNG', pdfWidth - margin - logoWidth, 5, logoWidth, logoHeight);
+          // Position logo at top left
+          doc.addImage(logoImg, 'PNG', margin, 5, logoWidth, logoHeight);
         }
+
+        // Add Header Text (Top Right of Header zone)
+        doc.setFontSize(16);
+        doc.setTextColor(40, 40, 40); // Dark grey
+        const headerText = 'National Renewable Energy Platform';
+        const headerTextWidth = doc.getTextWidth(headerText);
+        doc.text(headerText, pdfWidth - margin - headerTextWidth, 18);
+
 
         // Add a line separator
         doc.setDrawColor(200, 200, 200);
