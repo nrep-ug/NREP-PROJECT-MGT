@@ -28,6 +28,8 @@ export default function NewProjectPage() {
     status: 'planned'
   });
 
+  const [components, setComponents] = useState([]);
+
   useEffect(() => {
     if (user) {
       loadClients();
@@ -56,6 +58,20 @@ export default function NewProjectPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const addComponent = () => {
+    setComponents([...components, { name: '', description: '' }]);
+  };
+
+  const removeComponent = (index) => {
+    setComponents(components.filter((_, i) => i !== index));
+  };
+
+  const handleComponentChange = (index, field, value) => {
+    const updatedComponents = [...components];
+    updatedComponents[index][field] = value;
+    setComponents(updatedComponents);
   };
 
   const handleSubmit = async (e) => {
@@ -87,7 +103,9 @@ export default function NewProjectPage() {
           ...formData,
           budgetAmount: parseFloat(formData.budgetAmount) || 0,
           organizationId: user.organizationId,
-          createdBy: user.authUser.$id
+          createdBy: user.authUser.$id,
+          components: components.filter(c => c.name.trim()), // Only send components with names
+          requesterId: user.authUser.$id
         })
       });
 
@@ -412,6 +430,104 @@ export default function NewProjectPage() {
                 </Form.Group>
               </Col>
             </Row>
+
+            {/* Project Components Section */}
+            <div className="d-flex align-items-center mb-3 mt-4">
+              <div
+                className="rounded-circle d-flex align-items-center justify-content-center me-3"
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+                  boxShadow: '0 2px 8px rgba(139, 92, 246, 0.3)'
+                }}
+              >
+                <i className="bi bi-boxes text-white" style={{ fontSize: '1rem' }}></i>
+              </div>
+              <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#8b5cf6', letterSpacing: '0.5px' }}>
+                Project Components (Optional)
+              </h6>
+            </div>
+
+            {components.length > 0 && (
+              <div className="mb-3">
+                {components.map((component, index) => (
+                  <div key={index} className="mb-3 p-3 bg-light rounded-3 border" style={{ borderColor: '#e5e7eb' }}>
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span className="small fw-semibold text-muted">Component #{index + 1}</span>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-danger p-0"
+                        onClick={() => removeComponent(index)}
+                        disabled={submitting}
+                        style={{ fontSize: '0.9rem' }}
+                      >
+                        <i className="bi bi-trash me-1"></i>
+                        Remove
+                      </Button>
+                    </div>
+                    <Row>
+                      <Col md={4}>
+                        <Form.Group className="mb-2">
+                          <Form.Label className="small fw-medium">Name</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={component.name}
+                            onChange={(e) => handleComponentChange(index, 'name', e.target.value)}
+                            placeholder="e.g., Backend API"
+                            disabled={submitting}
+                            className="bg-white border-0"
+                            style={{ padding: '0.75rem', borderRadius: '8px' }}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={8}>
+                        <Form.Group className="mb-2">
+                          <Form.Label className="small fw-medium">Description</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={component.description}
+                            onChange={(e) => handleComponentChange(index, 'description', e.target.value)}
+                            placeholder="Component description..."
+                            disabled={submitting}
+                            className="bg-white border-0"
+                            style={{ padding: '0.75rem', borderRadius: '8px' }}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <Button
+              variant="outline-secondary"
+              onClick={addComponent}
+              disabled={submitting}
+              className="mb-4 border-2"
+              style={{
+                borderStyle: 'dashed',
+                borderColor: '#8b5cf6',
+                color: '#8b5cf6',
+                borderRadius: '8px',
+                padding: '0.75rem 1.5rem',
+                fontWeight: '500',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                if (!submitting) {
+                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <i className="bi bi-plus-circle me-2"></i>
+              Add Component
+            </Button>
 
             <div className="d-flex justify-content-between align-items-center mt-5 pt-4 border-top">
               <Button

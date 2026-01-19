@@ -13,6 +13,7 @@ export const projectKeys = {
     documents: (projectId) => [...projectKeys.detail(projectId), 'documents'],
     embeds: (projectId) => [...projectKeys.detail(projectId), 'embeds'],
     team: (projectId) => [...projectKeys.detail(projectId), 'team'],
+    components: (projectId) => [...projectKeys.detail(projectId), 'components'],
 };
 
 // --- Projects ---
@@ -151,6 +152,24 @@ export function useProjectMembers(projectId) {
             }
             const data = await response.json();
             return data.members || [];
+        },
+        enabled: !!projectId,
+    });
+}
+
+export function useProjectComponents(projectId) {
+    return useQuery({
+        queryKey: projectKeys.components(projectId),
+        queryFn: async () => {
+            const response = await databases.listDocuments(
+                DB_ID,
+                COLLECTIONS.PROJECT_COMPONENTS,
+                [
+                    Query.equal('projectId', projectId),
+                    Query.orderDesc('$createdAt')
+                ]
+            );
+            return response.documents;
         },
         enabled: !!projectId,
     });
