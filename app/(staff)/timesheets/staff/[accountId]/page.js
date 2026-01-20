@@ -287,17 +287,38 @@ export default function StaffTimesheetsPage() {
                 const response = await fetch('/images/logo.png');
                 if (response.ok) {
                     const blob = await response.blob();
+
+                    // Resize image to reduce PDF size
                     logoData = await new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result);
-                        reader.readAsDataURL(blob);
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const maxWidth = 250; // Resize to smaller dimension
+                            const scale = maxWidth / img.width;
+
+                            // Only resize if significantly larger
+                            if (scale < 1) {
+                                canvas.width = maxWidth;
+                                canvas.height = img.height * scale;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                resolve(canvas.toDataURL('image/png'));
+                            } else {
+                                // Use original if small enough
+                                const reader = new FileReader();
+                                reader.onloadend = () => resolve(reader.result);
+                                reader.readAsDataURL(blob);
+                            }
+                        };
+                        img.onerror = () => resolve(null);
+                        img.src = URL.createObjectURL(blob);
                     });
                 }
             } catch (e) {
                 console.warn("Could not load logo", e);
             }
 
-            const doc = new jsPDF();
+            const doc = new jsPDF({ compress: true });
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
             let yPos = 20;
