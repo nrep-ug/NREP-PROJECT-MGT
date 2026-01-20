@@ -1,6 +1,11 @@
 /**
- * Team Timesheets API - View team members' timesheets for approval
- * GET: Fetch timesheets for team members (managers and admins only)
+ * Team Timesheets API - All Staff Timesheets View
+ * GET: Fetch all staff timesheets based on user role and permissions
+ *
+ * Access levels:
+ * - Admins: All organization staff
+ * - Finance: All organization staff
+ * - Supervisors: Staff they supervise only
  */
 
 import { NextResponse } from 'next/server';
@@ -11,22 +16,30 @@ export const dynamic = 'force-dynamic';
 const COL_TIMESHEETS = 'pms_timesheets';
 const COL_ENTRIES = 'pms_timesheet_entries';
 const COL_USERS = 'pms_users';
-const COL_PROJECTS = 'pms_projects';
 
 /**
  * GET /api/timesheets/team
- * Fetch team timesheets for managers/admins
+ * Fetch all staff timesheets with role-based filtering
  *
- * Admins can see all organization timesheets
- * Project managers can see timesheets for projects they manage
+ * Query params:
+ * - organizationId: Required
+ * - requesterId: Required (account ID of requester)
+ * - viewAs: Optional - 'admin', 'finance', or 'supervisor' to override automatic role detection
+ * - status: Optional filter (submitted, approved, rejected, draft, none)
+ * - weekStart: Optional week filter (defaults to current week)
+ * - department: Optional department filter
+ * - search: Optional search query (name or username)
  */
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
     const requesterId = searchParams.get('requesterId');
-    const status = searchParams.get('status'); // Optional filter: submitted, approved, rejected
-    const weekStart = searchParams.get('weekStart'); // Optional week filter
+    const viewAsParam = searchParams.get('viewAs'); // Optional: 'admin', 'finance', 'supervisor'
+    const statusFilter = searchParams.get('status');
+    const weekStartFilter = searchParams.get('weekStart');
+    const departmentFilter = searchParams.get('department');
+    const searchQuery = searchParams.get('search');
 
     if (!organizationId || !requesterId) {
       return NextResponse.json(
@@ -35,173 +48,277 @@ export async function GET(request) {
       );
     }
 
-    // Check if requester is admin or has manager role on any project
+    // Step 1: Determine user's access level and available views
     const requester = await adminUsers.get(requesterId);
     const isAdmin = requester.labels?.includes('admin');
+    const isFinance = requester.labels?.includes('finance');
 
-    let managedProjectIds = [];
+    // Check if user is a supervisor
+    const supervisedUsers = await adminDatabases.listDocuments(
+      DB_ID,
+      COL_USERS,
+      [
+        Query.equal('supervisedBy', requesterId),
+        Query.equal('organizationId', organizationId),
+        Query.limit(200)
+      ]
+    );
+    const isSupervisor = supervisedUsers.documents.length > 0;
+    const allowedAccountIds = supervisedUsers.documents.map(u => u.accountId);
 
-    if (!isAdmin) {
-      // Check if user is a project manager by checking team memberships
-      const projects = await adminDatabases.listDocuments(DB_ID, COL_PROJECTS, [
-        Query.equal('organizationId', organizationId)
-      ]);
+    // Determine available views for this user
+    const availableViews = [];
+    if (isAdmin) availableViews.push({ value: 'admin', label: 'Admin - All Staff' });
+    if (isFinance) availableViews.push({ value: 'finance', label: 'Finance - All Staff' });
+    if (isSupervisor) availableViews.push({
+      value: 'supervisor',
+      label: `Supervisor - ${allowedAccountIds.length} Supervised Staff`
+    });
 
-      // Check each project's team to see if requester has 'manager' role
-      for (const project of projects.documents) {
-        if (project.projectTeamId) {
-          try {
-            // Get team memberships for this project
-            const memberships = await adminTeams.listMemberships(project.projectTeamId);
+    // If user has no access, deny
+    if (availableViews.length === 0) {
+      return NextResponse.json(
+        { error: 'Unauthorized - only admins, finance staff, and supervisors can view team timesheets' },
+        { status: 403 }
+      );
+    }
 
-            // Check if requester is in this team with 'manager' role
-            const membershipForUser = memberships.memberships.find(
-              m => m.userId === requesterId && m.roles.includes('manager')
-            );
+    // Determine which view to use
+    let accessType = viewAsParam || availableViews[0].value;
 
-            if (membershipForUser) {
-              managedProjectIds.push(project.$id);
-            }
-          } catch (err) {
-            console.error(`Error checking team ${project.projectTeamId}:`, err);
-            // Continue checking other projects
-          }
-        }
+    // Validate that user has permission for the requested view
+    if (!availableViews.find(v => v.value === accessType)) {
+      accessType = availableViews[0].value;
+    }
+
+    // Step 2: Fetch all relevant staff based on access level
+    const staffQueries = [
+      Query.equal('organizationId', organizationId),
+      Query.limit(500) // Reasonable limit
+    ];
+
+    // Filter by supervised staff for supervisors
+    if (accessType === 'supervisor' && allowedAccountIds.length > 0) {
+      staffQueries.push(Query.equal('accountId', allowedAccountIds));
+    }
+
+    // Apply department filter if provided
+    if (departmentFilter) {
+      staffQueries.push(Query.equal('department', departmentFilter));
+    }
+
+    // Apply search filter
+    if (searchQuery) {
+      // Note: Appwrite doesn't support LIKE queries, so we'll filter client-side
+      // For better performance, consider using Algolia or similar for search
+    }
+
+    const staffResponse = await adminDatabases.listDocuments(
+      DB_ID,
+      COL_USERS,
+      staffQueries
+    );
+
+    let allStaff = staffResponse.documents;
+
+    // Client-side search filtering (since Appwrite doesn't support LIKE)
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      allStaff = allStaff.filter(user => {
+        const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
+        const username = (user.username || '').toLowerCase();
+        return fullName.includes(query) || username.includes(query);
+      });
+    }
+
+    // Step 3: Get current week start if not provided
+    let weekStart = weekStartFilter;
+    if (!weekStart) {
+      const now = new Date();
+      const currentWeekStart = new Date(now);
+      currentWeekStart.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+      currentWeekStart.setHours(0, 0, 0, 0);
+      weekStart = currentWeekStart.toISOString().split('T')[0];
+    }
+
+    // Step 4: Fetch timesheets for all staff for the selected week
+    const accountIds = allStaff.map(u => u.accountId);
+
+    let timesheetsResponse = { documents: [] };
+    if (accountIds.length > 0) {
+      const timesheetQueries = [
+        Query.equal('organizationId', organizationId),
+        Query.equal('weekStart', weekStart),
+        Query.equal('accountId', accountIds),
+        Query.limit(500)
+      ];
+
+      timesheetsResponse = await adminDatabases.listDocuments(
+        DB_ID,
+        COL_TIMESHEETS,
+        timesheetQueries
+      );
+    }
+
+    // Create a map of accountId -> timesheet
+    const timesheetsMap = new Map(
+      timesheetsResponse.documents.map(ts => [ts.accountId, ts])
+    );
+
+    // Step 5: Enrich staff data with timesheet information
+    const enrichStaffMember = async (user) => {
+      const timesheet = timesheetsMap.get(user.accountId);
+
+      if (!timesheet) {
+        return {
+          user: {
+            accountId: user.accountId,
+            email: user.email,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            title: user.title,
+            department: user.department
+          },
+          currentWeekTimesheet: null
+        };
       }
 
-      // If not admin and not project manager, return error
-      if (managedProjectIds.length === 0) {
-        return NextResponse.json(
-          { error: 'Unauthorized - only admins and project managers can view team timesheets' },
-          { status: 403 }
+      try {
+        // Fetch entries for this timesheet
+        const entriesResponse = await adminDatabases.listDocuments(
+          DB_ID,
+          COL_ENTRIES,
+          [
+            Query.equal('timesheetId', timesheet.$id),
+            Query.limit(500)
+          ]
+        );
+
+        const entries = entriesResponse.documents;
+        const totalHours = entries.reduce((sum, e) => sum + e.hours, 0);
+        const billableHours = entries.reduce(
+          (sum, e) => (e.billable ? sum + e.hours : sum),
+          0
+        );
+
+        return {
+          user: {
+            accountId: user.accountId,
+            email: user.email,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            title: user.title,
+            department: user.department
+          },
+          currentWeekTimesheet: {
+            timesheetId: timesheet.$id,
+            status: timesheet.status || 'draft',
+            totalHours,
+            billableHours,
+            nonBillableHours: totalHours - billableHours,
+            entriesCount: entries.length,
+            weekStart: timesheet.weekStart,
+            submittedAt: timesheet.submittedAt || null,
+            approvedAt: timesheet.approvedAt || null,
+            approvedBy: timesheet.approvedBy || null
+          }
+        };
+      } catch (error) {
+        console.error(`Failed to enrich staff member ${user.accountId}:`, error);
+        return {
+          user: {
+            accountId: user.accountId,
+            email: user.email,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            title: user.title,
+            department: user.department
+          },
+          currentWeekTimesheet: null
+        };
+      }
+    };
+
+    // Process in batches of 10 for performance
+    const enrichedStaff = [];
+    const batchSize = 10;
+
+    for (let i = 0; i < allStaff.length; i += batchSize) {
+      const batch = allStaff.slice(i, i + batchSize);
+      const enrichedBatch = await Promise.all(batch.map(enrichStaffMember));
+      enrichedStaff.push(...enrichedBatch);
+    }
+
+    // Step 6: Apply status filter
+    let filteredStaff = enrichedStaff;
+    if (statusFilter) {
+      if (statusFilter === 'none') {
+        filteredStaff = enrichedStaff.filter(s => !s.currentWeekTimesheet);
+      } else {
+        filteredStaff = enrichedStaff.filter(
+          s => s.currentWeekTimesheet?.status === statusFilter
         );
       }
     }
 
-    // Build query for timesheets
-    const queries = [];
-
-    // If a specific status is requested
-    if (status) {
-      queries.push(Query.equal('status', status));
-    } else {
-      // By default, show submitted timesheets (pending approval)
-      queries.push(Query.equal('status', 'submitted'));
-    }
-
-    // If a specific week is requested
-    if (weekStart) {
-      queries.push(Query.equal('weekStart', weekStart));
-    }
-
-    // Fetch timesheets
-    const timesheetsResponse = await adminDatabases.listDocuments(
-      DB_ID,
-      COL_TIMESHEETS,
-      queries
-    );
-
-    // Enrich timesheets with user details and entries summary
-    const enrichedTimesheets = await Promise.all(
-      timesheetsResponse.documents.map(async (timesheet) => {
-        try {
-          // Get user profile
-          const userProfiles = await adminDatabases.listDocuments(
-            DB_ID,
-            COL_USERS,
-            [
-              Query.equal('accountId', timesheet.accountId),
-              Query.limit(1)
-            ]
-          );
-
-          const userProfile = userProfiles.documents.length > 0 ? userProfiles.documents[0] : null;
-
-          // Get entries for this timesheet
-          const entriesResponse = await adminDatabases.listDocuments(
-            DB_ID,
-            COL_ENTRIES,
-            [
-              Query.equal('timesheetId', timesheet.$id),
-              Query.orderAsc('workDate')
-            ]
-          );
-
-          // Calculate totals
-          const totalHours = entriesResponse.documents.reduce((sum, entry) => sum + entry.hours, 0);
-          const billableHours = entriesResponse.documents.reduce(
-            (sum, entry) => entry.billable ? sum + entry.hours : sum,
-            0
-          );
-
-          // Get unique projects
-          const projectIds = [...new Set(entriesResponse.documents.map(e => e.projectId))];
-          const projectsInvolved = await Promise.all(
-            projectIds.map(async (projectId) => {
-              try {
-                const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
-                return {
-                  $id: project.$id,
-                  name: project.name,
-                  code: project.code
-                };
-              } catch (err) {
-                return null;
-              }
-            })
-          );
-
-          return {
-            ...timesheet,
-            projectIds, // Keep projectIds for filtering
-            user: userProfile ? {
-              accountId: userProfile.accountId,
-              email: userProfile.email,
-              username: userProfile.username,
-              firstName: userProfile.firstName,
-              lastName: userProfile.lastName,
-              title: userProfile.title
-            } : null,
-            summary: {
-              totalHours,
-              billableHours,
-              nonBillableHours: totalHours - billableHours,
-              entriesCount: entriesResponse.documents.length,
-              projects: projectsInvolved.filter(p => p !== null)
-            }
-          };
-        } catch (error) {
-          console.error(`Failed to enrich timesheet ${timesheet.$id}:`, error);
-          return timesheet;
-        }
-      })
-    );
-
-    // Filter by project manager's managed projects (if not admin)
-    let filteredTimesheets = enrichedTimesheets;
-    if (!isAdmin && managedProjectIds.length > 0) {
-      filteredTimesheets = enrichedTimesheets.filter(timesheet => {
-        // Only show timesheets that have entries from managed projects
-        if (!timesheet.projectIds || timesheet.projectIds.length === 0) {
-          return false;
-        }
-        // Check if any project in the timesheet is managed by this PM
-        return timesheet.projectIds.some(projectId => managedProjectIds.includes(projectId));
-      });
-    }
-
-    // Sort by submission date (most recent first)
-    filteredTimesheets.sort((a, b) => {
-      if (a.submittedAt && b.submittedAt) {
-        return new Date(b.submittedAt) - new Date(a.submittedAt);
+    // Step 7: Calculate statistics
+    const statistics = {
+      totalStaff: filteredStaff.length,
+      withTimesheets: filteredStaff.filter(s => s.currentWeekTimesheet).length,
+      completionRate: 0,
+      totalHours: 0,
+      totalBillableHours: 0,
+      statusBreakdown: {
+        draft: 0,
+        submitted: 0,
+        approved: 0,
+        rejected: 0,
+        none: 0
       }
-      return 0;
+    };
+
+    filteredStaff.forEach(staff => {
+      if (staff.currentWeekTimesheet) {
+        const status = staff.currentWeekTimesheet.status || 'draft';
+        statistics.statusBreakdown[status] = (statistics.statusBreakdown[status] || 0) + 1;
+        statistics.totalHours += staff.currentWeekTimesheet.totalHours || 0;
+        statistics.totalBillableHours += staff.currentWeekTimesheet.billableHours || 0;
+      } else {
+        statistics.statusBreakdown.none += 1;
+      }
     });
 
-    return NextResponse.json({
-      timesheets: filteredTimesheets,
-      total: filteredTimesheets.length
+    if (statistics.totalStaff > 0) {
+      statistics.completionRate = Math.round(
+        (statistics.withTimesheets / statistics.totalStaff) * 100
+      );
+    }
+
+    // Step 8: Sort by staff name
+    filteredStaff.sort((a, b) => {
+      const nameA = `${a.user.firstName || ''} ${a.user.lastName || ''}`.trim();
+      const nameB = `${b.user.firstName || ''} ${b.user.lastName || ''}`.trim();
+      return nameA.localeCompare(nameB);
     });
+
+    return NextResponse.json(
+      {
+        staff: filteredStaff,
+        statistics,
+        accessType,
+        availableViews,
+        weekStart,
+        ...(accessType === 'supervisor' && { supervisedCount: allowedAccountIds.length })
+      },
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=30, stale-while-revalidate=60'
+        }
+      }
+    );
   } catch (error) {
     console.error('[API /timesheets/team GET]', error);
     return NextResponse.json(

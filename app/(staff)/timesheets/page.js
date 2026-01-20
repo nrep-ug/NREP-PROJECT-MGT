@@ -108,8 +108,8 @@ export default function TimesheetsDashboardPage() {
       <Card className="mb-4 border-0 shadow-sm">
         <Card.Body>
           <h5 className="mb-3">Quick Actions</h5>
-          <Row>
-            <Col md={4} className="mb-2 mb-md-0">
+          <Row className="g-3">
+            <Col md={6} lg={3}>
               <Button
                 variant="primary"
                 className="w-100"
@@ -119,18 +119,18 @@ export default function TimesheetsDashboardPage() {
                 My Timesheets
               </Button>
             </Col>
-            <Col md={4} className="mb-2 mb-md-0">
+            <Col md={6} lg={3}>
               <Button
                 variant="outline-info"
                 className="w-100"
                 onClick={() => router.push('/timesheets/reports')}
               >
                 <i className="bi bi-graph-up me-2"></i>
-                Reports & Analytics
+                Reports
               </Button>
             </Col>
             {(user?.isAdmin || user?.isSupervisor) && (
-              <Col md={4}>
+              <Col md={6} lg={3}>
                 <Button
                   variant="outline-success"
                   className="w-100"
@@ -138,6 +138,18 @@ export default function TimesheetsDashboardPage() {
                 >
                   <i className="bi bi-check-square me-2"></i>
                   Approvals
+                </Button>
+              </Col>
+            )}
+            {(user?.isAdmin || user?.isSupervisor || user?.isFinance) && (
+              <Col md={6} lg={3}>
+                <Button
+                  variant="outline-dark"
+                  className="w-100"
+                  onClick={() => router.push('/timesheets/team')}
+                >
+                  <i className="bi bi-people me-2"></i>
+                  All Staff
                 </Button>
               </Col>
             )}

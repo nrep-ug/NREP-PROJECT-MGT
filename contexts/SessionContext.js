@@ -25,8 +25,8 @@ const SessionContext = createContext({
   session: null,
   loading: true,
   error: null,
-  refreshSession: async () => {},
-  clearSession: () => {},
+  refreshSession: async () => { },
+  clearSession: () => { },
 });
 
 export function SessionProvider({ children }) {
@@ -87,6 +87,7 @@ export function SessionProvider({ children }) {
           isAdmin: sessionData.isAdmin || false,
           isStaff: sessionData.isStaff || false,
           isClient: sessionData.isClient || false,
+          isFinance: sessionData.isFinance || false,
 
           // Supervisor information
           isSupervisor: sessionData.isSupervisor || false,
@@ -124,7 +125,7 @@ export function SessionProvider({ children }) {
     setSession(null);
     setError(null);
   };
-  
+
   return (
     <SessionContext.Provider
       value={{
