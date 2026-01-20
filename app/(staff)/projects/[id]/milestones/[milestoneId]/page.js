@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, Button, Row, Col, Badge, Alert, Table, ProgressBar, Dropdown } from 'react-bootstrap';
 import { useAuth } from '@/hooks/useAuth';
 import { databases, COLLECTIONS, DB_ID, Query } from '@/lib/appwriteClient';
+import { useProjectComponents } from '@/hooks/useProjects';
 import AppLayout from '@/components/AppLayout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Toast, { useToast } from '@/components/Toast';
@@ -25,6 +26,9 @@ export default function MilestoneDetailPage() {
       loadData();
     }
   }, [user, params.id, params.milestoneId]);
+
+  // Fetch project components
+  const { data: projectComponents = [] } = useProjectComponents(params.id);
 
   const loadData = async () => {
     try {
@@ -396,6 +400,45 @@ export default function MilestoneDetailPage() {
                   {milestone.status}
                 </Badge>
               </div>
+
+              {milestone.components && milestone.components.length > 0 && (
+                <div className="mt-4 pt-3 border-top">
+                  <h6 className="text-muted mb-3 small fw-bold text-uppercase">Related Components</h6>
+                  <div className="d-flex flex-wrap gap-2">
+                    {milestone.components.map(componentId => {
+                      const component = projectComponents.find(c => c.$id === componentId);
+                      return component ? (
+                        <div
+                          key={componentId}
+                          onClick={() => router.push(`/projects/${project.$id}/components/${component.$id}`)}
+                          className="d-flex align-items-center gap-2 px-3 py-2 rounded-3 border bg-light text-decoration-none"
+                          style={{
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            borderLeft: '4px solid #0ea5e9 !important'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#e0f2fe';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f8f9fa';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                        >
+                          <i className="bi bi-box-seam text-primary fs-5"></i>
+                          <div>
+                            <div className="fw-semibold text-dark" style={{ fontSize: '0.9rem' }}>{component.name}</div>
+                          </div>
+                          <i className="bi bi-chevron-right text-muted ms-2" style={{ fontSize: '0.8rem' }}></i>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              )}
             </Card.Body>
           </Card>
 

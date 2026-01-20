@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, Form, Button, Row, Col, Alert } from 'react-bootstrap';
 import { useAuth } from '@/hooks/useAuth';
 import { databases, COLLECTIONS, DB_ID, ID, Permission, Role } from '@/lib/appwriteClient';
+import { useProjectComponents } from '@/hooks/useProjects';
 import AppLayout from '@/components/AppLayout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Toast, { useToast } from '@/components/Toast';
@@ -24,8 +25,12 @@ export default function NewMilestonePage() {
     status: 'open',
     startDate: '',
     dueDate: '',
-    actualDueDate: ''
+    actualDueDate: '',
+    components: []
   });
+
+  // Fetch project components
+  const { data: projectComponents = [] } = useProjectComponents(params.id);
 
   useEffect(() => {
     if (user && params.id) {
@@ -124,6 +129,7 @@ export default function NewMilestonePage() {
           startDate: formData.startDate || null,
           dueDate: formData.dueDate || null,
           actualDueDate: formData.actualDueDate || null,
+          components: formData.components || [],
           createdBy: user.authUser.$id,
         },
         [
@@ -297,6 +303,37 @@ export default function NewMilestonePage() {
               />
               <Form.Text className="text-muted">
                 Only fill this if the Activity Schedule has been completed
+              </Form.Text>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>
+                Related Components (Optional)
+                <i className="bi bi-info-circle ms-2 text-muted" title="Select components this milestone is related to"></i>
+              </Form.Label>
+              <Form.Select
+                multiple
+                name="components"
+                value={formData.components}
+                onChange={(e) => {
+                  const selected = Array.from(e.target.selectedOptions, option => option.value);
+                  setFormData(prev => ({ ...prev, components: selected }));
+                }}
+                disabled={submitting}
+                style={{ minHeight: '120px' }}
+              >
+                {projectComponents.length === 0 ? (
+                  <option disabled>No components available</option>
+                ) : (
+                  projectComponents.map((component) => (
+                    <option key={component.$id} value={component.$id}>
+                      {component.name}
+                    </option>
+                  ))
+                )}
+              </Form.Select>
+              <Form.Text className="text-muted">
+                Hold Ctrl (Cmd on Mac) to select multiple components. Leave empty if not applicable.
               </Form.Text>
             </Form.Group>
 

@@ -239,9 +239,18 @@ export default function ProjectComponents({ project, user, showToast, canModify,
                                         </div>
 
                                         <div className="flex-grow-1 overflow-hidden">
-                                            <h6 className="mb-1 fw-bold text-truncate" style={{ color: '#1e293b' }}>
-                                                {component.name}
-                                            </h6>
+                                            <div
+                                                className="mb-1 d-flex align-items-center gap-2 cursor-pointer"
+                                                onClick={() => window.location.href = `/projects/${project.$id}/components/${component.$id}`}
+                                                style={{ cursor: 'pointer' }}
+                                                onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                                                onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                                            >
+                                                <h6 className="mb-0 fw-bold text-truncate" style={{ color: '#1e293b' }}>
+                                                    {component.name}
+                                                </h6>
+                                                <i className="bi bi-box-arrow-up-right text-muted" style={{ fontSize: '0.75rem' }}></i>
+                                            </div>
                                             {component.leaderId && (
                                                 <Badge
                                                     bg="info"
