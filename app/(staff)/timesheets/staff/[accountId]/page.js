@@ -277,9 +277,25 @@ export default function StaffTimesheetsPage() {
         }
     };
 
-    const handleExportPDF = () => {
+    const handleExportPDF = async () => {
         try {
             setExportingPDF(true);
+
+            // Fetch Logo
+            let logoData = null;
+            try {
+                const response = await fetch('/images/logo.png');
+                if (response.ok) {
+                    const blob = await response.blob();
+                    logoData = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                }
+            } catch (e) {
+                console.warn("Could not load logo", e);
+            }
 
             const doc = new jsPDF();
             const pageWidth = doc.internal.pageSize.getWidth();
@@ -305,29 +321,47 @@ export default function StaffTimesheetsPage() {
                 }
             };
 
-            // Header
+            // Header - Logo & Org Name
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 15, 10, 15, 15);
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(50, 50, 50);
+                doc.text('National Renewable Energy Platform (NREP)', 35, 19);
+            } else {
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(50, 50, 50);
+                doc.text('National Renewable Energy Platform (NREP)', 15, 19);
+            }
+
+            // Header Divider
+            doc.setDrawColor(...colors.lightGray);
+            doc.setLineWidth(0.5);
+            doc.line(15, 30, pageWidth - 15, 30);
+
+            // Report Title
+            yPos = 45;
             doc.setFontSize(20);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(...colors.primary);
-            doc.text('Timesheet Report', pageWidth / 2, yPos, { align: 'center' });
+            doc.text('Timesheet Report', 15, yPos);
 
             yPos += 10;
             doc.setFontSize(14);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(0, 0, 0);
-            doc.text(`${staffMember?.firstName || ''} ${staffMember?.lastName || ''}`, pageWidth / 2, yPos, { align: 'center' });
+            doc.text(`${staffMember?.firstName || ''} ${staffMember?.lastName || ''}`, 15, yPos);
 
             yPos += 7;
             doc.setFontSize(10);
             doc.setTextColor(...colors.darkGray);
             const staffInfo = [
-
-
                 staffMember?.username ? `@${staffMember.username}` : '',
                 staffMember?.title || '',
                 staffMember?.department || ''
             ].filter(Boolean).join('  |  ');
-            doc.text(staffInfo, pageWidth / 2, yPos, { align: 'center' });
+            doc.text(staffInfo, 15, yPos);
 
             yPos += 10;
             doc.setDrawColor(...colors.lightGray);
