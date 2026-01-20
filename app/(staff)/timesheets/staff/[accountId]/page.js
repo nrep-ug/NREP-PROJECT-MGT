@@ -530,7 +530,7 @@ export default function StaffTimesheetsPage() {
             <AppLayout user={user}>
                 <Alert variant="danger" className="mt-4">
                     <Alert.Heading>Access Denied</Alert.Heading>
-                    <p>You do not have permission to view this staff member's timesheets.</p>
+                    <p>You do not have permission to view this staff member&apos;s timesheets.</p>
                     <Button variant="outline-danger" onClick={() => router.push('/timesheets/team')}>
                         <i className="bi bi-arrow-left me-2"></i>
                         Back to Team Timesheets
@@ -550,7 +550,7 @@ export default function StaffTimesheetsPage() {
                     <div>
                         <div className="d-flex align-items-center gap-2 mb-2">
                             <h2 className="mb-0">
-                                {staffMember?.firstName} {staffMember?.lastName}'s Timesheets
+                                {staffMember?.firstName} {staffMember?.lastName}&apos;s Timesheets
                             </h2>
                             {getAccessBadge()}
                         </div>
