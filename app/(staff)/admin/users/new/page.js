@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, Form, Button, Row, Col, Alert, InputGroup, Badge, Modal, Container } from 'react-bootstrap';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { databases, Query, COLLECTIONS, DB_ID } from '@/lib/appwriteClient';
 import AppLayout from '@/components/AppLayout';
 import Toast, { useToast } from '@/components/Toast';
 
@@ -24,23 +25,64 @@ export default function NewUserPage() {
     department: '',
     clientOrganizationIds: [],
     projectIds: [],
-    sendEmail: true
+    sendEmail: true,
+    isSupervisor: false,
+    isFinance: false,
+    supervisorId: ''
   });
 
   const [clientOrganizations, setClientOrganizations] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [supervisors, setSupervisors] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [createdUser, setCreatedUser] = useState(null);
   const [showInstructionModal, setShowInstructionModal] = useState(true);
 
-  // Load client organizations and projects on mount
+  // Load client organizations, projects, and supervisors on mount
   useEffect(() => {
-    if (user?.organizationId) {
+    if (user?.isAdmin) {
       loadData();
     }
   }, [user]);
+
+  const loadData = async () => {
+    setLoadingData(true);
+    try {
+      // Parallel data fetching
+      const [orgsRes, projectsRes, supervisorsRes] = await Promise.all([
+        fetch(`/api/admin/organizations?requesterId=${user.authUser.$id}&type=client`),
+        fetch(`/api/projects?organizationId=${user.organizationId}`),
+        databases.listDocuments(
+          DB_ID,
+          COLLECTIONS.USERS,
+          [
+            Query.equal('isSupervisor', true),
+            Query.orderAsc('firstName')
+          ]
+        )
+      ]);
+
+      if (orgsRes.ok) {
+        const data = await orgsRes.json();
+        setClientOrganizations(data.organizations || []);
+      }
+
+      if (projectsRes.ok) {
+        const data = await projectsRes.json();
+        setProjects(data.projects || []);
+      }
+
+      setSupervisors(supervisorsRes.documents || []);
+
+    } catch (error) {
+      console.error('Failed to load form data:', error);
+      showToast('Failed to load some form data', 'warning');
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   // Check if user is admin
   if (!authLoading && user && !user.isAdmin) {
@@ -53,31 +95,6 @@ export default function NewUserPage() {
       </AppLayout>
     );
   }
-
-  const loadData = async () => {
-    try {
-      setLoadingData(true);
-
-      // Load client organizations
-      const clientsResponse = await fetch(`/api/clients?organizationId=${user.organizationId}`);
-      if (clientsResponse.ok) {
-        const clientsData = await clientsResponse.json();
-        setClientOrganizations(clientsData.clients || []);
-      }
-
-      // Load projects
-      const projectsResponse = await fetch(`/api/projects?organizationId=${user.organizationId}`);
-      if (projectsResponse.ok) {
-        const projectsData = await projectsResponse.json();
-        setProjects(projectsData.projects || []);
-      }
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      showToast('Failed to load client organizations and projects', 'warning');
-    } finally {
-      setLoadingData(false);
-    }
-  };
 
   // Validate form
   const validateForm = () => {
@@ -166,7 +183,10 @@ export default function NewUserPage() {
         department: '',
         clientOrganizationIds: [],
         projectIds: [],
-        sendEmail: true
+        sendEmail: true,
+        isSupervisor: false,
+        isFinance: false,
+        supervisorId: ''
       });
       setValidationErrors({});
 
@@ -235,8 +255,8 @@ export default function NewUserPage() {
             <Col md={6}>
               <div
                 className={`p-4 border rounded-4 h-100 cursor-pointer transition-all text-center position-relative overflow-hidden ${formData.userType === 'staff'
-                    ? 'border-primary shadow-sm ring-2 ring-primary ring-opacity-50'
-                    : 'border-light-subtle hover-shadow-md'
+                  ? 'border-primary shadow-sm ring-2 ring-primary ring-opacity-50'
+                  : 'border-light-subtle hover-shadow-md'
                   }`}
                 style={{
                   cursor: 'pointer',
@@ -278,8 +298,8 @@ export default function NewUserPage() {
             <Col md={6}>
               <div
                 className={`p-4 border rounded-4 h-100 cursor-pointer transition-all text-center position-relative overflow-hidden ${formData.userType === 'client'
-                    ? 'border-secondary shadow-sm ring-2 ring-secondary ring-opacity-50'
-                    : 'border-light-subtle hover-shadow-md'
+                  ? 'border-secondary shadow-sm ring-2 ring-secondary ring-opacity-50'
+                  : 'border-light-subtle hover-shadow-md'
                   }`}
                 style={{
                   cursor: 'pointer',
@@ -797,6 +817,71 @@ export default function NewUserPage() {
                               />
                               <small className="text-muted d-block ps-4">Full system access and configuration.</small>
                             </div>
+                          </div>
+
+                          <div className="mt-3 pt-3 border-top">
+                            <Row className="g-3">
+                              <Col md={12}>
+                                <Form.Group className="mb-0">
+                                  <Form.Label className="small fw-medium">Assign Supervisor</Form.Label>
+                                  <Form.Select
+                                    name="supervisorId"
+                                    value={formData.supervisorId || ''}
+                                    onChange={(e) => setFormData({ ...formData, supervisorId: e.target.value })}
+                                  >
+                                    <option value="">Select Supervisor</option>
+                                    {supervisors.map(supervisor => (
+                                      <option key={supervisor.$id} value={supervisor.accountId}>
+                                        {supervisor.firstName} {supervisor.lastName}
+                                      </option>
+                                    ))}
+                                  </Form.Select>
+                                  <Form.Text className="text-muted">
+                                    Optional. Assign a supervisor to manage this user's timesheets and approvals.
+                                  </Form.Text>
+                                </Form.Group>
+                              </Col>
+                            </Row>
+                          </div>
+
+                          <div className="mt-3 pt-3 border-top">
+                            <Form.Label className="small fw-medium d-block mb-2">Additional Privileges</Form.Label>
+                            <Row className="g-3">
+                              <Col md={6}>
+                                <div
+                                  className={`p-3 rounded border cursor-pointer transition-all ${formData.isSupervisor ? 'border-info bg-white shadow-sm' : 'border-transparent'}`}
+                                  onClick={() => setFormData({ ...formData, isSupervisor: !formData.isSupervisor })}
+                                  style={{ cursor: 'pointer' }}
+                                >
+                                  <Form.Check
+                                    type="checkbox"
+                                    id="isSupervisor"
+                                    label={<span className="fw-bold text-info">Supervisor</span>}
+                                    checked={formData.isSupervisor}
+                                    onChange={() => { }}
+                                    className="mb-1"
+                                  />
+                                  <small className="text-muted d-block ps-4">Can view timesheets of supervised staff.</small>
+                                </div>
+                              </Col>
+                              <Col md={6}>
+                                <div
+                                  className={`p-3 rounded border cursor-pointer transition-all ${formData.isFinance ? 'border-primary bg-white shadow-sm' : 'border-transparent'}`}
+                                  onClick={() => setFormData({ ...formData, isFinance: !formData.isFinance })}
+                                  style={{ cursor: 'pointer' }}
+                                >
+                                  <Form.Check
+                                    type="checkbox"
+                                    id="isFinance"
+                                    label={<span className="fw-bold text-primary">Finance</span>}
+                                    checked={formData.isFinance}
+                                    onChange={() => { }}
+                                    className="mb-1"
+                                  />
+                                  <small className="text-muted d-block ps-4">Can manage organization-wide finances and reports.</small>
+                                </div>
+                              </Col>
+                            </Row>
                           </div>
                         </div>
                       )}

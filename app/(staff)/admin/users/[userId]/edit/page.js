@@ -26,16 +26,37 @@ export default function EditUserPage() {
   const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSupervisor, setIsSupervisor] = useState(false);
+  const [isFinance, setIsFinance] = useState(false);
+  const [supervisorId, setSupervisorId] = useState('');
   const [clientOrganizationIds, setClientOrganizationIds] = useState([]);
   const [clientOrganizations, setClientOrganizations] = useState([]);
+  const [supervisors, setSupervisors] = useState([]);
   const [userRole, setUserRole] = useState(null); // 'staff' or 'client'
 
   useEffect(() => {
     if (user?.isAdmin && userId) {
       loadUserData();
       loadClientOrganizations();
+      loadSupervisors();
     }
   }, [user, userId]);
+
+  const loadSupervisors = async () => {
+    try {
+      const response = await databases.listDocuments(
+        DB_ID,
+        COLLECTIONS.USERS,
+        [
+          Query.equal('isSupervisor', true),
+          Query.orderAsc('firstName')
+        ]
+      );
+      setSupervisors(response.documents || []);
+    } catch (err) {
+      console.error('Failed to load supervisors:', err);
+    }
+  };
 
   const loadUserData = async () => {
     try {
@@ -64,6 +85,9 @@ export default function EditUserPage() {
       setTitle(userDoc.title || '');
       setDepartment(userDoc.department || '');
       setIsAdmin(userDoc.isAdmin || false);
+      setIsSupervisor(userDoc.isSupervisor || false);
+      setIsFinance(userDoc.isFinance || false);
+      setSupervisorId(userDoc.supervisorId || '');
       setClientOrganizationIds(userDoc.clientOrganizationIds || []);
 
       // Determine user role from role array
@@ -119,6 +143,9 @@ export default function EditUserPage() {
       if (userRole === 'staff') {
         updateData.department = department;
         updateData.isAdmin = isAdmin;
+        updateData.isSupervisor = isSupervisor;
+        updateData.isFinance = isFinance;
+        updateData.supervisorId = supervisorId;
       } else if (userRole === 'client') {
         updateData.clientOrganizationIds = clientOrganizationIds;
       }
@@ -272,15 +299,14 @@ export default function EditUserPage() {
               <p className="text-muted small mb-3">@{userData.username}</p>
               <Badge bg={getStatusBadge(userData.status)} className="mb-2">
                 <i
-                  className={`bi ${
-                    userData.status === 'active'
-                      ? 'bi-check-circle'
-                      : userData.status === 'invited'
+                  className={`bi ${userData.status === 'active'
+                    ? 'bi-check-circle'
+                    : userData.status === 'invited'
                       ? 'bi-clock'
                       : userData.status === 'suspended'
-                      ? 'bi-x-circle'
-                      : 'bi-dash-circle'
-                  } me-1`}
+                        ? 'bi-x-circle'
+                        : 'bi-dash-circle'
+                    } me-1`}
                 ></i>
                 {userData.status}
               </Badge>
@@ -414,6 +440,65 @@ export default function EditUserPage() {
                             to {isAdmin ? "['staff']" : "['staff', 'admin']"}.
                           </Form.Text>
                         </Form.Group>
+                      </Card.Body>
+                    </Card>
+
+                    <Card className="border mb-3">
+                      <Card.Body>
+                        <Form.Label className="small fw-medium d-block mb-2">Additional Privileges</Form.Label>
+                        <Row className="g-3">
+                          <Col md={12}>
+                            <Form.Group className="mb-3">
+                              <Form.Label className="small fw-medium">Assign Supervisor</Form.Label>
+                              <Form.Select
+                                value={supervisorId}
+                                onChange={(e) => setSupervisorId(e.target.value)}
+                              >
+                                <option value="">Select Supervisor</option>
+                                {supervisors.map(supervisor => (
+                                  <option key={supervisor.$id} value={supervisor.accountId}>
+                                    {supervisor.firstName} {supervisor.lastName}
+                                  </option>
+                                ))}
+                              </Form.Select>
+                              <Form.Text className="text-muted">
+                                Optional. Assign a supervisor to manage this user's timesheets and approvals.
+                              </Form.Text>
+                            </Form.Group>
+                          </Col>
+                          <Col md={6}>
+                            <Form.Check
+                              type="checkbox"
+                              id="isSupervisor"
+                              label={
+                                <span>
+                                  <span className="fw-bold text-info">Supervisor</span>
+                                </span>
+                              }
+                              checked={isSupervisor}
+                              onChange={(e) => setIsSupervisor(e.target.checked)}
+                              disabled={saving}
+                              className="mb-1"
+                            />
+                            <small className="text-muted d-block ps-4">Can view timesheets of supervised staff.</small>
+                          </Col>
+                          <Col md={6}>
+                            <Form.Check
+                              type="checkbox"
+                              id="isFinance"
+                              label={
+                                <span>
+                                  <span className="fw-bold text-primary">Finance</span>
+                                </span>
+                              }
+                              checked={isFinance}
+                              onChange={(e) => setIsFinance(e.target.checked)}
+                              disabled={saving}
+                              className="mb-1"
+                            />
+                            <small className="text-muted d-block ps-4">Can manage organization-wide finances and reports.</small>
+                          </Col>
+                        </Row>
                       </Card.Body>
                     </Card>
                   </>

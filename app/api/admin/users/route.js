@@ -42,7 +42,9 @@ export async function POST(request) {
       clientOrganizationIds = [], // Array of client organization IDs (for client users)
       projectIds = [],            // Array of project IDs to assign user to (for client users)
       sendEmail = true,
-      requesterId // ID of the user making the request (for authorization)
+      requesterId, // ID of the user making the request (for authorization)
+      isSupervisor = false,
+      isFinance = false
     } = body;
 
     // Validate required fields
@@ -147,6 +149,21 @@ export async function POST(request) {
       }
     }
 
+    // Add additional privilege labels
+    if (isSupervisor) {
+      labels.push('supervisor');
+      if (!roleArray.includes('supervisor')) roleArray.push('supervisor');
+    }
+
+    if (isFinance) {
+      labels.push('finance');
+      if (!roleArray.includes('finance')) roleArray.push('finance');
+    }
+
+    // Ensure unique labels
+    labels = [...new Set(labels)];
+    roleArray = [...new Set(roleArray)];
+
     try {
       await adminUsers.updateLabels(user.$id, labels);
     } catch (e) {
@@ -197,6 +214,9 @@ export async function POST(request) {
         department: department || null,
         timezone: 'Africa/Kampala',
         isAdmin: roleArray.includes('admin'), // For easy querying
+        isSupervisor: !!isSupervisor,
+        isFinance: !!isFinance,
+        supervisorId: body.supervisorId || null,
         clientOrganizationIds: roleArray.includes('client') ? clientOrganizationIds : []
       },
       permissions

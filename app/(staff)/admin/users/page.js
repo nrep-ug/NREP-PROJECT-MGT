@@ -66,6 +66,10 @@ export default function AdminUsersPage() {
     // Role filter
     if (roleFilter) {
       filtered = filtered.filter(u => {
+        // Handle special boolean roles
+        if (roleFilter === 'supervisor') return u.isSupervisor;
+        if (roleFilter === 'finance') return u.isFinance;
+
         // role is now an array, check if it includes the filter value
         if (Array.isArray(u.role)) {
           return u.role.includes(roleFilter);
@@ -492,6 +496,8 @@ export default function AdminUsersPage() {
                 <option value="">All Roles</option>
                 <option value="staff">Staff</option>
                 <option value="client">Client</option>
+                <option value="supervisor">Supervisor</option>
+                <option value="finance">Finance</option>
               </Form.Select>
             </Col>
             <Col md={3}>
@@ -640,15 +646,14 @@ export default function AdminUsersPage() {
                             style={{ fontSize: '0.75rem', fontWeight: '500', padding: '0.35rem 0.65rem' }}
                           >
                             <i
-                              className={`bi ${
-                                u.status === 'active'
+                              className={`bi ${u.status === 'active'
                                   ? 'bi-check-circle'
                                   : u.status === 'invited'
-                                  ? 'bi-clock'
-                                  : u.status === 'suspended'
-                                  ? 'bi-x-circle'
-                                  : 'bi-dash-circle'
-                              } me-1`}
+                                    ? 'bi-clock'
+                                    : u.status === 'suspended'
+                                      ? 'bi-x-circle'
+                                      : 'bi-dash-circle'
+                                } me-1`}
                             ></i>
                             {u.status}
                           </Badge>

@@ -28,8 +28,11 @@ export async function PATCH(request, { params }) {
       // Staff-specific
       department,
       isAdmin, // boolean - whether user should have admin role
+      isSupervisor, // boolean - whether user should have supervisor role
+      isFinance, // boolean - whether user should have finance role
       // Client-specific
-      clientOrganizationIds
+      clientOrganizationIds,
+      supervisorId // ID of the supervisor user
     } = body;
 
     if (!requesterId) {
@@ -57,7 +60,7 @@ export async function PATCH(request, { params }) {
     // Client users: ['client']
     let newRoleArray = null;
 
-    if (role === 'staff' && isAdmin !== undefined) {
+    if (role === 'staff') {
       const currentLabels = user.labels || [];
       let newLabels = [...currentLabels];
 
@@ -66,17 +69,35 @@ export async function PATCH(request, { params }) {
         newLabels.push('staff');
       }
 
-      if (isAdmin) {
-        // Add admin label if not present
-        if (!newLabels.includes('admin')) {
-          newLabels.push('admin');
+      // Handle Admin
+      if (isAdmin !== undefined) {
+        if (isAdmin) {
+          if (!newLabels.includes('admin')) newLabels.push('admin');
+        } else {
+          newLabels = newLabels.filter(label => label !== 'admin');
         }
-        newRoleArray = ['staff', 'admin'];
-      } else {
-        // Remove admin label but keep staff label
-        newLabels = newLabels.filter(label => label !== 'admin');
-        newRoleArray = ['staff'];
       }
+
+      // Handle Supervisor
+      if (isSupervisor !== undefined) {
+        if (isSupervisor) {
+          if (!newLabels.includes('supervisor')) newLabels.push('supervisor');
+        } else {
+          newLabels = newLabels.filter(label => label !== 'supervisor');
+        }
+      }
+
+      // Handle Finance
+      if (isFinance !== undefined) {
+        if (isFinance) {
+          if (!newLabels.includes('finance')) newLabels.push('finance');
+        } else {
+          newLabels = newLabels.filter(label => label !== 'finance');
+        }
+      }
+
+      // Update role array based on final labels
+      newRoleArray = [...newLabels];
 
       // Update Appwrite labels if changed
       if (JSON.stringify(newLabels.sort()) !== JSON.stringify(currentLabels.sort())) {
@@ -98,10 +119,20 @@ export async function PATCH(request, { params }) {
     if (status !== undefined) dbUpdates.status = status;
     if (title !== undefined) dbUpdates.title = title;
 
-    // Update role array and isAdmin flag
+    // Update role array and role flags
     if (newRoleArray) {
       dbUpdates.role = newRoleArray;
       dbUpdates.isAdmin = newRoleArray.includes('admin');
+    }
+
+    if (isSupervisor !== undefined) dbUpdates.isSupervisor = isSupervisor;
+    if (isFinance !== undefined) dbUpdates.isFinance = isFinance;
+
+    // Update supervisorId
+    // If supervisorId is explicitly passed (even as empty string), update it
+    // Convert empty string to null for storage
+    if (supervisorId !== undefined) {
+      dbUpdates.supervisorId = supervisorId || null;
     }
 
     if (role === 'staff') {
