@@ -607,7 +607,7 @@ export default function AdminUsersPage() {
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Name</th>
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Email</th>
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>User Type</th>
-                      <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Role</th>
+                      <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Roles</th>
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Status</th>
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Title</th>
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Actions</th>
@@ -644,7 +644,6 @@ export default function AdminUsersPage() {
                           <div>
                             <div style={{ fontWeight: '500', color: '#212529' }}>
                               {u.firstName} {u.lastName}
-                              {u.isAdmin && <Badge bg="danger" className="ms-2" style={{ fontSize: '0.65rem' }}>ADMIN</Badge>}
                             </div>
                             {u.otherNames && (
                               <div className="text-muted small">{u.otherNames}</div>
@@ -665,13 +664,26 @@ export default function AdminUsersPage() {
                           </Badge>
                         </td>
                         <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
-                          <Badge
-                            bg={getRoleBadge(Array.isArray(u.role) ? (u.role.includes('client') ? 'client' : 'staff') : u.role)}
-                            style={{ fontSize: '0.75rem', fontWeight: '500', padding: '0.35rem 0.65rem' }}
-                          >
-                            <i className={`bi ${Array.isArray(u.role) && u.role.includes('client') ? 'bi-person' : 'bi-briefcase'} me-1`}></i>
-                            {Array.isArray(u.role) ? (u.role.includes('client') ? 'client' : 'staff') : u.role}
-                          </Badge>
+                          <div className="d-flex flex-wrap gap-1">
+                            {u.isAdmin && (
+                              <Badge bg="danger" style={{ fontSize: '0.75rem', fontWeight: '500', padding: '0.35rem 0.65rem' }}>
+                                Admin
+                              </Badge>
+                            )}
+                            {u.isSupervisor && (
+                              <Badge bg="info" text="dark" style={{ fontSize: '0.75rem', fontWeight: '500', padding: '0.35rem 0.65rem' }}>
+                                Supervisor
+                              </Badge>
+                            )}
+                            {u.isFinance && (
+                              <Badge bg="warning" text="dark" style={{ fontSize: '0.75rem', fontWeight: '500', padding: '0.35rem 0.65rem' }}>
+                                Finance
+                              </Badge>
+                            )}
+                            {!u.isAdmin && !u.isSupervisor && !u.isFinance && (
+                              <span className="text-muted small">-</span>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                           <Badge
