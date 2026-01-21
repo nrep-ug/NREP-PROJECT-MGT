@@ -1,48 +1,49 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Row, Col, Card, Badge, Form, InputGroup, Alert, Button } from 'react-bootstrap';
+import { Row, Col, Card, Badge, Form, InputGroup, Button, Table, ButtonGroup } from 'react-bootstrap';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { databases, Query, COLLECTIONS, DB_ID } from '@/lib/appwriteClient';
 import { formatDate } from '@/lib/date';
 import AppLayout from '@/components/AppLayout';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import Toast, { useToast } from '@/components/Toast';
 
 export default function ClientProjectsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { toast, showToast, hideToast } = useToast();
+
   const [projects, setProjects] = useState([]);
-  const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+
+  // UI State
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('grid');
 
+  // Data Loading
   useEffect(() => {
     if (user && user.profile?.clientOrganizationIds) {
       loadProjects();
+    } else if (user && !user.profile?.clientOrganizationIds && !authLoading) {
+      setLoading(false); // No orgs, just stop loading
     }
-  }, [user]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [projects, searchTerm, statusFilter]);
+  }, [user, authLoading]);
 
   const loadProjects = async () => {
     try {
       setLoading(true);
-
-      // Get client organization IDs
       const clientOrgIds = user.profile.clientOrganizationIds || [];
 
       if (clientOrgIds.length === 0) {
-        setError('No client organizations associated with your account');
+        setProjects([]);
         setLoading(false);
         return;
       }
 
-      // Load all projects belonging to this client
+      // Load projects strictly for this client
       const projectsResponse = await databases.listDocuments(
         DB_ID,
         COLLECTIONS.PROJECTS,
@@ -52,68 +53,55 @@ export default function ClientProjectsPage() {
           Query.limit(100)
         ]
       );
-
       setProjects(projectsResponse.documents);
-      setFilteredProjects(projectsResponse.documents);
     } catch (err) {
       console.error('Failed to load projects:', err);
-      setError('Failed to load projects');
+      showToast('Failed to load projects', 'danger');
     } finally {
       setLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...projects];
+  // derived state
+  const filteredProjects = projects.filter(project => {
+    const matchesSearch =
+      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    // Apply search filter
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (project) =>
-          project.name.toLowerCase().includes(search) ||
-          project.code.toLowerCase().includes(search) ||
-          (project.description && project.description.toLowerCase().includes(search))
-      );
-    }
+    const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((project) => project.status === statusFilter);
-    }
+    return matchesSearch && matchesStatus;
+  });
 
-    setFilteredProjects(filtered);
+  const stats = {
+    total: projects.length,
+    active: projects.filter(p => p.status === 'active').length,
+    completed: projects.filter(p => p.status === 'completed').length,
+    planned: projects.filter(p => p.status === 'planned').length,
   };
 
   const getStatusVariant = (status) => {
     switch (status) {
-      case 'active':
-        return 'success';
-      case 'completed':
-        return 'info';
-      case 'on_hold':
-        return 'warning';
-      case 'cancelled':
-        return 'danger';
-      default:
-        return 'secondary';
+      case 'active': return 'success';
+      case 'completed': return 'info';
+      case 'on_hold': return 'warning';
+      case 'cancelled': return 'danger';
+      case 'planned': return 'secondary';
+      default: return 'secondary';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'active':
-        return 'play-circle';
-      case 'completed':
-        return 'check-circle';
-      case 'on_hold':
-        return 'pause-circle';
-      case 'cancelled':
-        return 'x-circle';
-      default:
-        return 'circle';
+      case 'active': return 'play-circle';
+      case 'completed': return 'check-circle';
+      case 'on_hold': return 'pause-circle';
+      case 'cancelled': return 'x-circle';
+      default: return 'circle';
     }
   };
+
 
   if (authLoading || loading) {
     return (
@@ -123,166 +111,238 @@ export default function ClientProjectsPage() {
     );
   }
 
-  if (error) {
-    return (
-      <AppLayout user={user}>
-        <Alert variant="danger">
-          <i className="bi bi-exclamation-triangle me-2"></i>
-          {error}
-        </Alert>
-      </AppLayout>
-    );
-  }
-
   return (
     <AppLayout user={user}>
-      {/* Header */}
-      <div className="mb-4">
-        <div className="d-flex justify-content-between align-items-center">
-          <div>
-            <h2>Your Projects</h2>
-            <p className="text-muted mb-0">View and track all your projects</p>
-          </div>
-          <Button variant="outline-secondary" onClick={() => router.push('/client/dashboard')}>
-            <i className="bi bi-arrow-left me-2"></i>
-            Back to Dashboard
-          </Button>
-        </div>
-      </div>
+      <Toast toast={toast} onClose={hideToast} />
 
-      {/* Filters */}
-      <Card className="border-0 shadow-sm mb-4">
-        <Card.Body>
-          <Row>
+      {/* Hero Header */}
+      <Card className="border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)' }}>
+        <Card.Body className="text-white p-4">
+          <Row className="align-items-center">
             <Col md={8}>
-              <Form.Group>
-                <InputGroup>
-                  <InputGroup.Text>
-                    <i className="bi bi-search"></i>
-                  </InputGroup.Text>
-                  <Form.Control
-                    type="text"
-                    placeholder="Search by project name, code, or description..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </InputGroup>
-              </Form.Group>
+              <h2 className="mb-2">
+                <i className="bi bi-folder-check me-3"></i>
+                My Projects
+              </h2>
+              <p className="mb-0 opacity-90">
+                Track status and progress of your active projects
+              </p>
             </Col>
-            <Col md={4}>
-              <Form.Group>
-                <Form.Select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+            {/* Client specific badge or info could go here */}
+          </Row>
+        </Card.Body>
+      </Card>
+
+      {/* Statistics Cards */}
+      <Row className="mb-4 g-3">
+        <Col lg={4} md={4}>
+          <Card className="border-0 shadow-sm h-100" style={{ borderRadius: '12px' }}>
+            <Card.Body className="p-4">
+              <div className="d-flex align-items-center mb-2">
+                <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" style={{ width: '48px', height: '48px' }}>
+                  <i className="bi bi-folder text-primary fs-4"></i>
+                </div>
+                <div>
+                  <h3 className="mb-0 fw-bold">{stats.total}</h3>
+                  <div className="text-muted small">Total Projects</div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col lg={4} md={4}>
+          <Card className="border-0 shadow-sm h-100" style={{ borderRadius: '12px' }}>
+            <Card.Body className="p-4">
+              <div className="d-flex align-items-center mb-2">
+                <div className="rounded-circle bg-success-subtle d-flex align-items-center justify-content-center me-3" style={{ width: '48px', height: '48px' }}>
+                  <i className="bi bi-play-circle text-success fs-4"></i>
+                </div>
+                <div>
+                  <h3 className="mb-0 fw-bold">{stats.active}</h3>
+                  <div className="text-muted small">Active</div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col lg={4} md={4}>
+          <Card className="border-0 shadow-sm h-100" style={{ borderRadius: '12px' }}>
+            <Card.Body className="p-4">
+              <div className="d-flex align-items-center mb-2">
+                <div className="rounded-circle bg-info-subtle d-flex align-items-center justify-content-center me-3" style={{ width: '48px', height: '48px' }}>
+                  <i className="bi bi-check-circle text-info fs-4"></i>
+                </div>
+                <div>
+                  <h3 className="mb-0 fw-bold">{stats.completed}</h3>
+                  <div className="text-muted small">Completed</div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Filters & Search */}
+      <Card className="border-0 shadow-sm mb-4" style={{ borderRadius: '12px' }}>
+        <Card.Body className="p-4">
+          <Row className="g-3 align-items-center">
+            <Col md={5}>
+              <InputGroup>
+                <InputGroup.Text className="bg-white border-end-0">
+                  <i className="bi bi-search"></i>
+                </InputGroup.Text>
+                <Form.Control
+                  type="text"
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="border-start-0"
+                />
+              </InputGroup>
+            </Col>
+            <Col md={5}>
+              <div className="d-flex gap-2 flex-wrap">
+                {['all', 'active', 'completed'].map(status => (
+                  <Button
+                    key={status}
+                    variant={statusFilter === status ? 'primary' : 'outline-secondary'}
+                    size="sm"
+                    onClick={() => setStatusFilter(status)}
+                    className="text-capitalize rounded-pill px-3"
+                  >
+                    {status}
+                  </Button>
+                ))}
+              </div>
+            </Col>
+            <Col md={2} className="text-end">
+              <ButtonGroup>
+                <Button
+                  variant={viewMode === 'grid' ? 'primary' : 'outline-secondary'}
+                  onClick={() => setViewMode('grid')}
+                  size="sm"
                 >
-                  <option value="all">All Statuses</option>
-                  <option value="active">Active</option>
-                  <option value="completed">Completed</option>
-                  <option value="on_hold">On Hold</option>
-                  <option value="cancelled">Cancelled</option>
-                </Form.Select>
-              </Form.Group>
+                  <i className="bi bi-grid-3x3-gap"></i>
+                </Button>
+                <Button
+                  variant={viewMode === 'table' ? 'primary' : 'outline-secondary'}
+                  onClick={() => setViewMode('table')}
+                  size="sm"
+                >
+                  <i className="bi bi-table"></i>
+                </Button>
+              </ButtonGroup>
+            </Col>
+          </Row>
+          <Row className="mt-3">
+            <Col>
+              <small className="text-muted">
+                Showing <strong>{filteredProjects.length}</strong> of <strong>{projects.length}</strong> projects
+              </small>
             </Col>
           </Row>
         </Card.Body>
       </Card>
 
-      {/* Projects Count */}
-      <div className="mb-3">
-        <small className="text-muted">
-          Showing {filteredProjects.length} of {projects.length} project{projects.length !== 1 ? 's' : ''}
-        </small>
-      </div>
-
-      {/* Projects Grid */}
+      {/* Projects Display */}
       {filteredProjects.length === 0 ? (
-        <Card className="border-0 shadow-sm">
+        <Card className="border-0 shadow-sm" style={{ borderRadius: '12px' }}>
           <Card.Body className="text-center py-5">
-            <div className="mb-3">
-              <i className="bi bi-inbox" style={{ fontSize: '3rem', opacity: 0.3 }}></i>
+            <div className="mb-3 text-muted opacity-25">
+              <i className="bi bi-folder-x" style={{ fontSize: '3rem' }}></i>
             </div>
             <h5>No Projects Found</h5>
-            <p className="text-muted mb-0">
-              {searchTerm || statusFilter !== 'all'
-                ? 'Try adjusting your filters'
-                : 'No projects are currently associated with your account'}
+            <p className="text-muted">
+              {searchTerm ? 'Try adjusting your search filters' : 'You are not assigned to any projects at the moment.'}
             </p>
           </Card.Body>
         </Card>
-      ) : (
-        <Row>
+      ) : viewMode === 'grid' ? (
+        <Row className="g-4">
           {filteredProjects.map((project) => (
-            <Col key={project.$id} md={6} lg={4} className="mb-4">
+            <Col key={project.$id} md={6} lg={4}>
               <Card
-                className="border-0 shadow-sm h-100"
-                style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-4px)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                className="border-0 shadow-sm h-100 project-card"
+                style={{ borderRadius: '12px', cursor: 'pointer', transition: 'transform 0.2s' }}
                 onClick={() => router.push(`/client/projects/${project.$id}`)}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
               >
-                <Card.Body>
+                <Card.Body className="p-4 d-flex flex-column">
                   <div className="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                      <div className="text-muted small mb-1">
-                        <i className="bi bi-folder me-1"></i>
-                        {project.code}
-                      </div>
-                      <h5 className="mb-0">{project.name}</h5>
-                    </div>
+                    <Badge bg="light" text="dark" className="border">
+                      {project.code}
+                    </Badge>
                     <Badge bg={getStatusVariant(project.status)} className="text-uppercase" style={{ fontSize: '0.7rem' }}>
                       <i className={`bi bi-${getStatusIcon(project.status)} me-1`}></i>
-                      {project.status.replace('_', ' ')}
+                      {project.status?.replace('_', ' ')}
                     </Badge>
                   </div>
 
+                  <h5 className="fw-bold mb-2">{project.name}</h5>
                   {project.description && (
-                    <p className="text-muted small mb-3" style={{
+                    <p className="text-muted small mb-3 flex-grow-1" style={{
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      overflow: 'hidden'
                     }}>
                       {project.description}
                     </p>
                   )}
 
                   <div className="border-top pt-3 mt-auto">
-                    <Row className="g-2">
-                      <Col xs={6}>
-                        <div className="text-muted small">
-                          <i className="bi bi-calendar-event me-1"></i>
-                          Start
-                        </div>
-                        <div className="small">
-                          {project.startDate ? formatDate(project.startDate) : 'Not set'}
-                        </div>
-                      </Col>
-                      <Col xs={6}>
-                        <div className="text-muted small">
-                          <i className="bi bi-calendar-check me-1"></i>
-                          End
-                        </div>
-                        <div className="small">
-                          {project.endDate ? formatDate(project.endDate) : 'Not set'}
-                        </div>
-                      </Col>
-                    </Row>
+                    <div className="d-flex align-items-center text-muted small">
+                      <i className="bi bi-calendar-event me-2"></i>
+                      {project.startDate ? formatDate(project.startDate) : 'TBD'}
+                      {project.endDate && ` - ${formatDate(project.endDate)}`}
+                    </div>
                   </div>
                 </Card.Body>
-                <Card.Footer className="bg-light border-0">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <small className="text-muted">
-                      <i className="bi bi-clock me-1"></i>
-                      Created {formatDate(project.$createdAt)}
-                    </small>
-                    <i className="bi bi-arrow-right text-primary"></i>
-                  </div>
-                </Card.Footer>
               </Card>
             </Col>
           ))}
         </Row>
+      ) : (
+        <Card className="border-0 shadow-sm" style={{ borderRadius: '12px' }}>
+          <div className="table-responsive">
+            <Table hover className="mb-0">
+              <thead className="bg-light">
+                <tr>
+                  <th className="py-3 px-4 border-0">Code</th>
+                  <th className="py-3 border-0">Project</th>
+                  <th className="py-3 border-0">Status</th>
+                  <th className="py-3 border-0">Timeline</th>
+                  {/* No Budget Column */}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProjects.map((project) => (
+                  <tr
+                    key={project.$id}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => router.push(`/client/projects/${project.$id}`)}
+                  >
+                    <td className="py-3 px-4">
+                      <Badge bg="light" text="dark" className="border">{project.code}</Badge>
+                    </td>
+                    <td className="py-3">
+                      <span className="fw-medium">{project.name}</span>
+                    </td>
+                    <td className="py-3">
+                      <Badge bg={getStatusVariant(project.status)} className="text-uppercase" style={{ fontSize: '0.7rem' }}>
+                        {project.status?.replace('_', ' ')}
+                      </Badge>
+                    </td>
+                    <td className="py-3 text-muted small">
+                      {project.startDate ? formatDate(project.startDate) : ''}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        </Card>
       )}
     </AppLayout>
   );

@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { databases, Query, COLLECTIONS, DB_ID } from '@/lib/appwriteClient';
 import UserProfileView from '@/components/user/UserProfileView';
 import Toast, { useToast } from '@/components/Toast';
-import ClientLayout from '../layout'; // Using the layout from parent dir
+import AppLayout from '@/components/AppLayout';
 
 export default function ClientProfilePage() {
     const { user, loading: authLoading } = useAuth();
@@ -59,21 +59,23 @@ export default function ClientProfilePage() {
 
     if (authLoading || loading) {
         return (
-            <div className="min-vh-100 d-flex align-items-center justify-content-center">
-                <Spinner animation="border" />
-                <p className="ms-2 mb-0 text-muted">Loading your profile...</p>
-            </div>
+            <AppLayout user={user}>
+                <div className="text-center py-5">
+                    <Spinner animation="border" />
+                    <p className="mt-2 text-muted">Loading your profile...</p>
+                </div>
+            </AppLayout>
         );
     }
 
     return (
-        <div className="container py-4">
+        <AppLayout user={user}>
             <Toast toast={toast} onClose={hideToast} />
             <div className="mb-4">
                 <h1 className="h3 mb-3">My Profile</h1>
             </div>
 
             <UserProfileView user={profileData} />
-        </div>
+        </AppLayout>
     );
 }
