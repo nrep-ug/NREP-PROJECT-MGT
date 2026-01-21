@@ -30,14 +30,17 @@ export default function EditUserPage() {
   const [isFinance, setIsFinance] = useState(false);
   const [supervisorId, setSupervisorId] = useState('');
   const [clientOrganizationIds, setClientOrganizationIds] = useState([]);
+  const [projectIds, setProjectIds] = useState([]);
   const [clientOrganizations, setClientOrganizations] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [supervisors, setSupervisors] = useState([]);
   const [userRole, setUserRole] = useState(null); // 'staff' or 'client'
 
   useEffect(() => {
     if (user?.isAdmin && userId) {
       loadUserData();
-      loadClientOrganizations();
+      // Load both orgs and projects potentially needed
+      loadClientData();
       loadSupervisors();
     }
   }, [user, userId]);
@@ -89,6 +92,7 @@ export default function EditUserPage() {
       setIsFinance(userDoc.isFinance || false);
       setSupervisorId(userDoc.supervisorId || '');
       setClientOrganizationIds(userDoc.clientOrganizationIds || []);
+      setProjectIds(userDoc.projectIds || []);
 
       // Determine user role from role array
       // role is now an array: ['staff'], ['staff', 'admin'], or ['client']
@@ -108,15 +112,29 @@ export default function EditUserPage() {
     }
   };
 
-  const loadClientOrganizations = async () => {
+  const loadClientData = async () => {
     try {
-      const response = await fetch(`/api/admin/organizations?requesterId=${user.authUser.$id}&type=client`);
-      if (response.ok) {
-        const data = await response.json();
+      // Fetch Organizations
+      const orgsResponse = await fetch(`/api/admin/organizations?requesterId=${user.authUser.$id}&type=client`);
+      if (orgsResponse.ok) {
+        const data = await orgsResponse.json();
         setClientOrganizations(data.organizations || []);
       }
+
+      // Fetch Projects (for the admin's organization scope)
+      // Note: We'll filter these later based on selected client orgs if needed, 
+      // or simply show projects that belong to the selected client orgs.
+      // Fetching all projects for now might be heavy if there are many, 
+      // but for filtering purposes we need them available.
+      // Better approach: Fetch projects where organizationId == admin's org (already doing this for scoped access)
+      const projectsResponse = await fetch(`/api/projects?organizationId=${user.organizationId}`);
+      if (projectsResponse.ok) {
+        const data = await projectsResponse.json();
+        setProjects(data.projects || []);
+      }
+
     } catch (err) {
-      console.error('Failed to load client organizations:', err);
+      console.error('Failed to load client data:', err);
     }
   };
 
@@ -148,6 +166,7 @@ export default function EditUserPage() {
         updateData.supervisorId = supervisorId;
       } else if (userRole === 'client') {
         updateData.clientOrganizationIds = clientOrganizationIds;
+        updateData.projectIds = projectIds;
       }
 
       const response = await fetch(`/api/admin/users/${userId}`, {
@@ -506,49 +525,108 @@ export default function EditUserPage() {
 
                 {/* Client-specific fields */}
                 {userRole === 'client' && (
-                  <Form.Group className="mb-3">
-                    <Form.Label className="fw-semibold">Client Organizations</Form.Label>
-                    <Card className="border">
-                      <Card.Body style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                        {clientOrganizations.length === 0 ? (
-                          <div className="text-center text-muted py-3">
-                            <i className="bi bi-building" style={{ fontSize: '2rem', opacity: 0.3 }}></i>
-                            <p className="mb-0 mt-2">No client organizations found</p>
-                          </div>
-                        ) : (
-                          clientOrganizations.map(org => (
-                            <Form.Check
-                              key={org.$id}
-                              type="checkbox"
-                              id={`org-${org.$id}`}
-                              label={
-                                <div>
-                                  <div className="fw-semibold">{org.name}</div>
-                                  {org.industry && (
-                                    <small className="text-muted">{org.industry}</small>
-                                  )}
-                                </div>
-                              }
-                              checked={clientOrganizationIds.includes(org.$id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setClientOrganizationIds([...clientOrganizationIds, org.$id]);
-                                } else {
-                                  setClientOrganizationIds(clientOrganizationIds.filter(id => id !== org.$id));
+                  <>
+                    <Form.Group className="mb-4">
+                      <Form.Label className="fw-semibold">Client Organizations</Form.Label>
+                      <Card className="border">
+                        <Card.Body style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                          {clientOrganizations.length === 0 ? (
+                            <div className="text-center text-muted py-3">
+                              <i className="bi bi-building" style={{ fontSize: '1.5rem', opacity: 0.3 }}></i>
+                              <p className="mb-0 mt-2 small">No client organizations found</p>
+                            </div>
+                          ) : (
+                            clientOrganizations.map(org => (
+                              <Form.Check
+                                key={org.$id}
+                                type="checkbox"
+                                id={`org-${org.$id}`}
+                                label={
+                                  <div>
+                                    <div className="fw-medium">{org.name}</div>
+                                  </div>
                                 }
-                              }}
-                              disabled={saving}
-                              className="mb-3 pb-3 border-bottom"
-                            />
-                          ))
-                        )}
-                      </Card.Body>
-                    </Card>
-                    <Form.Text className="text-muted">
-                      <i className="bi bi-info-circle me-1"></i>
-                      Select which client organizations this user belongs to
-                    </Form.Text>
-                  </Form.Group>
+                                checked={clientOrganizationIds.includes(org.$id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setClientOrganizationIds([...clientOrganizationIds, org.$id]);
+                                  } else {
+                                    const newIds = clientOrganizationIds.filter(id => id !== org.$id);
+                                    setClientOrganizationIds(newIds);
+                                    // Deselect projects belonging to this org? 
+                                    // Optional enhancement: Currently we keep projects selected but they won't show
+                                  }
+                                }}
+                                disabled={saving}
+                                className="mb-2"
+                              />
+                            ))
+                          )}
+                        </Card.Body>
+                      </Card>
+                      <Form.Text className="text-muted">
+                        Select organizations this user represents.
+                      </Form.Text>
+                    </Form.Group>
+
+                    <Form.Group className="mb-3">
+                      <Form.Label className="fw-semibold">Project Access</Form.Label>
+                      <Card className="border">
+                        <Card.Body style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                          {clientOrganizationIds.length === 0 ? (
+                            <div className="text-center text-muted py-4">
+                              <i className="bi bi-arrow-up-circle" style={{ fontSize: '1.5rem', opacity: 0.3 }}></i>
+                              <p className="mb-0 mt-2 small">Select a client organization above to view projects</p>
+                            </div>
+                          ) : (
+                            <>
+                              {projects
+                                .filter(p => p.clientId && clientOrganizationIds.includes(p.clientId))
+                                .length === 0 ? (
+                                <div className="text-center text-muted py-3">
+                                  <p className="mb-0 small">No projects found for selected organizations</p>
+                                </div>
+                              ) : (
+                                projects
+                                  .filter(p => p.clientId && clientOrganizationIds.includes(p.clientId))
+                                  .map(project => (
+                                    <Form.Check
+                                      key={project.$id}
+                                      type="checkbox"
+                                      id={`proj-${project.$id}`}
+                                      label={
+                                        <div>
+                                          <div className="fw-medium">{project.name}</div>
+                                          <div className="d-flex gap-2 small text-muted">
+                                            <span>{project.code}</span>
+                                            <span>•</span>
+                                            <span>{clientOrganizations.find(c => c.$id === project.clientId)?.name}</span>
+                                          </div>
+                                        </div>
+                                      }
+                                      checked={projectIds.includes(project.$id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setProjectIds([...projectIds, project.$id]);
+                                        } else {
+                                          setProjectIds(projectIds.filter(id => id !== project.$id));
+                                        }
+                                      }}
+                                      disabled={saving}
+                                      className="mb-3 pb-2 border-bottom"
+                                    />
+                                  ))
+                              )
+                              }
+                            </>
+                          )}
+                        </Card.Body>
+                      </Card>
+                      <Form.Text className="text-muted">
+                        Select specific projects this user can access.
+                      </Form.Text>
+                    </Form.Group>
+                  </>
                 )}
 
                 {/* Action buttons */}

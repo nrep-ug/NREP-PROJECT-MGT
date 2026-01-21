@@ -314,6 +314,7 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
+    const clientOrganizationId = searchParams.get('clientOrganizationId');
 
     if (!organizationId) {
       return NextResponse.json(
@@ -322,13 +323,19 @@ export async function GET(request) {
       );
     }
 
+    const queries = [Query.equal('organizationId', organizationId)];
+
+    // Filter users belonging to a specific client organization
+    // For array attributes, Query.equal checks if the array contains the value
+    if (clientOrganizationId) {
+      queries.push(Query.equal('clientOrganizationIds', clientOrganizationId));
+    }
+
     // Fetch all users in the organization
     const users = await adminDatabases.listDocuments(
       DB_ID,
       COL_USERS,
-      [
-        Query.equal('organizationId', organizationId)
-      ]
+      queries
     );
 
     // Fetch auth user details for each user to get their labels

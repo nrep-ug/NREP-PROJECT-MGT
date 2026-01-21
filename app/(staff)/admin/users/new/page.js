@@ -1046,73 +1046,92 @@ export default function NewUserPage() {
                                   overflowX: 'hidden'
                                 }}
                               >
-                                {projects.length === 0 ? (
-                                  <div className="text-center py-4">
-                                    <i className="bi bi-folder-x" style={{ fontSize: '2rem', opacity: 0.3, color: '#14B8A6' }}></i>
-                                    <p className="text-muted small mb-0 mt-2">No projects available</p>
+                                {formData.clientOrganizationIds.length === 0 ? (
+                                  <div className="text-center py-4 px-3 bg-light rounded-3 border border-light-subtle">
+                                    <i className="bi bi-building-exclamation text-muted" style={{ fontSize: '1.5rem', opacity: 0.5 }}></i>
+                                    <p className="text-muted small mb-0 mt-2">
+                                      Please select an <strong>Organization</strong> first to view compatible projects.
+                                    </p>
                                   </div>
                                 ) : (
-                                  <div className="d-flex flex-column gap-2">
-                                    {projects.map(project => {
-                                      const isSelected = formData.projectIds.includes(project.$id);
+                                  <>
+                                    {(() => {
+                                      const filteredProjects = projects.filter(p => formData.clientOrganizationIds.includes(p.clientId));
+
+                                      if (filteredProjects.length === 0) {
+                                        return (
+                                          <div className="text-center py-4">
+                                            <i className="bi bi-folder-x" style={{ fontSize: '2rem', opacity: 0.3, color: '#14B8A6' }}></i>
+                                            <p className="text-muted small mb-0 mt-2">No projects found for selected organizations</p>
+                                          </div>
+                                        );
+                                      }
+
                                       return (
-                                        <div
-                                          key={project.$id}
-                                          onClick={() => setFormData({
-                                            ...formData,
-                                            projectIds: toggleArrayItem(formData.projectIds, project.$id)
+                                        <div className="d-flex flex-column gap-2">
+                                          {filteredProjects.map(project => {
+                                            const isSelected = formData.projectIds.includes(project.$id);
+                                            return (
+                                              <div
+                                                key={project.$id}
+                                                onClick={() => setFormData({
+                                                  ...formData,
+                                                  projectIds: toggleArrayItem(formData.projectIds, project.$id)
+                                                })}
+                                                className="d-flex align-items-center p-3 rounded-3"
+                                                style={{
+                                                  backgroundColor: isSelected ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                                                  border: isSelected ? '2px solid #14B8A6' : '2px solid transparent',
+                                                  cursor: 'pointer',
+                                                  transition: 'all 0.2s ease',
+                                                  boxShadow: isSelected ? '0 2px 8px rgba(20, 184, 166, 0.2)' : 'none'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                  if (!isSelected) {
+                                                    e.currentTarget.style.backgroundColor = 'white';
+                                                    e.currentTarget.style.borderColor = '#99f6e4';
+                                                  }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                  if (!isSelected) {
+                                                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
+                                                    e.currentTarget.style.borderColor = 'transparent';
+                                                  }
+                                                }}
+                                              >
+                                                <div
+                                                  className="rounded d-flex align-items-center justify-content-center me-3 flex-shrink-0"
+                                                  style={{
+                                                    width: '20px',
+                                                    height: '20px',
+                                                    border: isSelected ? '2px solid #14B8A6' : '2px solid #cbd5e1',
+                                                    backgroundColor: isSelected ? '#14B8A6' : 'white',
+                                                    transition: 'all 0.2s ease'
+                                                  }}
+                                                >
+                                                  {isSelected && (
+                                                    <i className="bi bi-check text-white" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}></i>
+                                                  )}
+                                                </div>
+                                                <div className="flex-grow-1">
+                                                  <div className="fw-semibold" style={{ color: '#14B8A6', fontSize: '0.85rem' }}>
+                                                    {project.code}
+                                                  </div>
+                                                  <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: '2px' }}>
+                                                    {project.name}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            );
                                           })}
-                                          className="d-flex align-items-center p-3 rounded-3"
-                                          style={{
-                                            backgroundColor: isSelected ? 'white' : 'rgba(255, 255, 255, 0.5)',
-                                            border: isSelected ? '2px solid #14B8A6' : '2px solid transparent',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease',
-                                            boxShadow: isSelected ? '0 2px 8px rgba(20, 184, 166, 0.2)' : 'none'
-                                          }}
-                                          onMouseEnter={(e) => {
-                                            if (!isSelected) {
-                                              e.currentTarget.style.backgroundColor = 'white';
-                                              e.currentTarget.style.borderColor = '#99f6e4';
-                                            }
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            if (!isSelected) {
-                                              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
-                                              e.currentTarget.style.borderColor = 'transparent';
-                                            }
-                                          }}
-                                        >
-                                          <div
-                                            className="rounded d-flex align-items-center justify-content-center me-3 flex-shrink-0"
-                                            style={{
-                                              width: '20px',
-                                              height: '20px',
-                                              border: isSelected ? '2px solid #14B8A6' : '2px solid #cbd5e1',
-                                              backgroundColor: isSelected ? '#14B8A6' : 'white',
-                                              transition: 'all 0.2s ease'
-                                            }}
-                                          >
-                                            {isSelected && (
-                                              <i className="bi bi-check text-white" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}></i>
-                                            )}
-                                          </div>
-                                          <div className="flex-grow-1">
-                                            <div className="fw-semibold" style={{ color: '#14B8A6', fontSize: '0.85rem' }}>
-                                              {project.code}
-                                            </div>
-                                            <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: '2px' }}>
-                                              {project.name}
-                                            </div>
-                                          </div>
                                         </div>
                                       );
-                                    })}
-                                  </div>
+                                    })()}
+                                  </>
                                 )}
                               </div>
 
-                              {projects.length > 0 && (
+                              {formData.projectIds.length > 0 && (
                                 <div className="mt-3 p-2 bg-white rounded text-center">
                                   <small className="text-muted">
                                     <i className="bi bi-check-circle me-1" style={{ color: '#14B8A6' }}></i>

@@ -80,9 +80,8 @@ export async function PUT(request, { params }) {
       name,
       code,
       primaryContactId,
-      contactName,         // Legacy field (optional)
-      contactEmail,        // Legacy field (optional)
-      contactPhone,        // Legacy field (optional)
+      email,               // Organization email
+      phone,               // Organization phone
       address,
       website,
       notes,
@@ -150,9 +149,8 @@ export async function PUT(request, { params }) {
     if (name !== undefined) updateData.name = name;
     if (code !== undefined) updateData.code = code || null;
     if (primaryContactId !== undefined) updateData.primaryContactId = primaryContactId || null;
-    if (contactName !== undefined) updateData.contactName = contactName || null;
-    if (contactEmail !== undefined) updateData.contactEmail = contactEmail || null;
-    if (contactPhone !== undefined) updateData.contactPhone = contactPhone || null;
+    if (email !== undefined) updateData.email = email || null;
+    if (phone !== undefined) updateData.phone = phone || null;
     if (address !== undefined) updateData.address = address || null;
     if (website !== undefined) updateData.website = website || null;
     if (notes !== undefined) updateData.notes = notes || null;

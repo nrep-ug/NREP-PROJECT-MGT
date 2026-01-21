@@ -86,10 +86,9 @@ export async function POST(request) {
       organizationId,
       name,
       code,
-      primaryContactId,    // NEW: Reference to user account
-      contactName,         // Legacy field (optional)
-      contactEmail,        // Legacy field (optional)
-      contactPhone,        // Legacy field (optional)
+      primaryContactId,    // Reference to user account
+      email,               // Organization email
+      phone,               // Organization phone
       address,
       website,
       notes,
@@ -165,9 +164,8 @@ export async function POST(request) {
       name,
       code: code || null,
       primaryContactId: primaryContactId || null,
-      contactName: contactName || null,         // Legacy field
-      contactEmail: contactEmail || null,       // Legacy field
-      contactPhone: contactPhone || null,       // Legacy field
+      email: email || null,
+      phone: phone || null,
       address: address || null,
       website: website || null,
       notes: notes || null,

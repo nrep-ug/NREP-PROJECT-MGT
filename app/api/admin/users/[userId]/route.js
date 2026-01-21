@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, DB_ID } from '@/lib/appwriteAdmin';
+import { adminDatabases, adminUsers, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
 
 const COL_USERS = 'pms_users';
 
@@ -53,6 +53,21 @@ export async function PATCH(request, { params }) {
 
     // Get current user from Appwrite
     const user = await adminUsers.get(userId);
+
+    // Get user document from database (Moved up to be available for Project logic)
+    const existingUserDocs = await adminDatabases.listDocuments(
+      DB_ID,
+      COL_USERS,
+      [Query.equal('accountId', userId), Query.limit(1)]
+    );
+
+    if (existingUserDocs.documents.length === 0) {
+      return NextResponse.json(
+        { error: 'User document not found in database' },
+        { status: 404 }
+      );
+    }
+    const userDoc = existingUserDocs.documents[0];
 
     // Handle role and label updates for staff users
     // role field in database is now an array matching Appwrite labels
@@ -139,21 +154,55 @@ export async function PATCH(request, { params }) {
       if (department !== undefined) dbUpdates.department = department;
     } else if (role === 'client') {
       if (clientOrganizationIds !== undefined) dbUpdates.clientOrganizationIds = clientOrganizationIds;
-    }
 
-    // Get user document from database
-    const userDocs = await adminDatabases.listDocuments(
-      DB_ID,
-      COL_USERS,
-      []
-    );
-    const userDoc = userDocs.documents.find(doc => doc.accountId === userId);
+      // Handle Project Assignments (for Client Users)
+      if (body.projectIds !== undefined) {
+        dbUpdates.projectIds = body.projectIds;
 
-    if (!userDoc) {
-      return NextResponse.json(
-        { error: 'User document not found in database' },
-        { status: 404 }
-      );
+        // Sync Project Team Memberships
+        const currentProjectIds = userDoc.projectIds || [];
+        const newProjectIds = body.projectIds || [];
+
+        // Projects to Add
+        const projectsToAdd = newProjectIds.filter(id => !currentProjectIds.includes(id));
+        for (const projectId of projectsToAdd) {
+          try {
+            const project = await adminDatabases.getDocument(DB_ID, 'pms_projects', projectId);
+            if (project.projectTeamId) {
+              await adminTeams.createMembership(
+                project.projectTeamId,
+                ['client_rep'],
+                undefined,
+                userId
+              );
+            }
+          } catch (err) {
+            console.error(`Failed to add user to project ${projectId}:`, err);
+            // Continue even if fail
+          }
+        }
+
+        // Projects to Remove
+        const projectsToRemove = currentProjectIds.filter(id => !newProjectIds.includes(id));
+        for (const projectId of projectsToRemove) {
+          try {
+            const project = await adminDatabases.getDocument(DB_ID, 'pms_projects', projectId);
+            // Need to find membership ID first to delete it
+            // This is tricky without listing memberships.
+            // Alternative: List memberships of the team and find the user.
+            if (project.projectTeamId) {
+              const memberships = await adminTeams.listMemberships(project.projectTeamId, [
+                Query.equal('userId', userId)
+              ]);
+              if (memberships.memberships.length > 0) {
+                await adminTeams.deleteMembership(project.projectTeamId, memberships.memberships[0].$id);
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to remove user from project ${projectId}:`, err);
+          }
+        }
+      }
     }
 
     // Update database record

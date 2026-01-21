@@ -19,6 +19,9 @@ export default function ClientsPage() {
   // Filter clients by search term
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.primaryContact?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.primaryContact?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.primaryContact?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -134,14 +137,16 @@ export default function ClientsPage() {
       </Card>
 
       {/* Clients Table */}
-      <Card className="border-0 shadow-sm">
-        <Card.Body>
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <Card.Body className="p-0">
           {filteredClients.length === 0 ? (
             <div className="text-center py-5">
               {clients.length === 0 ? (
                 <>
                   <div className="mb-3">
-                    <i className="bi bi-people" style={{ fontSize: '4rem', opacity: 0.3 }}></i>
+                    <div className="d-inline-flex align-items-center justify-content-center bg-light rounded-circle" style={{ width: '80px', height: '80px' }}>
+                      <i className="bi bi-people" style={{ fontSize: '2.5rem', opacity: 0.5 }}></i>
+                    </div>
                   </div>
                   <h5>No Client Organizations Yet</h5>
                   <p className="text-muted">
@@ -159,7 +164,7 @@ export default function ClientsPage() {
               ) : (
                 <>
                   <div className="mb-3">
-                    <i className="bi bi-search" style={{ fontSize: '4rem', opacity: 0.3 }}></i>
+                    <i className="bi bi-search" style={{ fontSize: '3rem', opacity: 0.3 }}></i>
                   </div>
                   <h5>No Clients Found</h5>
                   <p className="text-muted">Try adjusting your search criteria</p>
@@ -168,87 +173,133 @@ export default function ClientsPage() {
             </div>
           ) : (
             <div className="table-responsive">
-              <Table hover>
-                <thead className="table-light">
+              <Table hover className="mb-0 aligned-table">
+                <thead className="bg-light">
                   <tr>
-                    <th>Organization Name</th>
-                    <th>Code</th>
-                    <th>Primary Contact</th>
-                    <th>Contact Email</th>
-                    <th>Status</th>
-                    <th className="text-center">Actions</th>
+                    <th className="py-3 ps-4 border-0">Organization</th>
+                    <th className="py-3 border-0">Contact Info</th>
+                    <th className="py-3 border-0">Primary Person</th>
+                    <th className="py-3 border-0">Status</th>
+                    <th className="py-3 pe-4 border-0 text-center" style={{ width: '100px' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredClients.map((client) => (
                     <tr key={client.$id}>
-                      <td>
-                        <div>
-                          <strong>{client.name}</strong>
-                          {client.website && (
-                            <div className="small text-muted">
-                              <a href={client.website} target="_blank" rel="noopener noreferrer" className="text-decoration-none">
-                                <i className="bi bi-link-45deg me-1"></i>
-                                {client.website}
-                              </a>
+                      <td className="ps-4 align-middle">
+                        <div className="d-flex align-items-center">
+                          <div className="rounded d-flex align-items-center justify-content-center me-3 text-white fw-bold shadow-sm"
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
+                              fontSize: '1rem'
+                            }}>
+                            {client.name.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="fw-bold text-dark">{client.name}</div>
+                            <div className="d-flex gap-2 align-items-center mt-1">
+                              {client.code && (
+                                <Badge bg="light" text="dark" className="border">
+                                  {client.code}
+                                </Badge>
+                              )}
+                              {client.website && (
+                                <a href={client.website} target="_blank" rel="noopener noreferrer" className="text-muted text-decoration-none small" title="Visit Website">
+                                  <i className="bi bi-globe me-1"></i>
+                                  Website
+                                </a>
+                              )}
                             </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="align-middle">
+                        <div className="d-flex flex-column gap-1">
+                          {client.email ? (
+                            <a href={`mailto:${client.email}`} className="text-decoration-none text-body small">
+                              <i className="bi bi-envelope text-muted me-2"></i>
+                              {client.email}
+                            </a>
+                          ) : (
+                            <span className="text-muted small fst-italic ps-1">No email</span>
+                          )}
+
+                          {client.phone ? (
+                            <span className="small text-body">
+                              <i className="bi bi-telephone text-muted me-2"></i>
+                              {client.phone}
+                            </span>
+                          ) : (
+                            <span className="text-muted small fst-italic ps-1">No phone</span>
                           )}
                         </div>
                       </td>
-                      <td>
-                        {client.code ? (
-                          <Badge bg="secondary">{client.code}</Badge>
-                        ) : (
-                          <span className="text-muted">-</span>
-                        )}
-                      </td>
-                      <td>
+                      <td className="align-middle">
                         {client.primaryContact ? (
-                          <div>
-                            <div>{client.primaryContact.firstName} {client.primaryContact.lastName}</div>
-                            <small className="text-muted">@{client.primaryContact.username}</small>
-                            {client.primaryContact.title && (
-                              <div className="small text-muted">{client.primaryContact.title}</div>
-                            )}
+                          <div className="d-flex align-items-center">
+                            <div className="rounded-circle bg-light d-flex align-items-center justify-content-center me-2 border"
+                              style={{ width: '32px', height: '32px' }}>
+                              <i className="bi bi-person text-secondary"></i>
+                            </div>
+                            <div>
+                              <div className="small fw-semibold">{client.primaryContact.firstName} {client.primaryContact.lastName}</div>
+                              <a href={`mailto:${client.primaryContact.email}`} className="text-muted text-decoration-none small d-block">
+                                {client.primaryContact.email}
+                              </a>
+                            </div>
                           </div>
                         ) : client.contactName ? (
-                          <div>
-                            <div>{client.contactName}</div>
-                            <small className="text-muted">(Legacy contact)</small>
+                          <div className="text-muted small">
+                            <div><i className="bi bi-person me-1"></i> {client.contactName}</div>
+                            {client.contactEmail && <div>{client.contactEmail}</div>}
+                            <div className="fst-italic scale-80">(Legacy)</div>
                           </div>
                         ) : (
-                          <span className="text-muted">No contact assigned</span>
+                          <Badge bg="light" text="secondary" className="fw-normal border">
+                            Not Assigned
+                          </Badge>
                         )}
                       </td>
-                      <td>
-                        {client.primaryContact?.email ? (
-                          <a href={`mailto:${client.primaryContact.email}`} className="text-decoration-none">
-                            {client.primaryContact.email}
-                          </a>
-                        ) : client.contactEmail ? (
-                          <a href={`mailto:${client.contactEmail}`} className="text-decoration-none">
-                            {client.contactEmail} <small className="text-muted">(legacy)</small>
-                          </a>
-                        ) : (
-                          <span className="text-muted">-</span>
-                        )}
-                      </td>
-                      <td>
-                        <Badge bg={client.status === 'active' ? 'success' : client.status === 'inactive' ? 'secondary' : 'danger'}>
+                      <td className="align-middle">
+                        <Badge
+                          bg={client.status === 'active' ? 'success' : client.status === 'inactive' ? 'secondary' : 'warning'}
+                          className="text-uppercase"
+                          style={{
+                            letterSpacing: '0.5px',
+                            fontSize: '0.7rem',
+                            opacity: 0.9
+                          }}
+                        >
                           {client.status || 'active'}
                         </Badge>
                       </td>
-                      <td className="text-center">
-                        {user?.isAdmin && (
+                      <td className="align-middle pe-4 text-center">
+                        <div className="d-flex justify-content-center gap-2">
                           <Button
                             size="sm"
-                            variant="outline-primary"
-                            onClick={() => router.push(`/clients/${client.$id}/edit`)}
-                            title="Edit client organization"
+                            variant="light"
+                            className="text-primary border-0 shadow-sm"
+                            onClick={() => router.push(`/clients/${client.$id}`)}
+                            title="View Details"
+                            style={{ width: '32px', height: '32px', padding: 0 }}
                           >
-                            <i className="bi bi-pencil"></i>
+                            <i className="bi bi-eye-fill" style={{ fontSize: '0.9rem' }}></i>
                           </Button>
-                        )}
+                          {user?.isAdmin && (
+                            <Button
+                              size="sm"
+                              variant="light"
+                              className="text-primary border-0 shadow-sm"
+                              onClick={() => router.push(`/clients/${client.$id}/edit`)}
+                              title="Edit Details"
+                              style={{ width: '32px', height: '32px', padding: 0 }}
+                            >
+                              <i className="bi bi-pencil-fill" style={{ fontSize: '0.9rem' }}></i>
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

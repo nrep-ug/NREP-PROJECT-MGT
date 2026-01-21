@@ -17,6 +17,8 @@ export default function EditClientPage() {
     name: '',
     code: '',
     primaryContactId: '',
+    email: '',
+    phone: '',
     address: '',
     website: '',
     notes: '',
@@ -65,6 +67,8 @@ export default function EditClientPage() {
         name: client.name || '',
         code: client.code || '',
         primaryContactId: client.primaryContactId || '',
+        email: client.email || '',
+        phone: client.phone || '',
         address: client.address || '',
         website: client.website || '',
         notes: client.notes || '',
@@ -106,6 +110,10 @@ export default function EditClientPage() {
 
     if (!formData.name || formData.name.trim().length < 2) {
       errors.name = 'Client organization name is required (min 2 characters)';
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
     }
 
     if (formData.website && !isValidUrl(formData.website)) {
@@ -261,6 +269,37 @@ export default function EditClientPage() {
                 placeholder="Street address, city, country"
               />
             </Form.Group>
+
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Email Address</Form.Label>
+                  <Form.Control
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    disabled={submitting}
+                    placeholder="info@company.com"
+                    isInvalid={!!validationErrors.email}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {validationErrors.email}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Phone Number</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    disabled={submitting}
+                    placeholder="+1 234 567 890"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
 
             <Row>
               <Col md={6}>

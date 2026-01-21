@@ -17,6 +17,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
     const status = searchParams.get('status');
+    const clientId = searchParams.get('clientId');
 
     if (!organizationId) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
@@ -25,6 +26,9 @@ export async function GET(request) {
     const queries = [Query.equal('organizationId', organizationId)];
     if (status) {
       queries.push(Query.equal('status', status));
+    }
+    if (clientId) {
+      queries.push(Query.equal('clientId', clientId));
     }
 
     const response = await adminDatabases.listDocuments(DB_ID, COL_PROJECTS, queries);

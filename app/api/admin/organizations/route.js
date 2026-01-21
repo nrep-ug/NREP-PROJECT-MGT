@@ -34,19 +34,32 @@ export async function GET(request) {
       );
     }
 
+    // Determine collection based on type
+    let collectionId = COL_ORGANIZATIONS;
+    if (type === 'client') {
+      collectionId = 'pms_clients';
+    }
+
     // Build queries
     const queries = [
       Query.orderAsc('name'),
       Query.limit(200)
     ];
 
-    if (type) {
+    // Only add type filter if we are NOT using the dedicated clients collection
+    // (since pms_clients doesn't have a 'type' field, they are all clients)
+    if (type && type !== 'client') {
       queries.push(Query.equal('type', type));
+    }
+
+    // For clients, we might want to filter by status if needed, but usually we want all active ones
+    if (type === 'client') {
+      queries.push(Query.notEqual('status', 'suspended'));
     }
 
     const organizations = await adminDatabases.listDocuments(
       DB_ID,
-      COL_ORGANIZATIONS,
+      collectionId,
       queries
     );
 
