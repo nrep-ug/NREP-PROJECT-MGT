@@ -22,6 +22,7 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [userTypeFilter, setUserTypeFilter] = useState('');
 
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     filterUsers();
-  }, [users, search, roleFilter, statusFilter, page]);
+  }, [users, search, roleFilter, statusFilter, userTypeFilter, page]);
 
   const loadUsers = async () => {
     try {
@@ -84,6 +85,11 @@ export default function AdminUsersPage() {
       filtered = filtered.filter(u => u.status === statusFilter);
     }
 
+    // User type filter
+    if (userTypeFilter) {
+      filtered = filtered.filter(u => u.userType === userTypeFilter);
+    }
+
     setFilteredUsers(filtered);
   };
 
@@ -95,6 +101,10 @@ export default function AdminUsersPage() {
       suspended: 'danger'
     };
     return variants[status] || 'secondary';
+  };
+
+  const getUserTypeBadge = (userType) => {
+    return userType === 'client' ? 'info' : 'primary';
   };
 
   const getRoleBadge = (role) => {
@@ -109,6 +119,7 @@ export default function AdminUsersPage() {
     setSearch('');
     setRoleFilter('');
     setStatusFilter('');
+    setUserTypeFilter('');
     setPage(1);
   };
 
@@ -478,7 +489,7 @@ export default function AdminUsersPage() {
 
           {/* Search and Filters */}
           <Row className="g-2">
-            <Col md={4}>
+            <Col md={3}>
               <InputGroup size="sm">
                 <Form.Control
                   type="text"
@@ -490,6 +501,13 @@ export default function AdminUsersPage() {
                   <i className="bi bi-search"></i>
                 </Button>
               </InputGroup>
+            </Col>
+            <Col md={2}>
+              <Form.Select size="sm" value={userTypeFilter} onChange={(e) => setUserTypeFilter(e.target.value)}>
+                <option value="">All Types</option>
+                <option value="staff">Staff</option>
+                <option value="client">Client</option>
+              </Form.Select>
             </Col>
             <Col md={2}>
               <Form.Select size="sm" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
@@ -509,13 +527,13 @@ export default function AdminUsersPage() {
                 <option value="suspended">Suspended</option>
               </Form.Select>
             </Col>
-            <Col md={3}>
+            <Col md={2}>
               <Button
                 size="sm"
                 variant="outline-secondary"
                 className="w-100"
                 onClick={clearFilters}
-                disabled={!search && !roleFilter && !statusFilter}
+                disabled={!search && !roleFilter && !statusFilter && !userTypeFilter}
               >
                 <i className="bi bi-x-circle me-1"></i>
                 Clear Filters
@@ -524,7 +542,7 @@ export default function AdminUsersPage() {
           </Row>
 
           {/* Active filters indicator */}
-          {(search || roleFilter || statusFilter) && (
+          {(search || roleFilter || statusFilter || userTypeFilter) && (
             <div className="mt-3 p-2 rounded" style={{ backgroundColor: '#f8f9fa', border: '1px dashed #dee2e6' }}>
               <small className="text-muted fw-semibold">
                 <i className="bi bi-funnel me-2"></i>
@@ -533,6 +551,11 @@ export default function AdminUsersPage() {
                   <Badge bg="primary" className="ms-2" style={{ fontWeight: '500' }}>
                     <i className="bi bi-search me-1" style={{ fontSize: '0.7rem' }}></i>
                     {search}
+                  </Badge>
+                )}
+                {userTypeFilter && (
+                  <Badge bg="info" className="ms-2" style={{ fontWeight: '500' }}>
+                    Type: {userTypeFilter}
                   </Badge>
                 )}
                 {roleFilter && (
@@ -583,6 +606,7 @@ export default function AdminUsersPage() {
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Username</th>
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Name</th>
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Email</th>
+                      <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>User Type</th>
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Role</th>
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Status</th>
                       <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Title</th>
@@ -633,6 +657,15 @@ export default function AdminUsersPage() {
                         </td>
                         <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                           <Badge
+                            bg={getUserTypeBadge(u.userType)}
+                            style={{ fontSize: '0.75rem', fontWeight: '500', padding: '0.35rem 0.65rem' }}
+                          >
+                            <i className={`bi ${u.userType === 'client' ? 'bi-person' : 'bi-briefcase'} me-1`}></i>
+                            {u.userType}
+                          </Badge>
+                        </td>
+                        <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
+                          <Badge
                             bg={getRoleBadge(Array.isArray(u.role) ? (u.role.includes('client') ? 'client' : 'staff') : u.role)}
                             style={{ fontSize: '0.75rem', fontWeight: '500', padding: '0.35rem 0.65rem' }}
                           >
@@ -647,12 +680,12 @@ export default function AdminUsersPage() {
                           >
                             <i
                               className={`bi ${u.status === 'active'
-                                  ? 'bi-check-circle'
-                                  : u.status === 'invited'
-                                    ? 'bi-clock'
-                                    : u.status === 'suspended'
-                                      ? 'bi-x-circle'
-                                      : 'bi-dash-circle'
+                                ? 'bi-check-circle'
+                                : u.status === 'invited'
+                                  ? 'bi-clock'
+                                  : u.status === 'suspended'
+                                    ? 'bi-x-circle'
+                                    : 'bi-dash-circle'
                                 } me-1`}
                             ></i>
                             {u.status}

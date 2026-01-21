@@ -519,314 +519,88 @@ export default function AdminPage() {
         </Col>
       </Row>
 
-      {/* User Management Table */}
+      {/* User Management Call-to-Action */}
       <Card className="border-0 shadow-sm">
-        <Card.Header className="bg-white border-bottom" style={{ borderBottom: '2px solid #e9ecef' }}>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <div>
-              <h5 className="mb-1 fw-bold">
-                <i className="bi bi-people-fill me-2" style={{ color: '#054653' }}></i>
-                User Management
-              </h5>
-              <p className="text-muted small mb-0">Manage system users, roles, and permissions</p>
-            </div>
-            <div className="d-flex gap-2">
-              <Button
-                size="sm"
-                variant="outline-secondary"
-                onClick={() => refetch()}
-                disabled={loadingUsers}
-                style={{
-                  borderRadius: '6px',
-                  fontWeight: '500'
-                }}
-              >
-                {loadingUsers ? (
-                  <>
-                    <Spinner size="sm" animation="border" className="me-1" />
-                    Refreshing...
-                  </>
-                ) : (
-                  <>
-                    <i className="bi bi-arrow-clockwise me-1"></i>
-                    Refresh
-                  </>
-                )}
-              </Button>
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={() => router.push('/admin/users/new')}
-                disabled={!user}
-                style={{
-                  borderRadius: '6px',
-                  fontWeight: '500',
-                  boxShadow: '0 2px 8px rgba(37, 99, 235, 0.2)'
-                }}
-              >
-                <i className="bi bi-plus-circle me-1"></i>
-                Create User
-              </Button>
+        <Card.Body className="text-center py-5">
+          <div className="mb-4">
+            <div
+              className="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+              style={{
+                width: '80px',
+                height: '80px',
+                background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
+                boxShadow: '0 4px 20px rgba(5, 70, 83, 0.3)'
+              }}
+            >
+              <i className="bi bi-people-fill text-white" style={{ fontSize: '2.5rem' }}></i>
             </div>
           </div>
+          <h4 className="mb-3 fw-bold" style={{ color: '#054653' }}>
+            <i className="bi bi-people-fill me-2"></i>
+            User Management
+          </h4>
+          <p className="text-muted mb-4" style={{ maxWidth: '600px', margin: '0 auto' }}>
+            Manage all system users, assign roles, control permissions, and monitor user activity from the dedicated user management interface.
+          </p>
+          <div className="d-flex gap-3 justify-content-center flex-wrap">
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => router.push('/admin/users')}
+              style={{
+                fontWeight: '500',
+                padding: '0.75rem 2rem',
+                boxShadow: '0 4px 15px rgba(37, 99, 235, 0.25)'
+              }}
+            >
+              <i className="bi bi-arrow-right-circle me-2"></i>
+              Go to User Management
+            </Button>
+            <Button
+              variant="outline-primary"
+              size="lg"
+              onClick={() => router.push('/admin/users/new')}
+              style={{
+                fontWeight: '500',
+                padding: '0.75rem 2rem'
+              }}
+            >
+              <i className="bi bi-plus-circle me-2"></i>
+              Create New User
+            </Button>
+          </div>
 
-          {/* Search and Filters */}
-          <Row className="g-2">
+          {/* Quick Stats Summary */}
+          <Row className="mt-5 g-3">
             <Col md={3}>
-              <Form onSubmit={handleSearchSubmit}>
-                <InputGroup size="sm">
-                  <Form.Control
-                    type="text"
-                    placeholder="Search by name..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <Button type="submit" variant="outline-secondary">
-                    <i className="bi bi-search"></i>
-                  </Button>
-                </InputGroup>
-              </Form>
-            </Col>
-            <Col md={2}>
-              <Form.Select
-                size="sm"
-                value={userTypeFilter}
-                onChange={(e) => handleFilterChange('userType', e.target.value)}
-              >
-                <option value="">All Types</option>
-                <option value="staff">Staff</option>
-                <option value="client">Client</option>
-              </Form.Select>
-            </Col>
-            <Col md={2}>
-              <Form.Select
-                size="sm"
-                value={roleFilter}
-                onChange={(e) => handleFilterChange('role', e.target.value)}
-              >
-                <option value="">All Roles</option>
-                <option value="admin">Admin</option>
-                <option value="staff">Staff</option>
-                <option value="client">Client</option>
-              </Form.Select>
+              <div className="p-3 rounded" style={{ backgroundColor: '#f8f9fa' }}>
+                <div className="fw-semibold text-muted small mb-1">Total Users</div>
+                <h3 className="mb-0 fw-bold" style={{ color: '#054653' }}>{stats.totalUsers}</h3>
+              </div>
             </Col>
             <Col md={3}>
-              <Form.Select
-                size="sm"
-                value={statusFilter}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-              >
-                <option value="">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="invited">Invited</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-              </Form.Select>
+              <div className="p-3 rounded" style={{ backgroundColor: '#f8f9fa' }}>
+                <div className="fw-semibold text-muted small mb-1">Active Users</div>
+                <h3 className="mb-0 fw-bold" style={{ color: '#198754' }}>{stats.activeUsers}</h3>
+              </div>
             </Col>
-            <Col md={2}>
-              <Button
-                size="sm"
-                variant="outline-secondary"
-                className="w-100"
-                onClick={clearFilters}
-                disabled={!search && !roleFilter && !statusFilter && !userTypeFilter}
-              >
-                <i className="bi bi-x-circle me-1"></i>
-                Clear
-              </Button>
+            <Col md={3}>
+              <div className="p-3 rounded" style={{ backgroundColor: '#f8f9fa' }}>
+                <div className="fw-semibold text-muted small mb-1">Staff Members</div>
+                <h3 className="mb-0 fw-bold" style={{ color: '#054653' }}>
+                  {users.filter(u => Array.isArray(u.role) ? u.role.includes('staff') : u.role === 'staff').length}
+                </h3>
+              </div>
+            </Col>
+            <Col md={3}>
+              <div className="p-3 rounded" style={{ backgroundColor: '#f8f9fa' }}>
+                <div className="fw-semibold text-muted small mb-1">Clients</div>
+                <h3 className="mb-0 fw-bold" style={{ color: '#0dcaf0' }}>
+                  {users.filter(u => Array.isArray(u.role) ? u.role.includes('client') : u.role === 'client').length}
+                </h3>
+              </div>
             </Col>
           </Row>
-
-          {/* Active filters indicator */}
-          {(search || roleFilter || statusFilter || userTypeFilter) && (
-            <div
-              className="mt-3 p-2 rounded"
-              style={{ backgroundColor: '#f8f9fa', border: '1px dashed #dee2e6' }}
-            >
-              <small className="text-muted fw-semibold">
-                <i className="bi bi-funnel me-2"></i>
-                Active filters:
-                {search && (
-                  <Badge bg="primary" className="ms-2" style={{ fontWeight: '500' }}>
-                    <i className="bi bi-search me-1" style={{ fontSize: '0.7rem' }}></i>
-                    {search}
-                  </Badge>
-                )}
-                {userTypeFilter && (
-                  <Badge bg="info" className="ms-2" style={{ fontWeight: '500' }}>
-                    Type: {userTypeFilter}
-                  </Badge>
-                )}
-                {roleFilter && (
-                  <Badge bg="success" className="ms-2" style={{ fontWeight: '500' }}>
-                    Role: {roleFilter}
-                  </Badge>
-                )}
-                {statusFilter && (
-                  <Badge bg="warning" text="dark" className="ms-2" style={{ fontWeight: '500' }}>
-                    Status: {statusFilter}
-                  </Badge>
-                )}
-              </small>
-            </div>
-          )}
-        </Card.Header>
-
-        <Card.Body className="p-0">
-          {loadingUsers && users.length === 0 ? (
-            <div className="text-center py-5">
-              <Spinner animation="border" />
-              <p className="mt-2 text-muted">Loading users...</p>
-            </div>
-          ) : users.length === 0 ? (
-            <div className="text-center py-5">
-              <div className="mb-3">
-                <i className="bi bi-people" style={{ fontSize: '3rem', opacity: 0.3 }}></i>
-              </div>
-              <h6>No Users Found</h6>
-              <p className="text-muted mb-3">
-                {search || roleFilter || statusFilter
-                  ? 'No users match your search criteria. Try adjusting your filters.'
-                  : 'Get started by creating your first user'}
-              </p>
-              {!(search || roleFilter || statusFilter) && (
-                <Button size="sm" onClick={() => router.push('/admin/users/new')}>
-                  <i className="bi bi-plus-circle me-2"></i>
-                  Create First User
-                </Button>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="table-responsive">
-                <Table hover className="mb-0" style={{ fontSize: '0.9rem' }}>
-                  <thead style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
-                    <tr>
-                      <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Username</th>
-                      <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Name</th>
-                      <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Email</th>
-                      <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>User Type</th>
-                      <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Role</th>
-                      <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Status</th>
-                      <th style={{ fontWeight: '600', color: '#495057', padding: '1rem' }}>Title</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u, index) => (
-                      <tr
-                        key={u.$id}
-                        style={{
-                          transition: 'all 0.2s ease',
-                          borderBottom: index === users.length - 1 ? 'none' : '1px solid #f0f0f0'
-                        }}
-                      >
-                        <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
-                          <div className="d-flex align-items-center">
-                            <div
-                              className="rounded-circle me-2 d-flex align-items-center justify-content-center"
-                              style={{
-                                width: '32px',
-                                height: '32px',
-                                background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
-                                color: 'white',
-                                fontSize: '0.75rem',
-                                fontWeight: '600'
-                              }}
-                            >
-                              {u.firstName?.[0]}{u.lastName?.[0]}
-                            </div>
-                            <strong style={{ color: '#054653' }}>@{u.username}</strong>
-                          </div>
-                        </td>
-                        <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
-                          <div>
-                            <div style={{ fontWeight: '500', color: '#212529' }}>
-                              {u.firstName} {u.lastName}
-                            </div>
-                            {u.otherNames && (
-                              <div className="text-muted small">{u.otherNames}</div>
-                            )}
-                          </div>
-                        </td>
-                        <td style={{ padding: '1rem', verticalAlign: 'middle', color: '#6c757d' }}>
-                          <i className="bi bi-envelope me-2" style={{ fontSize: '0.85rem' }}></i>
-                          {u.email}
-                        </td>
-                        <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
-                          <Badge
-                            bg={getUserTypeBadge(u.userType)}
-                            style={{ fontSize: '0.75rem', fontWeight: '500', padding: '0.35rem 0.65rem' }}
-                          >
-                            <i className={`bi ${u.userType === 'client' ? 'bi-person' : 'bi-briefcase'} me-1`}></i>
-                            {u.userType}
-                          </Badge>
-                        </td>
-                        <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
-                          {u.roles && u.roles.length > 0 ? (
-                            <div className="d-flex flex-wrap gap-1">
-                              {u.roles.map((role) => (
-                                <Badge
-                                  key={role}
-                                  bg={getRoleBadge(role)}
-                                  style={{ fontSize: '0.75rem', fontWeight: '500', padding: '0.35rem 0.65rem' }}
-                                >
-                                  {role}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <Badge bg="secondary" style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}>
-                              none
-                            </Badge>
-                          )}
-                        </td>
-                        <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
-                          <Badge
-                            bg={getStatusBadge(u.status)}
-                            style={{ fontSize: '0.75rem', fontWeight: '500', padding: '0.35rem 0.65rem' }}
-                          >
-                            <i
-                              className={`bi ${
-                                u.status === 'active'
-                                  ? 'bi-check-circle'
-                                  : u.status === 'invited'
-                                  ? 'bi-clock'
-                                  : u.status === 'suspended'
-                                  ? 'bi-x-circle'
-                                  : 'bi-dash-circle'
-                              } me-1`}
-                            ></i>
-                            {u.status}
-                          </Badge>
-                        </td>
-                        <td style={{ padding: '1rem', verticalAlign: 'middle', color: '#6c757d' }}>
-                          {u.title || <span className="text-muted fst-italic">No title</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div
-                  className="d-flex justify-content-between align-items-center p-3"
-                  style={{ backgroundColor: '#f8f9fa', borderTop: '2px solid #e9ecef' }}
-                >
-                  <div className="text-muted small fw-semibold">
-                    <i className="bi bi-list-ul me-2"></i>
-                    Showing <span style={{ color: '#054653', fontWeight: '600' }}>{(page - 1) * limit + 1}</span> to{' '}
-                    <span style={{ color: '#054653', fontWeight: '600' }}>{Math.min(page * limit, total)}</span> of{' '}
-                    <span style={{ color: '#054653', fontWeight: '600' }}>{total}</span> users
-                  </div>
-                  <Pagination size="sm" className="mb-0">
-                    {renderPaginationItems()}
-                  </Pagination>
-                </div>
-              )}
-            </>
-          )}
         </Card.Body>
       </Card>
     </AppLayout>
