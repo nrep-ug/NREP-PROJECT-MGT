@@ -544,6 +544,15 @@ export default function AdminUsersPage() {
                         <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                           <Button
                             size="sm"
+                            variant="outline-info"
+                            className="me-2"
+                            onClick={() => router.push(`/admin/users/${u.accountId}`)}
+                            title="View Details"
+                          >
+                            <i className="bi bi-eye"></i>
+                          </Button>
+                          <Button
+                            size="sm"
                             variant="outline-primary"
                             onClick={() => router.push(`/admin/users/${u.accountId}/edit`)}
                           >
