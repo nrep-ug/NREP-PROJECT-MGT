@@ -16,6 +16,7 @@ export default function TimesheetDetailsPage() {
   const [timesheet, setTimesheet] = useState(null);
   const [entries, setEntries] = useState([]);
   const [projects, setProjects] = useState({});
+  const [approvers, setApprovers] = useState({ supervisor: null, admin: null });
   const [loading, setLoading] = useState(true);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -44,6 +45,7 @@ export default function TimesheetDetailsPage() {
       if (response.ok) {
         setTimesheet(data.timesheet);
         setEntries(data.entries || []);
+        setApprovers(data.approvers || { supervisor: null, admin: null });
 
         // Create projects map for quick lookup
         const projectsMap = {};
@@ -172,14 +174,35 @@ export default function TimesheetDetailsPage() {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const variants = {
-      draft: 'secondary',
-      submitted: 'warning',
-      approved: 'success',
-      rejected: 'danger'
-    };
-    return <Badge bg={variants[status] || 'secondary'}>{status?.toUpperCase() || 'DRAFT'}</Badge>;
+  const getApprovalStage = (ts) => {
+    if (!ts) return 'unknown';
+    if (ts.status === 'rejected') return 'rejected';
+    if (ts.status === 'approved') return 'completed';
+    if (ts.status === 'submitted') {
+      if (ts.supervisorApproval === false) return 'supervisor';
+      return 'admin';
+    }
+    return 'draft';
+  };
+
+  const getStatusBadge = (ts) => {
+    const status = ts?.status;
+    const stage = getApprovalStage(ts);
+
+    if (status === 'rejected') return <Badge bg="danger">REJECTED</Badge>;
+    if (status === 'approved') return <Badge bg="success">APPROVED</Badge>;
+
+    if (status === 'submitted') {
+      if (stage === 'supervisor') {
+        return <Badge bg="info" text="dark">PENDING SUPERVISOR</Badge>;
+      }
+      if (stage === 'admin') {
+        return <Badge bg="warning" text="dark">PENDING ADMIN</Badge>;
+      }
+      return <Badge bg="warning" text="dark">SUBMITTED</Badge>;
+    }
+
+    return <Badge bg="secondary">DRAFT</Badge>;
   };
 
   // Group entries by date
@@ -219,10 +242,39 @@ export default function TimesheetDetailsPage() {
     );
   }
 
-  // Check if user can approve (admin, supervisor of the employee, or manager of projects)
-  const canApprove = user?.isAdmin ||
-                     user?.isSupervisor ||
-                     (timesheet.status === 'submitted');
+  // Check if user can approve
+  const approvalStage = getApprovalStage(timesheet);
+  let canApprove = false;
+  let approveButtonLabel = 'Approve Timesheet';
+
+  if (timesheet?.status === 'submitted') {
+    if (approvalStage === 'supervisor') {
+      // Can approve if user is the supervisor of the submitter
+      // Check both direct check and if we are admin acting as supervisor
+      if (user?.authUser?.$id === timesheet.user?.supervisorId) {
+        canApprove = true;
+        approveButtonLabel = 'Approve (Supervisor)';
+      } else if (user?.isAdmin && timesheet.user?.supervisorId) {
+        // Admin override for supervisor step (optional, but good for unblocking)
+        // Let's allow admins to approve at supervisor step if they want
+        canApprove = true;
+        approveButtonLabel = 'Approve (Supervisor Override)';
+      }
+    } else if (approvalStage === 'admin') {
+      // Can approve if user is Admin
+      if (user?.isAdmin) {
+        canApprove = true;
+        approveButtonLabel = 'Approve (Final)';
+      }
+    }
+  }
+
+  // Check if can Reject (Admins can always reject, Supervisor can reject if it's their turn)
+  let canReject = false;
+  if (timesheet?.status === 'submitted') {
+    if (user?.isAdmin) canReject = true;
+    else if (approvalStage === 'supervisor' && user?.authUser?.$id === timesheet.user?.supervisorId) canReject = true;
+  }
 
   // Check if user can edit (owner and timesheet is draft or rejected)
   const isOwner = timesheet?.accountId === user?.authUser?.$id;
@@ -245,9 +297,66 @@ export default function TimesheetDetailsPage() {
           </p>
         </div>
         <div>
-          {getStatusBadge(timesheet.status)}
+          {getStatusBadge(timesheet)}
         </div>
       </div>
+
+      {/* Approval Timeline / History */}
+      {(timesheet.supervisorApproval === true || timesheet.adminApproval === true || timesheet.status === 'rejected') && (
+        <Card className="mb-3 border-0 shadow-sm">
+          <Card.Body>
+            <h6 className="text-muted mb-3">Approval History</h6>
+            <div className="d-flex flex-column gap-3">
+              {/* Supervisor Step */}
+              {timesheet.supervisorApproval === true && (
+                <div className="d-flex align-items-center">
+                  <div className="me-3 text-success"><i className="bi bi-check-circle-fill fs-5"></i></div>
+                  <div>
+                    <div><strong>Supervisor Approved</strong></div>
+                    <div className="text-muted small">
+                      by {approvers.supervisor ? `${approvers.supervisor.firstName} ${approvers.supervisor.lastName}` : 'Supervisor'}
+                      {' '}on {new Date(timesheet.supervisorApprovedAt).toLocaleString()}
+                    </div>
+                    {timesheet.supervisorComments && (
+                      <div className="mt-1 small fst-italic text-muted">"{timesheet.supervisorComments}"</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Admin Step */}
+              {timesheet.adminApproval === true && (
+                <div className="d-flex align-items-center">
+                  <div className="me-3 text-success"><i className="bi bi-check-circle-fill fs-5"></i></div>
+                  <div>
+                    <div><strong>Final Approval</strong></div>
+                    <div className="text-muted small">
+                      by {approvers.admin ? `${approvers.admin.firstName} ${approvers.admin.lastName}` : 'Administrator'}
+                      {' '}on {new Date(timesheet.adminApprovedAt).toLocaleString()}
+                    </div>
+                    {timesheet.adminComments && (
+                      <div className="mt-1 small fst-italic text-muted">"{timesheet.adminComments}"</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Rejection */}
+              {timesheet.rejectionComments && (
+                <div className="d-flex align-items-center">
+                  <div className="me-3 text-danger"><i className="bi bi-x-circle-fill fs-5"></i></div>
+                  <div>
+                    <div><strong>Rejected</strong></div>
+                    <div className="text-muted small">
+                      See comments below
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card.Body>
+        </Card>
+      )}
 
       {/* Employee Info Card */}
       <Card className="mb-3 border-0 shadow-sm">
@@ -271,6 +380,11 @@ export default function TimesheetDetailsPage() {
                   <strong>Department:</strong> {timesheet.user.department}
                 </div>
               )}
+              {timesheet.user?.supervisorId && (
+                <div className="mb-2 text-muted small">
+                  Supervisor ID: {timesheet.user.supervisorId}
+                </div>
+              )}
             </Col>
             <Col md={6}>
               <h6 className="text-muted mb-3">Timesheet Information</h6>
@@ -278,7 +392,7 @@ export default function TimesheetDetailsPage() {
                 <strong>Week Start:</strong> {formatDate(timesheet.weekStart)}
               </div>
               <div className="mb-2">
-                <strong>Status:</strong> {getStatusBadge(timesheet.status)}
+                <strong>Status:</strong> {getStatusBadge(timesheet)}
               </div>
               {timesheet.submittedAt && (
                 <div className="mb-2">
@@ -287,7 +401,7 @@ export default function TimesheetDetailsPage() {
               )}
               {timesheet.approvedAt && (
                 <div className="mb-2">
-                  <strong>Approved:</strong> {new Date(timesheet.approvedAt).toLocaleString()}
+                  <strong>Final Approval:</strong> {new Date(timesheet.approvedAt).toLocaleString()}
                 </div>
               )}
             </Col>
@@ -347,14 +461,7 @@ export default function TimesheetDetailsPage() {
         </Card>
       )}
 
-      {/* Comments */}
-      {timesheet.approvalComments && (
-        <Alert variant="success" className="mb-3">
-          <strong>Approval Comments:</strong>
-          <p className="mb-0 mt-2">{timesheet.approvalComments}</p>
-        </Alert>
-      )}
-
+      {/* Comments and Rejection Details */}
       {timesheet.rejectionComments && (
         <Alert variant="danger" className="mb-3">
           <strong>Rejection Comments:</strong>
@@ -460,26 +567,35 @@ export default function TimesheetDetailsPage() {
       </Card>
 
       {/* Action Buttons */}
-      {canApprove && timesheet.status === 'submitted' && (
-        <Card className="border-0 shadow-sm">
+      {(canApprove || canReject) && timesheet.status === 'submitted' && (
+        <Card className="border-0 shadow-sm mb-4">
           <Card.Body>
             <h6 className="mb-3">Actions</h6>
             <div className="d-flex gap-2">
-              <Button
-                variant="success"
-                onClick={() => setShowApproveModal(true)}
-              >
-                <i className="bi bi-check-circle me-2"></i>
-                Approve Timesheet
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => setShowRejectModal(true)}
-              >
-                <i className="bi bi-x-circle me-2"></i>
-                Reject Timesheet
-              </Button>
+              {canApprove && (
+                <Button
+                  variant="success"
+                  onClick={() => setShowApproveModal(true)}
+                >
+                  <i className="bi bi-check-circle me-2"></i>
+                  {approveButtonLabel}
+                </Button>
+              )}
+              {canReject && (
+                <Button
+                  variant="danger"
+                  onClick={() => setShowRejectModal(true)}
+                >
+                  <i className="bi bi-x-circle me-2"></i>
+                  Reject Timesheet
+                </Button>
+              )}
             </div>
+            {!canApprove && !canReject && (
+              <Alert variant="info" className="mb-0">
+                You are viewing this timesheet, but action is currently required from {approvalStage === 'supervisor' ? 'the Supervisor' : 'an Administrator'}.
+              </Alert>
+            )}
           </Card.Body>
         </Card>
       )}

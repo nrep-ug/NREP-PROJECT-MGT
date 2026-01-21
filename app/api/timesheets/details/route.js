@@ -39,17 +39,41 @@ export async function GET(request) {
       timesheetId
     );
 
-    // Fetch user profile
-    const userProfiles = await adminDatabases.listDocuments(
+    // Gather all account IDs to fetch (Owner + Approvers)
+    const accountIdsToFetch = [timesheet.accountId];
+    if (timesheet.supervisorApproverId) accountIdsToFetch.push(timesheet.supervisorApproverId);
+    if (timesheet.adminApproverId) accountIdsToFetch.push(timesheet.adminApproverId);
+
+    // Fetch user profiles
+    const userProfilesResponse = await adminDatabases.listDocuments(
       DB_ID,
       COL_USERS,
       [
-        Query.equal('accountId', timesheet.accountId),
-        Query.limit(1)
+        Query.equal('accountId', [...new Set(accountIdsToFetch)]), // Deduplicate
+        Query.limit(accountIdsToFetch.length)
       ]
     );
 
-    const userProfile = userProfiles.documents.length > 0 ? userProfiles.documents[0] : null;
+    // Map profiles by accountId
+    const profilesMap = new Map(userProfilesResponse.documents.map(u => [u.accountId, u]));
+
+    const userProfile = profilesMap.get(timesheet.accountId);
+    const supervisorProfile = timesheet.supervisorApproverId ? profilesMap.get(timesheet.supervisorApproverId) : null;
+    const adminProfile = timesheet.adminApproverId ? profilesMap.get(timesheet.adminApproverId) : null;
+
+    // Helper to format user for response
+    const formatUser = (u) => u ? ({
+      accountId: u.accountId,
+      email: u.email,
+      username: u.username,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      title: u.title,
+      department: u.department,
+      supervisorId: u.supervisorId // Useful for frontend logic
+    }) : null;
+
+    // ... (Entries fetching logic remains same)
 
     // Fetch entries for this timesheet
     const entriesResponse = await adminDatabases.listDocuments(
@@ -96,15 +120,11 @@ export async function GET(request) {
     return NextResponse.json({
       timesheet: {
         ...timesheet,
-        user: userProfile ? {
-          accountId: userProfile.accountId,
-          email: userProfile.email,
-          username: userProfile.username,
-          firstName: userProfile.firstName,
-          lastName: userProfile.lastName,
-          title: userProfile.title,
-          department: userProfile.department
-        } : null
+        user: formatUser(userProfile)
+      },
+      approvers: {
+        supervisor: formatUser(supervisorProfile),
+        admin: formatUser(adminProfile)
       },
       entries: enrichedEntries,
       projects: projectsMap

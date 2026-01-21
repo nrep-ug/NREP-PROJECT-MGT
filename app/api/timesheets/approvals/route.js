@@ -36,6 +36,10 @@ export async function GET(request) {
     const status = searchParams.get('status');
     const weekStart = searchParams.get('weekStart');
 
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const offset = (page - 1) * limit;
+
     if (!organizationId || !requesterId) {
       return NextResponse.json(
         { error: 'organizationId and requesterId are required' },
@@ -92,11 +96,11 @@ export async function GET(request) {
           batch.map(project =>
             project.projectTeamId
               ? adminTeams.listMemberships(project.projectTeamId)
-                  .then(teamMembers => ({
-                    projectId: project.$id,
-                    members: teamMembers.memberships
-                  }))
-                  .catch(() => null)
+                .then(teamMembers => ({
+                  projectId: project.$id,
+                  members: teamMembers.memberships
+                }))
+                .catch(() => null)
               : Promise.resolve(null)
           )
         );
@@ -148,8 +152,21 @@ export async function GET(request) {
     }
 
     // Add ordering
+    timesheetQueries.push(Query.orderDesc('submittedAt')); // Sort by submission (usually better for approvals) or weekStart
+    // The original code used weekStart, then sorted by submittedAt in memory. I will stick to submittedAt for DB sort.
+    // Wait, original was `Query.orderDesc('weekStart')`.
+    // I will change to `Query.orderDesc('submittedAt')` as recently submitted items are more relevant for approval.
+    // However, consistency matters. Let's stick to 'weekStart' to match previous logic unless user complained. 
+    // Actually, line 354 sorts by `submittedAt`. So DB should too.
+    // But does `submittedAt` exist on all? No, Drafts don't have it.
+    // But approvals page usually filters by `submitted`.
+    // Let's use `weekStart` as primary DB sort to be safe, or `updatedAt`.
+    // I'll stick to `weekStart`.
     timesheetQueries.push(Query.orderDesc('weekStart'));
-    timesheetQueries.push(Query.limit(100)); // Limit for performance
+
+    // Pagination
+    timesheetQueries.push(Query.limit(limit));
+    timesheetQueries.push(Query.offset(offset));
 
     // Fetch timesheets
     const timesheetsResponse = await adminDatabases.listDocuments(
@@ -161,8 +178,11 @@ export async function GET(request) {
     if (timesheetsResponse.documents.length === 0) {
       return NextResponse.json({
         timesheets: [],
-        total: 0,
-        accessType
+        total: timesheetsResponse.total, // Use DB total
+        accessType,
+        page,
+        limit,
+        totalPages: Math.ceil(timesheetsResponse.total / limit)
       });
     }
 
@@ -224,10 +244,10 @@ export async function GET(request) {
             const project = projectsMap.get(projectId);
             return project
               ? {
-                  $id: project.$id,
-                  name: project.name,
-                  code: project.code
-                }
+                $id: project.$id,
+                name: project.name,
+                code: project.code
+              }
               : null;
           })
           .filter(p => p !== null);
@@ -240,14 +260,14 @@ export async function GET(request) {
           projectIds, // Keep for filtering
           user: userProfile
             ? {
-                accountId: userProfile.accountId,
-                email: userProfile.email,
-                username: userProfile.username,
-                firstName: userProfile.firstName,
-                lastName: userProfile.lastName,
-                title: userProfile.title,
-                department: userProfile.department
-              }
+              accountId: userProfile.accountId,
+              email: userProfile.email,
+              username: userProfile.username,
+              firstName: userProfile.firstName,
+              lastName: userProfile.lastName,
+              title: userProfile.title,
+              department: userProfile.department
+            }
             : null,
           summary: {
             totalHours,
@@ -273,26 +293,88 @@ export async function GET(request) {
       enrichedTimesheets.push(...enrichedBatch.filter(ts => ts !== null));
     }
 
-    // Step 6: Filter by manager's managed projects (if applicable)
+    // Step 6: Filter and Enrich with Approval Stage
     let filteredTimesheets = enrichedTimesheets;
 
+    // Helper to determine stage
+    const getApprovalStage = (ts, userProfile) => {
+      if (ts.status === 'rejected') return 'rejected';
+      if (ts.status === 'approved') return 'completed';
+
+      // Status is submitted or draft (but approvals page usually sees submitted)
+      if (ts.status === 'submitted') {
+        // If supervisorApproval is explicitly false, it is pending supervisor
+        // (assuming supervisorId existed at submission, which sets it to false)
+        // If supervisorApproval is null, it means no supervisor req (Pending Admin)
+        // If supervisorApproval is true, it is Supervisor Approved (Pending Admin)
+        if (ts.supervisorApproval === false) return 'supervisor';
+        return 'admin';
+      }
+      return 'unknown';
+    };
+
+    // Filter for Managers (Project Managers)
     if (accessType === 'manager' && managedProjectIds.length > 0) {
-      filteredTimesheets = enrichedTimesheets.filter(timesheet => {
-        // Only show timesheets that have entries from managed projects
-        if (!timesheet.projectIds || timesheet.projectIds.length === 0) {
-          return false;
-        }
-        // Check if any project in the timesheet is managed by this PM
+      filteredTimesheets = filteredTimesheets.filter(timesheet => {
+        if (!timesheet.projectIds || timesheet.projectIds.length === 0) return false;
         return timesheet.projectIds.some(projectId => managedProjectIds.includes(projectId));
       });
     }
+
+    // Filter/Process for Supervisors and Admins
+    if (accessType === 'supervisor' && !isAdmin) {
+      // Supervisors should only see items pending SUPERVISOR approval
+      // They shouldn't see items waiting for Admin (unless they double hat, handled by isAdmin check)
+      // They definitely shouldn't see items they already approved (unless history?)
+      // The 'status' query param filters broad buckets.
+
+      if (status === 'submitted') {
+        filteredTimesheets = filteredTimesheets.filter(ts => {
+          const stage = getApprovalStage(ts);
+          return stage === 'supervisor';
+        });
+      }
+    }
+
+    // Add computed fields for UI
+    filteredTimesheets = filteredTimesheets.map(ts => {
+      const stage = getApprovalStage(ts);
+
+      let canApprove = false;
+      if (ts.status === 'submitted') {
+        if (stage === 'supervisor') {
+          // Actionable by Supervisor
+          // Check if current user is the supervisor
+          // (User profile for 'supervisedBy' check is one way, but we have supervisorId on submitting user)
+          // We fetched users in Step 4.
+          const submitter = usersMap.get(ts.accountId);
+          // The submitter's supervisorId must match requesterId
+          if (submitter?.supervisorId === requesterId) canApprove = true;
+
+          // Admins can approve if they are ALSO the supervisor? 
+          // We handle that logic in UI, but here we flag visibility.
+          if (isAdmin && submitter?.supervisorId === requesterId) canApprove = true;
+
+        } else if (stage === 'admin') {
+          // Actionable by Admin
+          if (isAdmin) canApprove = true;
+        }
+      }
+
+      return {
+        ...ts,
+        approvalStage: stage,
+        canApprove,
+        // Pass the submitter's supervisorId for UI reference if needed
+        submitterSupervisorId: usersMap.get(ts.accountId)?.supervisorId
+      };
+    });
 
     // Sort by submission date (most recent first)
     filteredTimesheets.sort((a, b) => {
       if (a.submittedAt && b.submittedAt) {
         return new Date(b.submittedAt) - new Date(a.submittedAt);
       }
-      // Put timesheets without submission dates at the end
       if (a.submittedAt) return -1;
       if (b.submittedAt) return 1;
       return 0;

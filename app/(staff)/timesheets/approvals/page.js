@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Table, Button, Badge, Modal, Form, Alert, Row, Col, ButtonGroup, InputGroup } from 'react-bootstrap';
+import { Card, Table, Button, Badge, Modal, Form, Alert, Row, Col, ButtonGroup, InputGroup, Pagination } from 'react-bootstrap';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate, formatHours } from '@/lib/date';
 import AppLayout from '@/components/AppLayout';
@@ -17,6 +17,13 @@ export default function TimesheetsApprovalsPage() {
   const [statusFilter, setStatusFilter] = useState('submitted');
   const [searchQuery, setSearchQuery] = useState('');
   const [weekFilter, setWeekFilter] = useState('');
+
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const LIMIT = 20;
+
   const [selectedIds, setSelectedIds] = useState([]);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showBulkRejectModal, setShowBulkRejectModal] = useState(false);
@@ -38,7 +45,7 @@ export default function TimesheetsApprovalsPage() {
     if (user?.organizationId) {
       loadTimesheets();
     }
-  }, [user, statusFilter, weekFilter]);
+  }, [user, statusFilter, weekFilter, page]); // Reload when page changes
 
   const loadTimesheets = async () => {
     try {
@@ -46,6 +53,8 @@ export default function TimesheetsApprovalsPage() {
       const params = new URLSearchParams({
         organizationId: user.organizationId,
         requesterId: user.authUser.$id,
+        page: page.toString(),
+        limit: LIMIT.toString(),
         ...(statusFilter && { status: statusFilter }),
         ...(weekFilter && { weekStart: weekFilter })
       });
@@ -55,6 +64,17 @@ export default function TimesheetsApprovalsPage() {
 
       if (response.ok) {
         setTimesheets(data.timesheets || []);
+        // Handle pagination meta if API returns it, waiting for API update to include totalPages
+        // My recent API update added: total, page, limit, totalPages
+        if (data.totalPages) {
+          setTotalPages(data.totalPages);
+          setTotalItems(data.total);
+        } else {
+          // Fallback if API lacks pagination meta (shouldn't happen)
+          setTotalPages(1);
+          setTotalItems(data.timesheets?.length || 0);
+        }
+
         setSelectedIds([]); // Clear selections on reload
       } else {
         console.error('Failed to load timesheets:', data.error);
@@ -266,14 +286,24 @@ export default function TimesheetsApprovalsPage() {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const variants = {
-      draft: 'secondary',
-      submitted: 'warning',
-      approved: 'success',
-      rejected: 'danger'
-    };
-    return <Badge bg={variants[status] || 'secondary'}>{status?.toUpperCase() || 'DRAFT'}</Badge>;
+  const getStatusBadge = (timesheet) => {
+    const status = timesheet.status;
+    const stage = timesheet.approvalStage; // 'supervisor', 'admin', 'completed', 'rejected' or 'unknown'
+
+    if (status === 'rejected') return <Badge bg="danger">REJECTED</Badge>;
+    if (status === 'approved') return <Badge bg="success">APPROVED</Badge>;
+
+    if (status === 'submitted') {
+      if (stage === 'supervisor') {
+        return <Badge bg="info" text="dark">PENDING SUPERVISOR</Badge>;
+      }
+      if (stage === 'admin') {
+        return <Badge bg="warning" text="dark">PENDING ADMIN</Badge>;
+      }
+      return <Badge bg="warning" text="dark">SUBMITTED</Badge>;
+    }
+
+    return <Badge bg="secondary">DRAFT</Badge>;
   };
 
   // Filter timesheets by search query
@@ -326,25 +356,25 @@ export default function TimesheetsApprovalsPage() {
               <ButtonGroup size="sm">
                 <Button
                   variant={statusFilter === 'submitted' ? 'primary' : 'outline-primary'}
-                  onClick={() => setStatusFilter('submitted')}
+                  onClick={() => { setStatusFilter('submitted'); setPage(1); }}
                 >
                   Pending ({timesheets.filter(t => t.status === 'submitted').length})
                 </Button>
                 <Button
                   variant={statusFilter === 'approved' ? 'success' : 'outline-success'}
-                  onClick={() => setStatusFilter('approved')}
+                  onClick={() => { setStatusFilter('approved'); setPage(1); }}
                 >
                   Approved
                 </Button>
                 <Button
                   variant={statusFilter === 'rejected' ? 'danger' : 'outline-danger'}
-                  onClick={() => setStatusFilter('rejected')}
+                  onClick={() => { setStatusFilter('rejected'); setPage(1); }}
                 >
                   Rejected
                 </Button>
                 <Button
                   variant={!statusFilter ? 'secondary' : 'outline-secondary'}
-                  onClick={() => setStatusFilter('')}
+                  onClick={() => { setStatusFilter(''); setPage(1); }}
                 >
                   All
                 </Button>
@@ -392,8 +422,8 @@ export default function TimesheetsApprovalsPage() {
                 {searchQuery
                   ? 'No timesheets match your search'
                   : statusFilter === 'submitted'
-                  ? 'No timesheets pending approval'
-                  : 'No timesheets match the selected filter'}
+                    ? 'No timesheets pending approval'
+                    : 'No timesheets match the selected filter'}
               </p>
             </div>
           ) : (
@@ -426,6 +456,7 @@ export default function TimesheetsApprovalsPage() {
                           type="checkbox"
                           checked={selectedIds.includes(ts.$id)}
                           onChange={() => toggleSelectOne(ts.$id)}
+                          disabled={!ts.canApprove && ts.status === 'submitted'}
                         />
                       </td>
                       <td>
@@ -476,7 +507,7 @@ export default function TimesheetsApprovalsPage() {
                           )}
                         </div>
                       </td>
-                      <td>{getStatusBadge(ts.status)}</td>
+                      <td>{getStatusBadge(ts)}</td>
                       <td>
                         <small className="text-muted">
                           {ts.submittedAt
@@ -498,9 +529,10 @@ export default function TimesheetsApprovalsPage() {
                             <>
                               <Button
                                 size="sm"
-                                variant="outline-success"
+                                variant={ts.approvalStage === 'admin' ? 'outline-warning' : 'outline-success'}
                                 onClick={() => openApproveModal(ts)}
-                                title="Approve"
+                                title={ts.approvalStage === 'supervisor' ? "Approve (Supervisor)" : "Approve (Final)"}
+                                disabled={!ts.canApprove}
                               >
                                 <i className="bi bi-check"></i>
                               </Button>
@@ -509,6 +541,7 @@ export default function TimesheetsApprovalsPage() {
                                 variant="outline-danger"
                                 onClick={() => openRejectModal(ts)}
                                 title="Reject"
+                                disabled={!ts.canApprove && !user?.isAdmin}
                               >
                                 <i className="bi bi-x"></i>
                               </Button>
@@ -524,6 +557,24 @@ export default function TimesheetsApprovalsPage() {
           )}
         </Card.Body>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="d-flex flex-column align-items-center mt-4 mb-5">
+          <Pagination>
+            <Pagination.First onClick={() => setPage(1)} disabled={page === 1} />
+            <Pagination.Prev onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} />
+
+            <Pagination.Item active>{page}</Pagination.Item>
+
+            <Pagination.Next onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} />
+            <Pagination.Last onClick={() => setPage(totalPages)} disabled={page === totalPages} />
+          </Pagination>
+          <div className="text-muted small">
+            Showing page {page} of {totalPages} ({totalItems} total)
+          </div>
+        </div>
+      )}
 
       {/* Single Reject Modal */}
       <Modal show={showRejectModal} onHide={() => setShowRejectModal(false)} centered>

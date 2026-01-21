@@ -21,14 +21,24 @@ export default function TimesheetsDashboardPage() {
     error
   } = useTimesheetDashboard(user?.authUser?.$id, user?.organizationId);
 
-  const getStatusBadge = (status) => {
-    const variants = {
-      draft: 'secondary',
-      submitted: 'warning',
-      approved: 'success',
-      rejected: 'danger'
-    };
-    return <Badge bg={variants[status] || 'secondary'}>{status?.toUpperCase() || 'DRAFT'}</Badge>;
+  const getStatusBadge = (timesheet) => {
+    const status = timesheet.status;
+    // supervisorApproval can be true, false, or null
+    // If status is submitted:
+    // supervisorApproval === false (explicitly) -> Pending Supervisor
+    // supervisorApproval === true or null -> Pending Admin
+
+    if (status === 'rejected') return <Badge bg="danger">REJECTED</Badge>;
+    if (status === 'approved') return <Badge bg="success">APPROVED</Badge>;
+
+    if (status === 'submitted') {
+      if (timesheet.supervisorApproval === false) {
+        return <Badge bg="info" text="dark">PENDING SUPERVISOR</Badge>;
+      }
+      return <Badge bg="warning" text="dark">PENDING ADMIN</Badge>;
+    }
+
+    return <Badge bg="secondary">DRAFT</Badge>;
   };
 
   if (authLoading || loading) {
@@ -217,7 +227,7 @@ export default function TimesheetsDashboardPage() {
               </Col>
               <Col md={3}>
                 <div className="text-muted small mb-1">Status</div>
-                <div>{getStatusBadge(currentWeekStats.status)}</div>
+                <div>{getStatusBadge(currentWeekStats)}</div>
               </Col>
               <Col md={3}>
                 <div className="text-muted small mb-1">Total Hours</div>
@@ -283,7 +293,7 @@ export default function TimesheetsDashboardPage() {
                           Week of {new Date(timesheet.weekStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </div>
                       </td>
-                      <td>{getStatusBadge(timesheet.status)}</td>
+                      <td>{getStatusBadge(timesheet)}</td>
                       <td>
                         <Badge bg="primary" className="fs-6">
                           {formatHours(timesheet.totalHours)}

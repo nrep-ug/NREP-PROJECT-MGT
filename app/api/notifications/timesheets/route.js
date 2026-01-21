@@ -15,6 +15,7 @@ import { NextResponse } from 'next/server';
 import {
   sendTimesheetSubmittedEmail,
   sendTimesheetApprovedEmail,
+  sendTimesheetSupervisorApprovedEmail,
   sendTimesheetRejectedEmail,
 } from '@/lib/nodemailer';
 
@@ -23,7 +24,7 @@ import {
  * Send email notifications
  *
  * Body:
- * - type: 'timesheet_submitted' | 'timesheet_approved' | 'timesheet_rejected'
+ * - type: 'timesheet_submitted' | 'timesheet_approved' | 'timesheet_rejected' | 'timesheet_supervisor_approved'
  * - data: Object with relevant notification data
  */
 export async function POST(request) {
@@ -61,6 +62,17 @@ export async function POST(request) {
           );
         }
         result = await sendTimesheetApprovedEmail(data);
+        break;
+
+      case 'timesheet_supervisor_approved':
+        // Send to admins
+        if (!data.to || !data.employeeName || !data.weekStart || !data.supervisorName || !data.approvalUrl) {
+          return NextResponse.json(
+            { error: 'Missing required fields for timesheet_supervisor_approved notification' },
+            { status: 400 }
+          );
+        }
+        result = await sendTimesheetSupervisorApprovedEmail(data);
         break;
 
       case 'timesheet_rejected':
