@@ -11,6 +11,7 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
   const clientNavItems = [
     { href: '/client/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
     { href: '/client/projects', label: 'Projects', icon: 'bi-folder' },
+    { href: '/client/profile', label: 'My Profile', icon: 'bi-person-circle' },
   ];
 
   const staffNavItems = [
@@ -18,6 +19,7 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
     { href: '/projects', label: 'Projects', icon: 'bi-folder' },
     { href: '/clients', label: 'Clients', icon: 'bi-people' },
     { href: '/timesheets', label: 'Timesheets', icon: 'bi-clock-history' },
+    { href: '/profile', label: 'My Profile', icon: 'bi-person-circle' },
     { href: '/admin', label: 'Admin', icon: 'bi-gear', adminOnly: true },
   ];
 
@@ -26,6 +28,8 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
 
   const sidebarWidth = isCollapsed ? '80px' : '260px';
   const showLabels = !isCollapsed || isMobileOpen;
+
+  const currentYear = new Date().getFullYear();
 
   return (
     <>
@@ -364,7 +368,7 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
             color: 'rgba(255, 255, 255, 0.5)',
             fontSize: '0.75rem'
           }}>
-            <small>© 2024 NREP</small>
+            <small>© {currentYear} NREP</small>
           </div>
         )}
       </div>
