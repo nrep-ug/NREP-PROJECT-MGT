@@ -28,44 +28,41 @@ export async function GET(request) {
 
     const response = await adminDatabases.listDocuments(DB_ID, COL_CLIENTS, queries);
 
-    // Enrich clients with primary contact details
-    const clientsWithContacts = await Promise.all(
-      response.documents.map(async (client) => {
-        if (client.primaryContactId) {
-          try {
-            // Fetch contact person profile
-            const contactProfiles = await adminDatabases.listDocuments(
-              DB_ID,
-              'pms_users',
-              [
-                Query.equal('accountId', client.primaryContactId),
-                Query.limit(1)
-              ]
-            );
+    // Enrich with primary contact details
+    const primaryContactIds = [...new Set(response.documents
+      .map(c => c.primaryContactId)
+      .filter(id => id))]; // Filter out null/undefined
 
-            if (contactProfiles.documents.length > 0) {
-              const contact = contactProfiles.documents[0];
-              return {
-                ...client,
-                primaryContact: {
-                  accountId: contact.accountId,
-                  email: contact.email,
-                  username: contact.username,
-                  firstName: contact.firstName,
-                  lastName: contact.lastName,
-                  title: contact.title,
-                  status: contact.status
-                }
-              };
-            }
-          } catch (error) {
-            console.error(`Failed to fetch contact for client ${client.$id}:`, error);
-          }
-        }
+    let contactsMap = {};
 
-        return client;
-      })
-    );
+    if (primaryContactIds.length > 0) {
+      console.log('API/Clients: Fetching contacts for IDs:', primaryContactIds);
+      try {
+        const contactsRes = await adminDatabases.listDocuments(
+          DB_ID,
+          'pms_users',
+          [Query.equal('accountId', primaryContactIds)]
+        );
+
+        console.log(`API/Clients: Found ${contactsRes.documents.length} contacts`);
+
+        contactsRes.documents.forEach(contact => {
+          contactsMap[contact.accountId] = {
+            id: contact.accountId,
+            firstName: contact.firstName,
+            lastName: contact.lastName,
+            email: contact.email
+          };
+        });
+      } catch (err) {
+        console.error('Failed to fetch primary contacts', err);
+      }
+    }
+
+    const clientsWithContacts = response.documents.map(client => ({
+      ...client,
+      primaryContact: client.primaryContactId ? contactsMap[client.primaryContactId] : null
+    }));
 
     return NextResponse.json({ clients: clientsWithContacts, total: response.total });
   } catch (error) {

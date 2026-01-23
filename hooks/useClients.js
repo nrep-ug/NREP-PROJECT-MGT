@@ -14,15 +14,15 @@ export function useClients(organizationId) {
         queryKey: clientKeys.list({ organizationId }),
         queryFn: async () => {
             if (!organizationId) return [];
-            const response = await databases.listDocuments(
-                DB_ID,
-                COLLECTIONS.CLIENTS,
-                [
-                    Query.equal('organizationId', organizationId),
-                    Query.orderAsc('name')
-                ]
-            );
-            return response.documents;
+
+            const response = await fetch(`/api/clients?organizationId=${organizationId}`);
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch clients');
+            }
+
+            const data = await response.json();
+            return data.clients || [];
         },
         enabled: !!organizationId,
     });

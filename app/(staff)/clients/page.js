@@ -63,7 +63,7 @@ export default function ClientsPage() {
 
       {/* Statistics Cards */}
       <Row className="mb-4">
-        <Col md={4}>
+        <Col md={6}>
           <Card className="border-0 shadow-sm">
             <Card.Body>
               <div className="d-flex justify-content-between align-items-center">
@@ -78,7 +78,7 @@ export default function ClientsPage() {
             </Card.Body>
           </Card>
         </Col>
-        <Col md={4}>
+        <Col md={6}>
           <Card className="border-0 shadow-sm">
             <Card.Body>
               <div className="d-flex justify-content-between align-items-center">
@@ -93,21 +93,7 @@ export default function ClientsPage() {
             </Card.Body>
           </Card>
         </Col>
-        <Col md={4}>
-          <Card className="border-0 shadow-sm">
-            <Card.Body>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <p className="text-muted mb-1 small">With Primary Contact</p>
-                  <h3 className="mb-0">{clients.filter(c => c.primaryContactId).length}</h3>
-                </div>
-                <div className="fs-2 text-info opacity-50">
-                  <i className="bi bi-person-check"></i>
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+
       </Row>
 
       {/* Search Bar */}
