@@ -17,7 +17,7 @@ const COL_TIMESHEETS = 'pms_timesheets';
  */
 export async function GET(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Get the entry
     const entry = await adminDatabases.getDocument(DB_ID, COL_ENTRIES, id);
@@ -43,7 +43,7 @@ export async function GET(request, { params }) {
  */
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { projectId, taskId, workDate, hours, notes, billable, requesterId, title, endTime, startTime } = body;
 
@@ -128,7 +128,7 @@ export async function PUT(request, { params }) {
  */
 export async function DELETE(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const requesterId = searchParams.get('requesterId');
 

@@ -11,7 +11,7 @@ const COL_PROJECTS = 'pms_projects';
 
 export async function GET(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, id);
 
@@ -27,7 +27,7 @@ export async function GET(request, { params }) {
 
 export async function PATCH(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     // Allow updating only safe fields

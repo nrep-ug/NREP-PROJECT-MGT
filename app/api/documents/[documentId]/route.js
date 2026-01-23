@@ -56,7 +56,7 @@ async function canManageDocument(documentId, requesterId) {
  */
 export async function PATCH(request, { params }) {
   try {
-    const { documentId } = params;
+    const { documentId } = await params;
     const body = await request.json();
     const {
       requesterId,
@@ -123,7 +123,7 @@ export async function PATCH(request, { params }) {
  */
 export async function DELETE(request, { params }) {
   try {
-    const { documentId } = params;
+    const { documentId } = await params;
     const { searchParams } = new URL(request.url);
     const requesterId = searchParams.get('requesterId');
 

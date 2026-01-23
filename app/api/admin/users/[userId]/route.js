@@ -14,7 +14,7 @@ const COL_USERS = 'pms_users';
  */
 export async function PATCH(request, { params }) {
   try {
-    const { userId } = params;
+    const { userId } = await params;
     const body = await request.json();
     const {
       requesterId,

@@ -11,7 +11,7 @@ const COL_COMPONENTS = 'pms_project_components';
 
 export async function PATCH(request, { params }) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const body = await request.json();
         const { name, description, leaderId } = body;
 
@@ -40,7 +40,7 @@ export async function PATCH(request, { params }) {
 
 export async function DELETE(request, { params }) {
     try {
-        const { id } = params;
+        const { id } = await params;
 
         if (!id) {
             return NextResponse.json({ error: 'Component ID is required' }, { status: 400 });

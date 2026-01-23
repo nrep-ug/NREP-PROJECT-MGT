@@ -52,7 +52,7 @@ async function canManageDocument(documentId, requesterId) {
  */
 export async function POST(request, { params }) {
   try {
-    const { documentId } = params;
+    const { documentId } = await params;
     const body = await request.json();
     const {
       requesterId,

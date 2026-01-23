@@ -17,7 +17,7 @@ const COL_CLIENTS = 'pms_clients';
  */
 export async function GET(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const client = await adminDatabases.getDocument(DB_ID, COL_CLIENTS, id);
 
@@ -74,7 +74,7 @@ export async function GET(request, { params }) {
  */
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const {
       name,
@@ -258,7 +258,7 @@ export async function PUT(request, { params }) {
  */
 export async function DELETE(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const requesterId = searchParams.get('requesterId');
 
