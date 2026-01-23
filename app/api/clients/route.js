@@ -36,15 +36,12 @@ export async function GET(request) {
     let contactsMap = {};
 
     if (primaryContactIds.length > 0) {
-      console.log('API/Clients: Fetching contacts for IDs:', primaryContactIds);
       try {
         const contactsRes = await adminDatabases.listDocuments(
           DB_ID,
           'pms_users',
           [Query.equal('accountId', primaryContactIds)]
         );
-
-        console.log(`API/Clients: Found ${contactsRes.documents.length} contacts`);
 
         contactsRes.documents.forEach(contact => {
           contactsMap[contact.accountId] = {
