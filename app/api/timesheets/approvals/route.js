@@ -63,7 +63,7 @@ export async function GET(request) {
         DB_ID,
         COL_USERS,
         [
-          Query.equal('supervisedBy', requesterId),
+          Query.equal('supervisorId', requesterId), // Fixed: field is supervisorId, not supervisedBy
           Query.equal('organizationId', organizationId),
           Query.limit(100) // Reasonable limit for supervised staff
         ]

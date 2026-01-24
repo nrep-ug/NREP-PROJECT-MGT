@@ -80,7 +80,7 @@ export async function GET(request, { params }) {
             const staffProfile = staffProfiles.documents[0];
 
             // Check if this staff is supervised by the requester
-            if (staffProfile.supervisedBy === requesterId) {
+            if (staffProfile.supervisorId === requesterId) {
                 hasAccess = true;
                 accessType = 'supervisor';
             }
@@ -271,7 +271,7 @@ export async function GET(request, { params }) {
                     email: staffMember.email,
                     department: staffMember.department,
                     title: staffMember.title,
-                    supervisedBy: staffMember.supervisedBy
+                    supervisorId: staffMember.supervisorId
                 },
                 timesheets: enrichedTimesheets,
                 statistics,

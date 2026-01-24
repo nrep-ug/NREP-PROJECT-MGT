@@ -61,7 +61,7 @@ export default function DashboardPage() {
         // For now showing Org projects
         promises.push(databases.listDocuments(DB_ID, COLLECTIONS.PROJECTS, [Query.limit(10), Query.orderDesc('$createdAt')]));
         // My Team (Supervised Users)
-        promises.push(databases.listDocuments(DB_ID, COLLECTIONS.USERS, [Query.equal('supervisedBy', userId)]));
+        promises.push(databases.listDocuments(DB_ID, COLLECTIONS.USERS, [Query.equal('supervisorId', userId)]));
       }
       // --- STAFF VIEW DATA ---
       else {
@@ -106,7 +106,7 @@ export default function DashboardPage() {
 
       if (isSupervisor) {
         // Supervisor Stats
-        const teamRes = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [Query.equal('supervisedBy', userId)]);
+        const teamRes = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [Query.equal('supervisorId', userId)]);
         newStats.teamSize = teamRes.total;
       }
 

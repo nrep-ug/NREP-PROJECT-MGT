@@ -58,7 +58,7 @@ export async function GET(request) {
       DB_ID,
       COL_USERS,
       [
-        Query.equal('supervisedBy', requesterId),
+        Query.equal('supervisorId', requesterId),
         Query.equal('organizationId', organizationId),
         Query.limit(200)
       ]
