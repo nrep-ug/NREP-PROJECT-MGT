@@ -89,14 +89,33 @@ export async function GET(request) {
       userLabels = [labelsParam]; // Fallback if parsing fails
     }
 
-    // Check if user is admin (from labels)
+    // Check role labels
     const isAdmin = userLabels.includes('admin');
+    const isFinance = userLabels.includes('finance');
+    const isSupervisor = userLabels.includes('supervisor');
 
     // Check if user is a manager of any project (query project teams)
     // Note: 'manager' is a project team role, NOT a label
     // Even admins can be managers of specific projects, so we check for everyone
     let managedProjectIds = [];
     let isManager = false;
+
+    // For supervisors (who are not admin/finance), fetch supervised users
+    let supervisedAccountIds = [];
+    if (isSupervisor && !isAdmin && !isFinance) {
+      try {
+        const supervisedUsers = await adminDatabases.listDocuments(DB_ID, COL_ACCOUNTS, [
+          Query.equal('supervisorId', accountId),
+          Query.equal('organizationId', organizationId),
+          Query.equal('status', 'active'),
+          Query.equal('userType', 'staff'), // Exclude clients
+          Query.limit(200)
+        ]);
+        supervisedAccountIds = supervisedUsers.documents.map(u => u.accountId);
+      } catch (err) {
+        console.error('[Timesheet Reports] Error fetching supervised users:', err);
+      }
+    }
 
     // Optimized: Fetch projects in parallel batches and check memberships more efficiently
     const projectsForManagerCheck = await adminDatabases.listDocuments(DB_ID, COL_PROJECTS, [
@@ -154,22 +173,63 @@ export async function GET(request) {
     }
 
     // Role-based filtering for timesheets
-    if (!isAdmin) {
-      if (isManager) {
-        // Manager: Can see timesheets from managed projects' team members + own timesheets
-        // We need to filter by userId if specified, otherwise we'll filter entries later
-        if (userId) {
-          timesheetFilters.push(Query.equal('accountId', userId));
-        }
-      } else {
-        // Staff: Only own timesheets
-        timesheetFilters.push(Query.equal('accountId', accountId));
-      }
-    } else {
-      // Admin: Apply user filter if specified
+    // Priority: Admin/Finance > Supervisor > Manager > Staff
+    if (isAdmin || isFinance) {
+      // Admin/Finance: Can see all organization timesheets
+      // Apply user filter if specified
       if (userId) {
         timesheetFilters.push(Query.equal('accountId', userId));
       }
+    } else if (isSupervisor) {
+      // Supervisor: Can only see supervised users' timesheets
+      if (userId) {
+        // Validate userId is in supervised list
+        if (!supervisedAccountIds.includes(userId)) {
+          // Not authorized to view this user, return empty data
+          return NextResponse.json({
+            success: true,
+            type,
+            role: 'supervisor',
+            isAdmin: false,
+            isFinance: false,
+            isSupervisor: true,
+            isManager: false,
+            supervisedUsersCount: supervisedAccountIds.length,
+            error: 'Not authorized to view this user',
+            filters: { startDate: startDate || 'all', endDate: endDate || 'all', projectId: projectId || 'all', userId },
+            data: type === 'summary' ? { summary: getEmptySummary(), topProjects: [], topUsers: [] } : []
+          });
+        }
+        timesheetFilters.push(Query.equal('accountId', userId));
+      } else {
+        // Show all supervised users
+        if (supervisedAccountIds.length > 0) {
+          timesheetFilters.push(Query.equal('accountId', supervisedAccountIds));
+        } else {
+          // No supervised users, return empty data
+          return NextResponse.json({
+            success: true,
+            type,
+            role: 'supervisor',
+            isAdmin: false,
+            isFinance: false,
+            isSupervisor: true,
+            isManager: false,
+            supervisedUsersCount: 0,
+            filters: { startDate: startDate || 'all', endDate: endDate || 'all', projectId: projectId || 'all', userId: userId || 'all' },
+            data: type === 'summary' ? { summary: getEmptySummary(), topProjects: [], topUsers: [] } : []
+          });
+        }
+      }
+    } else if (isManager) {
+      // Manager: Can see timesheets from managed projects' team members + own timesheets
+      // We'll filter entries later by project
+      if (userId) {
+        timesheetFilters.push(Query.equal('accountId', userId));
+      }
+    } else {
+      // Staff: Only own timesheets
+      timesheetFilters.push(Query.equal('accountId', accountId));
     }
 
     // Step 2: Fetch timesheets with maximum limit for performance
@@ -196,12 +256,22 @@ export async function GET(request) {
 
     // Step 3: If no timesheets found, return empty data
     if (allTimesheets.length === 0) {
+      // Determine primary role for empty response
+      let emptyRole = 'staff';
+      if (isAdmin) emptyRole = 'admin';
+      else if (isFinance) emptyRole = 'finance';
+      else if (isSupervisor) emptyRole = 'supervisor';
+      else if (isManager) emptyRole = 'manager';
+
       return NextResponse.json({
         success: true,
         type,
-        role: isAdmin ? 'admin' : isManager ? 'manager' : 'staff',
+        role: emptyRole,
         isAdmin,
+        isFinance,
+        isSupervisor,
         isManager,
+        supervisedUsersCount: supervisedAccountIds.length,
         managedProjectsCount: managedProjectIds.length,
         managedProjects: managedProjectIds,
         filters: {
@@ -267,14 +337,15 @@ export async function GET(request) {
     }));
 
     // Step 7: Additional filtering for managers (only entries from managed projects + own entries)
-    if (isManager && !isAdmin && !userId && !projectId) {
+    // Only apply if not admin/finance
+    if (isManager && !isAdmin && !isFinance && !userId && !projectId) {
       allEntries = allEntries.filter(entry => {
         return entry.accountId === accountId || managedProjectIds.includes(entry.projectId);
       });
     }
 
     // Step 8: If manager viewing specific project, ensure they manage it
-    if (isManager && !isAdmin && projectId && !managedProjectIds.includes(projectId)) {
+    if (isManager && !isAdmin && !isFinance && projectId && !managedProjectIds.includes(projectId)) {
       // Not a managed project, can only see own entries
       allEntries = allEntries.filter(entry => entry.accountId === accountId);
     }
@@ -288,6 +359,7 @@ export async function GET(request) {
       adminDatabases.listDocuments(DB_ID, COL_ACCOUNTS, [
         Query.equal('organizationId', organizationId),
         Query.equal('status', 'active'), // Only fetch active accounts
+        Query.equal('userType', 'staff'), // Exclude clients
         Query.limit(200) // Reduced from 500 for faster queries
       ])
     ]);
@@ -346,15 +418,27 @@ export async function GET(request) {
     }
 
     // Return primary role for display
-    // Note: An admin can also be a project manager
-    const primaryRole = isAdmin ? 'admin' : isManager ? 'manager' : 'staff';
+    // Priority: Admin > Finance > Supervisor > Manager > Staff
+    let primaryRole = 'staff';
+    if (isAdmin) {
+      primaryRole = 'admin';
+    } else if (isFinance) {
+      primaryRole = 'finance';
+    } else if (isSupervisor) {
+      primaryRole = 'supervisor';
+    } else if (isManager) {
+      primaryRole = 'manager';
+    }
 
     return NextResponse.json({
       success: true,
       type,
       role: primaryRole,
       isAdmin,
+      isFinance,
+      isSupervisor,
       isManager,
+      supervisedUsersCount: supervisedAccountIds.length,
       managedProjectsCount: managedProjectIds.length,
       managedProjects: managedProjectIds, // Array of project IDs user manages
       filters: {

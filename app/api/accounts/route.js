@@ -34,6 +34,7 @@ export async function GET(request) {
     const users = await adminDatabases.listDocuments(DB_ID, COL_USERS, [
       Query.equal('organizationId', organizationId),
       Query.equal('status', 'active'),
+      Query.equal('userType', 'staff'), // Exclude clients
       Query.orderAsc('firstName'),
       Query.limit(500)
     ]);
