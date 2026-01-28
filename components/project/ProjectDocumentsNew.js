@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { Button, Card, Row, Col, Dropdown, Modal, Form, Badge, Breadcrumb, InputGroup, Spinner } from 'react-bootstrap';
 import { databases, storage, Query, COLLECTIONS, DB_ID, BUCKET_DOCS, ID } from '@/lib/appwriteClient';
 import { formatDateTime } from '@/lib/date';
+import DocumentPreviewModal from './DocumentPreviewModal';
+import DocumentHistoryModal from './DocumentHistoryModal';
+import DocumentMoveModal from './DocumentMoveModal';
 
 export default function ProjectDocumentsNew({ project, user, showToast }) {
   const [documents, setDocuments] = useState([]);
@@ -13,6 +16,8 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [sortOption, setSortOption] = useState('date_desc');
+  const [dragActive, setDragActive] = useState(false);
 
   // Modals
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -21,10 +26,14 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [showReplaceModal, setShowReplaceModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showMoveModal, setShowMoveModal] = useState(false);
 
   // Selected items for actions
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [selectedFolder, setSelectedFolder] = useState(null);
+  const [moveItem, setMoveItem] = useState(null);
 
   // Upload form
   const [uploadFile, setUploadFile] = useState(null);
@@ -66,6 +75,12 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
     )
   );
 
+  const canUpload = user?.isAdmin || (
+    project?.projectTeamId && user?.teams?.some(
+      team => team.teamId === project.projectTeamId
+    )
+  );
+
   useEffect(() => {
     if (project?.$id) {
       loadFolders();
@@ -80,7 +95,8 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
       const teamResponse = await fetch(`/api/projects/${project.$id}/members`);
       if (teamResponse.ok) {
         const teamData = await teamResponse.json();
-        setStaffMembers(teamData.members || []);
+        // Filter out clients from staff members list
+        setStaffMembers((teamData.members || []).filter(m => m.userType !== 'client'));
       }
 
       // Load clients from organization
@@ -89,8 +105,8 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
           DB_ID,
           COLLECTIONS.USERS,
           [
-            Query.equal('organizationId', project.clientId),
-            Query.equal('role', 'client'),
+            Query.contains('clientOrganizationIds', [project.clientId]),
+            Query.equal('userType', 'client'),
             Query.limit(100)
           ]
         );
@@ -137,6 +153,68 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (!canUpload) return;
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      setUploadFile(file);
+      setUploadTitle(file.name);
+      setShowUploadModal(true);
+    }
+  };
+
+  const handleMoveItem = async (item, targetFolderId) => {
+    // Only proceed if target is different
+    if (targetFolderId === (currentFolder?.$id || null)) return;
+    if (item.parentFolderId === targetFolderId) return;
+
+    try {
+      const endpoint = item.title ? `/api/documents/${item.$id}` : `/api/documents/folders`;
+      const body = item.title ? {
+        requesterId: user.authUser.$id,
+        parentFolderId: targetFolderId
+      } : {
+        folderId: item.$id,
+        requesterId: user.authUser.$id,
+        parentFolderId: targetFolderId
+      };
+
+      const response = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) throw new Error('Failed to move item');
+
+      showToast('Item moved successfully!', 'success');
+      loadDocuments();
+      loadFolders();
+    } catch (err) {
+      showToast(err.message || 'Failed to move item', 'danger');
+    }
+  };
+
+  const openMoveModal = (item) => {
+    setMoveItem(item);
+    setShowMoveModal(true);
   };
 
   const handleUploadDocument = async () => {
@@ -517,9 +595,20 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
     return folders.filter(f => f.parentFolderId === (currentFolder?.$id || null));
   };
 
-  const filteredDocuments = documents.filter(doc =>
-    doc.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredDocuments = documents
+    .filter(doc => doc.title.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => {
+      switch (sortOption) {
+        case 'name_asc': return a.title.localeCompare(b.title);
+        case 'name_desc': return b.title.localeCompare(a.title);
+        case 'date_asc': return new Date(a.$createdAt) - new Date(b.$createdAt);
+        case 'date_desc': return new Date(b.$createdAt) - new Date(a.$createdAt);
+        case 'size_desc':
+          // We'll need size on the doc object. If not present (it's in version), fall back to date.
+          return (b.currentVersion?.sizeBytes || 0) - (a.currentVersion?.sizeBytes || 0);
+        default: return 0;
+      }
+    });
 
   const getFileIcon = (fileName) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
@@ -575,7 +664,36 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
   };
 
   return (
-    <div>
+    <div
+      onDragEnter={handleDrag}
+      onDragLeave={handleDrag}
+      onDragOver={handleDrag}
+      onDrop={handleDrop}
+      style={{ position: 'relative', minHeight: '400px' }}
+    >
+      {/* Drag Overlay */}
+      {dragActive && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(5, 70, 83, 0.1)',
+          border: '2px dashed #054653',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '12px',
+          pointerEvents: 'none'
+        }}>
+          <div className="text-center p-4 bg-white rounded-3 shadow">
+            <i className="bi bi-cloud-upload" style={{ fontSize: '3rem', color: '#054653' }}></i>
+            <h5 className="mt-2 text-primary">Drop files to upload</h5>
+          </div>
+        </div>
+      )}
       {/* Header with Actions */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <div>
@@ -586,51 +704,55 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
         </div>
 
         <div className="d-flex flex-wrap gap-2">
-          <Button
-            variant=""
-            size="sm"
-            onClick={openCreateFolderModal}
-            style={{
-              backgroundColor: 'white',
-              border: '2px solid #054653',
-              color: '#054653',
-              borderRadius: '8px',
-              padding: '0.5rem 1rem',
-              fontSize: '0.875rem',
-              fontWeight: '600'
-            }}
-          >
-            <i className="bi bi-folder-plus me-2"></i>
-            New Folder
-          </Button>
+          {canUpload && (
+            <Button
+              variant=""
+              size="sm"
+              onClick={openCreateFolderModal}
+              style={{
+                backgroundColor: 'white',
+                border: '2px solid #054653',
+                color: '#054653',
+                borderRadius: '8px',
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                fontWeight: '600'
+              }}
+            >
+              <i className="bi bi-folder-plus me-2"></i>
+              New Folder
+            </Button>
+          )}
 
-          <Button
-            variant=""
-            size="sm"
-            onClick={openUploadModal}
-            disabled={uploading}
-            style={{
-              backgroundColor: '#054653',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '0.5rem 1rem',
-              fontSize: '0.875rem',
-              fontWeight: '600'
-            }}
-          >
-            {uploading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                Uploading...
-              </>
-            ) : (
-              <>
-                <i className="bi bi-cloud-upload me-2"></i>
-                Upload Document
-              </>
-            )}
-          </Button>
+          {canUpload && (
+            <Button
+              variant=""
+              size="sm"
+              onClick={openUploadModal}
+              disabled={uploading}
+              style={{
+                backgroundColor: '#054653',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                fontWeight: '600'
+              }}
+            >
+              {uploading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-cloud-upload me-2"></i>
+                  Upload Document
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -672,10 +794,23 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
         </InputGroup>
 
         <div className="btn-group" role="group">
+          <Dropdown>
+            <Dropdown.Toggle variant="outline-secondary" size="sm" id="dropdown-sort" style={{ borderRadius: '6px 0 0 6px' }}>
+              <i className="bi bi-sort-down"></i>
+            </Dropdown.Toggle>
+            <Dropdown.Menu>
+              <Dropdown.Item onClick={() => setSortOption('date_desc')} active={sortOption === 'date_desc'}>Date (Newest)</Dropdown.Item>
+              <Dropdown.Item onClick={() => setSortOption('date_asc')} active={sortOption === 'date_asc'}>Date (Oldest)</Dropdown.Item>
+              <Dropdown.Item onClick={() => setSortOption('name_asc')} active={sortOption === 'name_asc'}>Name (A-Z)</Dropdown.Item>
+              <Dropdown.Item onClick={() => setSortOption('name_desc')} active={sortOption === 'name_desc'}>Name (Z-A)</Dropdown.Item>
+              <Dropdown.Item onClick={() => setSortOption('size_desc')} active={sortOption === 'size_desc'}>Size</Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
           <Button
             variant={viewMode === 'grid' ? 'primary' : 'outline-secondary'}
             size="sm"
             onClick={() => setViewMode('grid')}
+            style={{ borderRadius: '0' }}
           >
             <i className="bi bi-grid-3x3-gap"></i>
           </Button>
@@ -683,6 +818,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
             variant={viewMode === 'list' ? 'primary' : 'outline-secondary'}
             size="sm"
             onClick={() => setViewMode('list')}
+            style={{ borderRadius: '0 6px 6px 0' }}
           >
             <i className="bi bi-list-ul"></i>
           </Button>
@@ -826,8 +962,10 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
                         style={{
                           width: '56px',
                           height: '56px',
-                          backgroundColor: '#f8fafc'
+                          backgroundColor: '#f8fafc',
+                          cursor: 'pointer'
                         }}
+                        onClick={() => openPreviewModal(doc)}
                       >
                         <i
                           className={getFileIcon(doc.title)}
@@ -839,7 +977,11 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
                       </div>
 
                       <div className="flex-grow-1 overflow-hidden">
-                        <h6 className="mb-1 fw-bold text-truncate" style={{ color: '#1e293b' }}>
+                        <h6
+                          className="mb-1 fw-bold text-truncate"
+                          style={{ color: '#1e293b', cursor: 'pointer' }}
+                          onClick={() => openPreviewModal(doc)}
+                        >
                           {doc.title}
                         </h6>
                         <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
@@ -890,13 +1032,25 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
                         </Dropdown.Toggle>
 
                         <Dropdown.Menu>
+                          <Dropdown.Item onClick={() => openPreviewModal(doc)}>
+                            <i className="bi bi-eye me-2"></i>
+                            Preview
+                          </Dropdown.Item>
                           <Dropdown.Item onClick={() => handleDownloadDocument(doc)}>
                             <i className="bi bi-download me-2"></i>
                             Download
                           </Dropdown.Item>
+                          <Dropdown.Item onClick={() => openHistoryModal(doc)}>
+                            <i className="bi bi-clock-history me-2"></i>
+                            History
+                          </Dropdown.Item>
                           {canManageItem(doc) && (
                             <>
                               <Dropdown.Divider />
+                              <Dropdown.Item onClick={() => openMoveModal(doc)}>
+                                <i className="bi bi-folder-symlink me-2"></i>
+                                Move
+                              </Dropdown.Item>
                               <Dropdown.Item onClick={() => openRenameDocModal(doc)}>
                                 <i className="bi bi-pencil me-2"></i>
                                 Rename
@@ -1446,6 +1600,28 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
           </Button>
         </Modal.Footer>
       </Modal>
-    </div>
+
+
+      {/* New Modals */}
+      <DocumentPreviewModal
+        show={showPreviewModal}
+        onHide={() => setShowPreviewModal(false)}
+        document={selectedDoc}
+      />
+
+      <DocumentHistoryModal
+        show={showHistoryModal}
+        onHide={() => setShowHistoryModal(false)}
+        document={selectedDoc}
+      />
+
+      <DocumentMoveModal
+        show={showMoveModal}
+        onHide={() => setShowMoveModal(false)}
+        item={moveItem}
+        folders={folders}
+        onMove={handleMoveItem}
+      />
+    </div >
   );
 }
