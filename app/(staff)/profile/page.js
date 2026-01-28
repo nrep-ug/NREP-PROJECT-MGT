@@ -35,7 +35,30 @@ export default function StaffProfilePage() {
             );
 
             if (response.documents.length > 0) {
-                setProfileData(response.documents[0]);
+                const profile = response.documents[0];
+
+                // Fetch supervisor name if supervisorId exists
+                if (profile.supervisorId) {
+                    try {
+                        const supervisorRes = await databases.listDocuments(
+                            DB_ID,
+                            COLLECTIONS.USERS,
+                            [
+                                Query.equal('accountId', profile.supervisorId),
+                                Query.limit(1)
+                            ]
+                        );
+
+                        if (supervisorRes.documents.length > 0) {
+                            const supervisor = supervisorRes.documents[0];
+                            profile.supervisorName = `${supervisor.firstName} ${supervisor.lastName}`;
+                        }
+                    } catch (supErr) {
+                        console.error('Failed to fetch supervisor details:', supErr);
+                    }
+                }
+
+                setProfileData(profile);
             } else {
                 // Fallback to basic user data if document doesn't exist (shouldn't happen for valid staff)
                 console.warn('Profile document not found, using basic auth data');

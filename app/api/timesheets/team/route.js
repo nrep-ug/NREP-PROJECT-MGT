@@ -60,6 +60,7 @@ export async function GET(request) {
       [
         Query.equal('supervisorId', requesterId),
         Query.equal('organizationId', organizationId),
+        Query.equal('userType', 'staff'), // Exclude clients
         Query.limit(200)
       ]
     );
@@ -94,6 +95,7 @@ export async function GET(request) {
     // Step 2: Fetch all relevant staff based on access level
     const staffQueries = [
       Query.equal('organizationId', organizationId),
+      Query.equal('userType', 'staff'), // Exclude clients
       Query.limit(500) // Reasonable limit
     ];
 

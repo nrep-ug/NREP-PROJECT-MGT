@@ -202,9 +202,9 @@ export default function UserProfileView({ user, showAdminControls = false }) {
                                                 <i className="bi bi-person text-secondary"></i>
                                             </div>
                                             <div>
-                                                <div className="fw-bold">Supervisor Assigned</div>
-                                                <div className="text-muted small">ID: {user.supervisorId}</div>
-                                                {/* Ideally we would fetch supervisor name, but keeping it simple for now */}
+                                                <div className="fw-bold">{user.supervisorName || 'Supervisor Assigned'}</div>
+                                                {user.supervisorName && <div className="text-muted small">ID: {user.supervisorId}</div>}
+                                                {!user.supervisorName && <div className="text-muted small">ID: {user.supervisorId}</div>}
                                             </div>
                                         </div>
                                     </div>
