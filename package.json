@@ -1,6 +1,6 @@
 {
   "name": "nrep-pms",
-  "version": "2.7.5",
+  "version": "2.7.6",
   "description": "Production-ready Project Management System with Next.js and Appwrite",
   "private": true,
   "scripts": {
