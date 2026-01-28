@@ -25,7 +25,7 @@ const COL_TASKS = 'pms_tasks';
  */
 export async function GET(request, { params }) {
   try {
-    const { id: projectId } = params;
+    const { id: projectId } = await params;
     const { searchParams } = new URL(request.url);
     const requesterId = searchParams.get('requesterId');
     const startDate = searchParams.get('startDate');

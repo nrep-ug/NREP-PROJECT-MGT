@@ -11,6 +11,7 @@ const COLLECTIONS = {
  */
 export async function PUT(request, { params }) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { membershipId, roles, requesterId, organizationId } = body;
 
@@ -29,7 +30,7 @@ export async function PUT(request, { params }) {
     }
 
     // Get project to find the project team ID
-    const project = await databases.getDocument(DB_ID, COLLECTIONS.PROJECTS, params.id);
+    const project = await databases.getDocument(DB_ID, COLLECTIONS.PROJECTS, id);
 
     if (!project || !project.projectTeamId) {
       return NextResponse.json(

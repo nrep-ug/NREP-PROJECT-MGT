@@ -18,7 +18,8 @@ const COL_USERS = 'pms_users';
  */
 export async function GET(request, { params }) {
   try {
-    const projectId = params.id;
+    const { id } = await params;
+    const projectId = id;
 
     // Get project to find its team ID
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
@@ -80,7 +81,8 @@ export async function GET(request, { params }) {
  */
 export async function POST(request, { params }) {
   try {
-    const projectId = params.id;
+    const { id } = await params;
+    const projectId = id;
     const body = await request.json();
     const {
       userId, // Account ID of the user to add
@@ -98,7 +100,7 @@ export async function POST(request, { params }) {
     }
 
     // Validate roles
-    const validRoles = ['owner', 'manager', 'contributor', 'viewer', 'client_rep', 'lead','developer','designer','qa','member'];
+    const validRoles = ['owner', 'manager', 'contributor', 'viewer', 'client_rep', 'lead', 'developer', 'designer', 'qa', 'member'];
     const invalidRoles = roles.filter(role => !validRoles.includes(role));
     if (invalidRoles.length > 0) {
       return NextResponse.json(
@@ -185,7 +187,8 @@ export async function POST(request, { params }) {
  */
 export async function DELETE(request, { params }) {
   try {
-    const projectId = params.id;
+    const { id } = await params;
+    const projectId = id;
     const { searchParams } = new URL(request.url);
     const membershipId = searchParams.get('membershipId');
     const requesterId = searchParams.get('requesterId');
