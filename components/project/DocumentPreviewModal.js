@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Modal, Button, Spinner, Alert } from 'react-bootstrap';
-import { databases, storage, Query, COLLECTIONS, DB_ID, BUCKET_DOCS } from '@/lib/appwriteClient';
+import { databases, storage, account, Query, COLLECTIONS, DB_ID, BUCKET_DOCS } from '@/lib/appwriteClient';
 
 export default function DocumentPreviewModal({ show, onHide, document }) {
     const [loading, setLoading] = useState(false);
@@ -31,7 +31,7 @@ export default function DocumentPreviewModal({ show, onHide, document }) {
                 DB_ID,
                 COLLECTIONS.DOCUMENT_VERSIONS,
                 [
-                    Query.equal('documentId', document.$id),
+                    Query.equal('documentId', document.documentId),
                     Query.orderDesc('versionNo'),
                     Query.limit(1)
                 ]
@@ -52,9 +52,37 @@ export default function DocumentPreviewModal({ show, onHide, document }) {
             setFileType(type);
 
             // 2. Generate URL
-            // Use getFileView for previewable content
-            const url = storage.getFileView(BUCKET_DOCS, latestVersion.fileId);
-            setFileUrl(url.href);
+            // Use getFileView for previewable content, fallback to download if needed (debugging)
+            const viewResult = storage.getFileView(BUCKET_DOCS, latestVersion.fileId);
+            let viewUrl = viewResult.href ? viewResult.href : viewResult;
+
+            // Generate JWT for iframe auth (cross-site cookies issue fix)
+            // If the user isn't logged in this will fail, but they should be logged in to be here.
+            try {
+                const session = await account.createJWT();
+                if (session && session.jwt) {
+                    viewUrl += `&jwt=${session.jwt}`;
+                }
+            } catch (jwtError) {
+                console.warn('Failed to create JWT for preview:', jwtError);
+                // Continue without JWT, might fail if cross-site
+            }
+
+            // Remove debug logs
+            // console.log('Preview Debug:', {
+            //     bucketId: BUCKET_DOCS,
+            //     fileId: latestVersion.fileId,
+            //     viewUrl,
+            //     downloadUrl
+            // });
+
+            // For now, let's try using the download URL for PDF preview if view fails? 
+            // Or just logging it.
+            // If the user said "download works", maybe we should try using the download URL for the iframe?
+            // Some browsers handle Content-Disposition: attachment by forcing download, but let's see.
+            // Actually, if viewUrl returns 404, let's try setting fileUrl to viewUrl first, but logged.
+
+            setFileUrl(viewUrl);
 
         } catch (err) {
             console.error('Failed to load preview:', err);

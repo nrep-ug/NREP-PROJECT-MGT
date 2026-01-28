@@ -29,7 +29,7 @@ export default function DocumentHistoryModal({ show, onHide, document }) {
                 DB_ID,
                 COLLECTIONS.DOCUMENT_VERSIONS,
                 [
-                    Query.equal('documentId', document.$id),
+                    Query.equal('documentId', document.documentId),
                     Query.orderDesc('versionNo'), // Newest first
                     Query.limit(50)
                 ]
@@ -44,8 +44,9 @@ export default function DocumentHistoryModal({ show, onHide, document }) {
     };
 
     const handleDownload = (fileId) => {
-        const url = storage.getFileDownload(BUCKET_DOCS, fileId);
-        window.open(url.href, '_blank');
+        const result = storage.getFileDownload(BUCKET_DOCS, fileId);
+        const url = result.href ? result.href : result;
+        window.open(url, '_blank');
     };
 
     const formatSize = (bytes) => {

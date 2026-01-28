@@ -478,13 +478,14 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
       const versions = await databases.listDocuments(
         DB_ID,
         COLLECTIONS.DOCUMENT_VERSIONS,
-        [Query.equal('documentId', doc.$id), Query.orderDesc('versionNo'), Query.limit(1)]
+        [Query.equal('documentId', doc.documentId), Query.orderDesc('versionNo'), Query.limit(1)]
       );
 
       if (versions.documents.length > 0) {
         const latestVersion = versions.documents[0];
-        const fileUrl = storage.getFileView(BUCKET_DOCS, latestVersion.fileId);
-        window.open(fileUrl.href, '_blank');
+        const result = storage.getFileDownload(BUCKET_DOCS, latestVersion.fileId);
+        const fileUrl = result.href ? result.href : result;
+        window.open(fileUrl, '_blank');
       }
     } catch (err) {
       showToast('Failed to download document', 'danger');
@@ -564,6 +565,16 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
     setSelectedFolder(folder);
     setSelectedDoc(null);
     setShowDeleteModal(true);
+  };
+
+  const openPreviewModal = (doc) => {
+    setSelectedDoc(doc);
+    setShowPreviewModal(true);
+  };
+
+  const openHistoryModal = (doc) => {
+    setSelectedDoc(doc);
+    setShowHistoryModal(true);
   };
 
   const canManageItem = (item) => {
