@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { adminTeams as teams, adminDatabases as databases, DB_ID } from '@/lib/appwriteAdmin';
+import { adminTeams as teams, adminDatabases as databases, adminUsers, DB_ID } from '@/lib/appwriteAdmin';
+import { verifyAdminAccess } from '@/lib/authHelpers';
 
 const COLLECTIONS = {
   PROJECTS: 'pms_projects',
@@ -8,6 +9,7 @@ const COLLECTIONS = {
 /**
  * PUT /api/projects/[id]/members/update-roles
  * Update a member's roles in the project team
+ * Requires: requester must be admin OR project owner/manager
  */
 export async function PUT(request, { params }) {
   try {
@@ -39,11 +41,34 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // TODO: Verify requester has permission (is admin or project manager)
-    // For now, we're checking this on the client side
+    // Verify requester has permission: must be org admin OR project manager/owner
+    const isAdmin = await verifyAdminAccess(requesterId);
+    if (!isAdmin) {
+      // Check if they are a project manager or owner
+      const memberships = await teams.listMemberships(project.projectTeamId);
+      const requesterMembership = memberships.memberships.find(
+        (m) => m.userId === requesterId &&
+          (m.roles.includes('manager') || m.roles.includes('owner'))
+      );
+      if (!requesterMembership) {
+        return NextResponse.json(
+          { error: 'Forbidden: Only admins or project managers can update member roles' },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Validate roles to only allow known values
+    const allowedRoles = ['owner', 'manager', 'contributor', 'viewer', 'client_rep'];
+    const invalidRoles = roles.filter((r) => !allowedRoles.includes(r));
+    if (invalidRoles.length > 0) {
+      return NextResponse.json(
+        { error: `Invalid roles: ${invalidRoles.join(', ')}. Allowed: ${allowedRoles.join(', ')}` },
+        { status: 400 }
+      );
+    }
 
     // Update membership roles
-    // Note: Appwrite teams.updateMembershipRoles expects roles as an array of strings
     const updatedMembership = await teams.updateMembershipRoles(
       project.projectTeamId,
       membershipId,
@@ -57,7 +82,6 @@ export async function PUT(request, { params }) {
   } catch (error) {
     console.error('Error updating member roles:', error);
 
-    // Handle specific Appwrite errors
     if (error.code === 404) {
       return NextResponse.json(
         { error: 'Membership not found' },

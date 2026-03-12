@@ -44,8 +44,8 @@ async function getApprovers(timesheetId) {
   try {
     const approvers = [];
 
-    // Get all admins
-    const allUsers = await adminUsers.list();
+    // Get all admins - use limit to avoid missing users beyond default page size
+    const allUsers = await adminUsers.list(undefined, undefined, 100);
     const admins = allUsers.users.filter(u => u.labels?.includes('admin'));
 
     for (const admin of admins) {
@@ -110,9 +110,23 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get('accountId');
     const weekStart = searchParams.get('weekStart');
+    const requesterId = searchParams.get('requesterId');
 
     if (!accountId || !weekStart) {
       return NextResponse.json({ error: 'Missing accountId or weekStart' }, { status: 400 });
+    }
+
+    if (!requesterId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+    }
+
+    // A user can only fetch their own timesheet, unless they are an admin or manager
+    if (requesterId !== accountId) {
+      const requesterUser = await adminUsers.get(requesterId);
+      const isAdminOrManager = requesterUser.labels?.includes('admin') || requesterUser.labels?.includes('manager');
+      if (!isAdminOrManager) {
+        return NextResponse.json({ error: 'Forbidden: You can only view your own timesheets' }, { status: 403 });
+      }
     }
 
     // Find timesheet for this user + week
@@ -147,10 +161,22 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { accountId, organizationId, weekStart, entries } = body;
+    const { accountId, organizationId, weekStart, entries, requesterId } = body;
 
     if (!accountId || !organizationId || !weekStart) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    if (!requesterId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+    }
+
+    // Only allow a user to submit their own timesheets (or an admin on their behalf)
+    if (requesterId !== accountId) {
+      const requesterUser = await adminUsers.get(requesterId);
+      if (!requesterUser.labels?.includes('admin')) {
+        return NextResponse.json({ error: 'Forbidden: You can only submit your own timesheets' }, { status: 403 });
+      }
     }
 
     // 1. Find or create timesheet for this user + week

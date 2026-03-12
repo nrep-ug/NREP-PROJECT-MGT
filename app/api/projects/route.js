@@ -119,9 +119,10 @@ export async function POST(request) {
       await adminTeams.createMembership(
         projectTeamId,
         ['owner'],
-        createdBy,
-        undefined,
-        undefined
+        undefined,  // email - not needed when using userId
+        createdBy,  // userId
+        undefined,  // phone
+        undefined   // url
       );
     } catch (error) {
       // User might already be a member or doesn't exist yet

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { sendAccountCreatedEmail } from '@/lib/nodemailer';
 import { adminDatabases, adminTeams, adminUsers, ID, Query } from '@/lib/appwriteAdmin';
 import { verifyAdminAccess } from '@/lib/authHelpers';
+import crypto from 'crypto';
 import { getUserProfilePermissions } from '@/lib/rbac';
 
 const DB_ID = process.env.APPWRITE_DATABASE_ID || 'pms_db';
@@ -14,9 +15,10 @@ const COL_USERS = 'pms_users';
  */
 function generatePassword(length = 12) {
   const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+  const bytes = crypto.randomBytes(length);
   let password = '';
   for (let i = 0; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
+    password += charset[bytes[i] % charset.length];
   }
   return password;
 }
@@ -315,11 +317,27 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
     const clientOrganizationId = searchParams.get('clientOrganizationId');
+    const requesterId = searchParams.get('requesterId');
 
     if (!organizationId) {
       return NextResponse.json(
         { error: 'organizationId is required' },
         { status: 400 }
+      );
+    }
+
+    // Verify requester has admin access
+    if (!requesterId) {
+      return NextResponse.json(
+        { error: 'Unauthorized: requesterId is required' },
+        { status: 401 }
+      );
+    }
+    const isAdmin = await verifyAdminAccess(requesterId);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only administrators can list users' },
+        { status: 403 }
       );
     }
 
