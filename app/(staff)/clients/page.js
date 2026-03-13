@@ -12,7 +12,7 @@ import Toast, { useToast } from '@/components/Toast';
 export default function ClientsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { data: clients = [], isLoading: loading } = useClients(user?.organizationId);
+  const { data: clients = [], isLoading: loading } = useClients(user?.organizationId, user?.authUser?.$id);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast, showToast, hideToast } = useToast();
 

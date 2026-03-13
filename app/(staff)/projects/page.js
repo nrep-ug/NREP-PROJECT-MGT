@@ -16,7 +16,7 @@ export default function ProjectsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjects(user?.organizationId);
-  const { data: clients = [] } = useClients(user?.organizationId);
+  const { data: clients = [] } = useClients(user?.organizationId, user?.authUser?.$id);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');

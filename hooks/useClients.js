@@ -9,13 +9,13 @@ export const clientKeys = {
     detail: (id) => [...clientKeys.details(), id],
 };
 
-export function useClients(organizationId) {
+export function useClients(organizationId, requesterId) {
     return useQuery({
         queryKey: clientKeys.list({ organizationId }),
         queryFn: async () => {
-            if (!organizationId) return [];
+            if (!organizationId || !requesterId) return [];
 
-            const response = await fetch(`/api/clients?organizationId=${organizationId}`);
+            const response = await fetch(`/api/clients?organizationId=${organizationId}&requesterId=${requesterId}`);
 
             if (!response.ok) {
                 throw new Error('Failed to fetch clients');
@@ -24,7 +24,7 @@ export function useClients(organizationId) {
             const data = await response.json();
             return data.clients || [];
         },
-        enabled: !!organizationId,
+        enabled: !!organizationId && !!requesterId,
     });
 }
 

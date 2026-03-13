@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { adminDatabases, adminUsers, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { getProjectDocPermissions } from '@/lib/rbac';
+import { verifyStaffAccess } from '@/lib/authHelpers';
 import { nowUTC } from '@/lib/date';
 
 const COL_DOCUMENTS = 'pms_documents';
@@ -167,10 +168,20 @@ export async function POST(request) {
       isClientVisible = false,
       isStaffVisible = true,
       staffList = [],
-      clientList = []
+      clientList = [],
+      requesterId
     } = body;
 
-    console.log('Registering document:', body);
+    console.log('[API /documents POST] Registering document for project:', projectId);
+
+    if (!requesterId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+    }
+
+    const isStaff = await verifyStaffAccess(requesterId);
+    if (!isStaff) {
+      return NextResponse.json({ error: 'Forbidden: Only staff members can register documents' }, { status: 403 });
+    }
 
     if ( !documentId || !projectId || !organizationId || !projectTeamId || !uploaderId || !title || !fileId || !mimeType || !sizeBytes) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

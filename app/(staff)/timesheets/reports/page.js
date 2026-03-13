@@ -105,7 +105,7 @@ export default function TimesheetReportsPage() {
 
   const loadAccounts = async () => {
     try {
-      const response = await fetch(`/api/accounts?organizationId=${user.organizationId}`);
+      const response = await fetch(`/api/accounts?organizationId=${user.organizationId}&requesterId=${user.authUser.$id}`);
       const data = await response.json();
       if (response.ok) {
         setAccounts(data.accounts || []);

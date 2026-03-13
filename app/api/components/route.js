@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { adminDatabases, ID, DB_ID } from '@/lib/appwriteAdmin';
 import { getProjectDocPermissions } from '@/lib/rbac';
+import { verifyStaffAccess } from '@/lib/authHelpers';
 
 const COL_COMPONENTS = 'pms_project_components';
 
@@ -18,8 +19,18 @@ export async function POST(request) {
             projectTeamId,
             name,
             description,
-            leaderId
+            leaderId,
+            requesterId
         } = body;
+
+        if (!requesterId) {
+            return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+        }
+
+        const isStaff = await verifyStaffAccess(requesterId);
+        if (!isStaff) {
+            return NextResponse.json({ error: 'Forbidden: Only staff members can create components' }, { status: 403 });
+        }
 
         if (!projectId || !name || !name.trim()) {
             return NextResponse.json({ error: 'projectId and name are required' }, { status: 400 });

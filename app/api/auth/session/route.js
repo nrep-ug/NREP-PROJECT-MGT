@@ -13,7 +13,7 @@ export async function GET(request) {
 
     const { Client, Account } = await import('node-appwrite');
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('appwrite-session');
 
     if (!sessionCookie) {

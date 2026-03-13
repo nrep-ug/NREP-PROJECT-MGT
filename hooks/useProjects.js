@@ -142,11 +142,14 @@ export function useProjectEmbeds(projectId) {
     });
 }
 
-export function useProjectMembers(projectId) {
+export function useProjectMembers(projectId, requesterId) {
     return useQuery({
         queryKey: projectKeys.team(projectId),
         queryFn: async () => {
-            const response = await fetch(`/api/projects/${projectId}/members`);
+            const url = requesterId
+              ? `/api/projects/${projectId}/members?requesterId=${requesterId}`
+              : `/api/projects/${projectId}/members`;
+            const response = await fetch(url);
             if (!response.ok) {
                 throw new Error('Failed to fetch project members');
             }

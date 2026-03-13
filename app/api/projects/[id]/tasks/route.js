@@ -5,6 +5,7 @@
 
 import { NextResponse } from 'next/server';
 import { adminDatabases, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { verifyStaffAccess } from '@/lib/authHelpers';
 
 const COL_TASKS = 'pms_tasks';
 
@@ -17,9 +18,19 @@ export async function GET(request, { params }) {
     const { id: projectId } = await params;
     const { searchParams } = new URL(request.url);
     const includeCompleted = searchParams.get('includeCompleted') === 'true';
+    const requesterId = searchParams.get('requesterId');
 
     if (!projectId) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
+
+    if (!requesterId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+    }
+
+    const isStaff = await verifyStaffAccess(requesterId);
+    if (!isStaff) {
+      return NextResponse.json({ error: 'Forbidden: Only staff members can view tasks' }, { status: 403 });
     }
 
     // Build queries

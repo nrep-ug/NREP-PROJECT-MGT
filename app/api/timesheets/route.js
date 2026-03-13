@@ -20,9 +20,13 @@ const COL_ENTRIES = 'pms_timesheet_entries';
 async function sendNotification(type, data) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const headers = { 'Content-Type': 'application/json' };
+    if (process.env.INTERNAL_API_SECRET) {
+      headers['x-internal-secret'] = process.env.INTERNAL_API_SECRET;
+    }
     const response = await fetch(`${baseUrl}/api/notifications/timesheets`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ type, data })
     });
 

@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { adminDatabases, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { getProjectDocPermissions } from '@/lib/rbac';
+import { verifyStaffAccess } from '@/lib/authHelpers';
 
 const COL_EMBEDS = 'pms_embeds';
 
@@ -14,9 +15,19 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
+    const requesterId = searchParams.get('requesterId');
 
     if (!projectId) {
       return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+    }
+
+    if (!requesterId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+    }
+
+    const isStaff = await verifyStaffAccess(requesterId);
+    if (!isStaff) {
+      return NextResponse.json({ error: 'Forbidden: Only staff members can view embeds' }, { status: 403 });
     }
 
     const response = await adminDatabases.listDocuments(DB_ID, COL_EMBEDS, [
@@ -49,6 +60,15 @@ export async function POST(request) {
 
     if (!projectId || !organizationId || !projectTeamId || !title || !url) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    if (!createdBy) {
+      return NextResponse.json({ error: 'Unauthorized: createdBy is required' }, { status: 401 });
+    }
+
+    const isStaff = await verifyStaffAccess(createdBy);
+    if (!isStaff) {
+      return NextResponse.json({ error: 'Forbidden: Only staff members can create embeds' }, { status: 403 });
     }
 
     // Validate URL is HTTPS for security

@@ -15,7 +15,7 @@ export default function ComponentDetailPage() {
     const params = useParams();
     const router = useRouter();
     const { user, loading: authLoading } = useAuth();
-    const { data: teamMembers = [] } = useProjectMembers(params.id);
+    const { data: teamMembers = [] } = useProjectMembers(params.id, user?.authUser?.$id);
     const [project, setProject] = useState(null);
     const [component, setComponent] = useState(null);
     const [linkedMilestones, setLinkedMilestones] = useState([]);

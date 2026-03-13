@@ -92,7 +92,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
   const loadStaffAndClients = async () => {
     try {
       // Load staff members from project team
-      const teamResponse = await fetch(`/api/projects/${project.$id}/members`);
+      const teamResponse = await fetch(`/api/projects/${project.$id}/members?requesterId=${user?.authUser?.$id}`);
       if (teamResponse.ok) {
         const teamData = await teamResponse.json();
         // Filter out clients from staff members list

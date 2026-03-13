@@ -102,7 +102,7 @@ function TimesheetEntryContent() {
     }
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/tasks`);
+      const response = await fetch(`/api/projects/${projectId}/tasks?requesterId=${user?.authUser?.$id}`);
       const data = await response.json();
 
       if (response.ok) {

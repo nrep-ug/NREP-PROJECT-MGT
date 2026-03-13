@@ -31,7 +31,7 @@ export default function ClientDetailsPage() {
             setLoading(true);
 
             // Fetch Client Details
-            const clientRes = await fetch(`/api/clients/${params.id}`);
+            const clientRes = await fetch(`/api/clients/${params.id}?requesterId=${user?.authUser?.$id}`);
             if (!clientRes.ok) throw new Error('Failed to fetch client details');
             const clientData = await clientRes.json();
             setClient(clientData.client);

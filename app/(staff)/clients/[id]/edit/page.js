@@ -54,7 +54,7 @@ export default function EditClientPage() {
   const loadClientData = async () => {
     try {
       setLoadingClient(true);
-      const response = await fetch(`/api/clients/${params.id}`);
+      const response = await fetch(`/api/clients/${params.id}?requesterId=${user?.authUser?.$id}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch client');

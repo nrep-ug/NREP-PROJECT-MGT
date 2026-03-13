@@ -36,7 +36,7 @@ export default function UserProfileView({ user, showAdminControls = false }) {
             // Fetch Client Orgs
             // Using Promise.allSettled to handle potential failures gracefully
             const orgsPromise = user.clientOrganizationIds?.length > 0
-                ? Promise.all(user.clientOrganizationIds.map(id => fetch(`/api/clients/${id}`).then(r => r.json()).catch(() => null)))
+                ? Promise.all(user.clientOrganizationIds.map(id => fetch(`/api/clients/${id}?requesterId=${currentUser?.authUser?.$id}`).then(r => r.json()).catch(() => null)))
                 : Promise.resolve([]);
 
             // Fetch Projects

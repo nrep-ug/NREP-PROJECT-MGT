@@ -16,6 +16,16 @@ import { sendAccountCreatedEmail } from '@/lib/nodemailer';
  */
 export async function POST(request) {
     try {
+        // Verify internal API secret to prevent external abuse
+        const authHeader = request.headers.get('x-internal-secret');
+        const internalSecret = process.env.INTERNAL_API_SECRET;
+        if (internalSecret && authHeader !== internalSecret) {
+            return NextResponse.json(
+                { error: 'Unauthorized: internal access only' },
+                { status: 403 }
+            );
+        }
+
         const body = await request.json();
         const { to, name, username, password, loginUrl, organizationName } = body;
 

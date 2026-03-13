@@ -5,6 +5,7 @@
 
 import { NextResponse } from 'next/server';
 import { adminDatabases, adminUsers, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { verifyStaffAccess } from '@/lib/authHelpers';
 import { nowUTC } from '@/lib/date';
 
 const COL_FOLDERS = 'pms_document_folders';
@@ -146,6 +147,15 @@ export async function POST(request) {
       );
     }
 
+    // Verify the creator is a staff member
+    const isStaff = await verifyStaffAccess(createdBy);
+    if (!isStaff) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only staff members can create folders' },
+        { status: 403 }
+      );
+    }
+
     // Check if folder with same name exists in same parent
     const existingFolders = await adminDatabases.listDocuments(DB_ID, COL_FOLDERS, [
       Query.equal('projectId', projectId),
@@ -216,6 +226,15 @@ export async function PATCH(request) {
       );
     }
 
+    // Verify the requester is a staff member
+    const isStaff = await verifyStaffAccess(requesterId);
+    if (!isStaff) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only staff members can update folders' },
+        { status: 403 }
+      );
+    }
+
     // Get the folder
     const folder = await adminDatabases.getDocument(DB_ID, COL_FOLDERS, folderId);
 
@@ -283,6 +302,15 @@ export async function DELETE(request) {
       return NextResponse.json(
         { error: 'folderId and requesterId are required' },
         { status: 400 }
+      );
+    }
+
+    // Verify the requester is a staff member
+    const isStaffUser = await verifyStaffAccess(requesterId);
+    if (!isStaffUser) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only staff members can delete folders' },
+        { status: 403 }
       );
     }
 

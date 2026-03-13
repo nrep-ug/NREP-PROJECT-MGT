@@ -24,7 +24,7 @@ function ProjectDetailContent() {
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(params.id);
-  const { data: teamMembers = [] } = useProjectMembers(params.id);
+  const { data: teamMembers = [] } = useProjectMembers(params.id, user?.authUser?.$id);
   const [activeTab, setActiveTab] = useState('overview');
   const { toast, showToast, hideToast } = useToast();
 

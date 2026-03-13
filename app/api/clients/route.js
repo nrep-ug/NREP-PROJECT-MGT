@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { adminDatabases, adminUsers, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
-import { verifyAdminAccess } from '@/lib/authHelpers';
+import { verifyAdminAccess, verifyStaffAccess } from '@/lib/authHelpers';
 import { getOrgDocPermissions } from '@/lib/rbac';
 
 const COL_CLIENTS = 'pms_clients';
@@ -19,9 +19,19 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
+    const requesterId = searchParams.get('requesterId');
 
     if (!organizationId) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
+    }
+
+    if (!requesterId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+    }
+
+    const isStaff = await verifyStaffAccess(requesterId);
+    if (!isStaff) {
+      return NextResponse.json({ error: 'Forbidden: Only staff members can list clients' }, { status: 403 });
     }
 
     const queries = [Query.equal('organizationId', organizationId)];

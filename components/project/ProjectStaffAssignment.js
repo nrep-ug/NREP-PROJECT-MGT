@@ -24,7 +24,7 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
   // Fetch project members
   const fetchMembers = async () => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/members`);
+      const response = await fetch(`/api/projects/${projectId}/members?requesterId=${currentUser?.authUser?.$id || currentUser?.id}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -40,7 +40,7 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
   // Fetch available staff
   const fetchStaff = async () => {
     try {
-      const response = await fetch(`/api/staff?organizationId=${organizationId}`);
+      const response = await fetch(`/api/staff?organizationId=${organizationId}&requesterId=${currentUser?.authUser?.$id || currentUser?.id}`);
       const data = await response.json();
 
       if (response.ok) {

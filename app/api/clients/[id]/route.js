@@ -7,7 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { adminDatabases, adminUsers, Query, DB_ID } from '@/lib/appwriteAdmin';
-import { verifyAdminAccess } from '@/lib/authHelpers';
+import { verifyAdminAccess, verifyStaffAccess } from '@/lib/authHelpers';
 
 const COL_CLIENTS = 'pms_clients';
 
@@ -18,6 +18,17 @@ const COL_CLIENTS = 'pms_clients';
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const requesterId = searchParams.get('requesterId');
+
+    if (!requesterId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+    }
+
+    const isStaff = await verifyStaffAccess(requesterId);
+    if (!isStaff) {
+      return NextResponse.json({ error: 'Forbidden: Only staff members can view client details' }, { status: 403 });
+    }
 
     const client = await adminDatabases.getDocument(DB_ID, COL_CLIENTS, id);
 

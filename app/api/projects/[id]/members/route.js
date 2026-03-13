@@ -7,7 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { adminDatabases, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
-import { verifyManagerAccess, verifyProjectAccess } from '@/lib/authHelpers';
+import { verifyManagerAccess, verifyProjectAccess, verifyStaffAccess } from '@/lib/authHelpers';
 
 const COL_PROJECTS = 'pms_projects';
 const COL_USERS = 'pms_users';
@@ -20,6 +20,17 @@ export async function GET(request, { params }) {
   try {
     const { id } = await params;
     const projectId = id;
+    const { searchParams } = new URL(request.url);
+    const requesterId = searchParams.get('requesterId');
+
+    if (!requesterId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+    }
+
+    const isStaff = await verifyStaffAccess(requesterId);
+    if (!isStaff) {
+      return NextResponse.json({ error: 'Forbidden: Only staff members can view project members' }, { status: 403 });
+    }
 
     // Get project to find its team ID
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);

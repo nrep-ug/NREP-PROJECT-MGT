@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { adminDatabases, adminTeams, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
-import { verifyAdminAccess } from '@/lib/authHelpers';
+import { verifyAdminAccess, verifyStaffAccess } from '@/lib/authHelpers';
 import { getProjectDocPermissions } from '@/lib/rbac';
 
 const COL_PROJECTS = 'pms_projects';
@@ -18,9 +18,19 @@ export async function GET(request) {
     const organizationId = searchParams.get('organizationId');
     const status = searchParams.get('status');
     const clientId = searchParams.get('clientId');
+    const requesterId = searchParams.get('requesterId');
 
     if (!organizationId) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
+    }
+
+    if (!requesterId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+    }
+
+    const isStaff = await verifyStaffAccess(requesterId);
+    if (!isStaff) {
+      return NextResponse.json({ error: 'Forbidden: Only staff members can list projects' }, { status: 403 });
     }
 
     const queries = [Query.equal('organizationId', organizationId)];

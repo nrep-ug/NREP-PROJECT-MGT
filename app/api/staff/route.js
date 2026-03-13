@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { adminDatabases, adminUsers, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { verifyStaffAccess } from '@/lib/authHelpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,11 +20,27 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
+    const requesterId = searchParams.get('requesterId');
 
     if (!organizationId) {
       return NextResponse.json(
         { error: 'organizationId is required' },
         { status: 400 }
+      );
+    }
+
+    if (!requesterId) {
+      return NextResponse.json(
+        { error: 'Unauthorized: requesterId is required' },
+        { status: 401 }
+      );
+    }
+
+    const isStaff = await verifyStaffAccess(requesterId);
+    if (!isStaff) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only staff members can list staff' },
+        { status: 403 }
       );
     }
 

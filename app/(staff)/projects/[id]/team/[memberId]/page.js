@@ -47,7 +47,7 @@ export default function TeamMemberDetailPage() {
       setProject(projectDoc);
 
       // Load member from project team
-      const membersResponse = await fetch(`/api/projects/${params.id}/members`);
+      const membersResponse = await fetch(`/api/projects/${params.id}/members?requesterId=${user?.authUser?.$id}`);
       const membersData = await membersResponse.json();
 
       if (membersResponse.ok) {

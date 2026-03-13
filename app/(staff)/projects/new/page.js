@@ -39,7 +39,7 @@ export default function NewProjectPage() {
   const loadClients = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/clients?organizationId=${user.organizationId}`);
+      const response = await fetch(`/api/clients?organizationId=${user.organizationId}&requesterId=${user.authUser.$id}`);
       const data = await response.json();
 
       if (response.ok) {
