@@ -12,6 +12,7 @@ node_modules/
 
 # Production
 /build
+ecosystem.config.js
 
 # Misc
 .DS_Store
