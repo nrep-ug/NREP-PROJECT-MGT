@@ -1,93 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Modal, Form, Card, Badge, Row, Col, InputGroup } from 'react-bootstrap';
+import { useRouter } from 'next/navigation';
+import { Button, Card, Badge, Row, Col, InputGroup, Form } from 'react-bootstrap';
 import { useProjectComponents } from '@/hooks/useProjects';
 
 export default function ProjectComponents({ project, user, showToast, canModify, teamMembers = [] }) {
+    const router = useRouter();
     const { data: components = [], isLoading: loading, refetch } = useProjectComponents(project?.$id);
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editingComponent, setEditingComponent] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [submitting, setSubmitting] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        leaderId: '',
-    });
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
-
-        try {
-            const response = await fetch('/api/components', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    projectId: project.$id,
-                    organizationId: project.organizationId,
-                    projectTeamId: project.projectTeamId,
-                    requesterId: user.accountId,
-                    ...formData,
-                }),
-            });
-
-            if (!response.ok) throw new Error('Failed to create component');
-
-            showToast('Component created successfully!', 'success');
-            setShowAddModal(false);
-            setFormData({ name: '', description: '', leaderId: '' });
-            refetch();
-        } catch (err) {
-            showToast(err.message || 'Failed to create component', 'danger');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handleEdit = (component) => {
-        setEditingComponent(component);
-        setFormData({
-            name: component.name,
-            description: component.description || '',
-            leaderId: component.leaderId || '',
-            requesterId: user.accountId,
-        });
-        setShowEditModal(true);
-    };
-
-    const handleUpdate = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
-
-        try {
-            const response = await fetch(`/api/components/${editingComponent.$id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
-            });
-
-            if (!response.ok) throw new Error('Failed to update component');
-
-            showToast('Component updated successfully!', 'success');
-            setShowEditModal(false);
-            setEditingComponent(null);
-            setFormData({ name: '', description: '', leaderId: '' });
-            refetch();
-        } catch (err) {
-            showToast(err.message || 'Failed to update component', 'danger');
-        } finally {
-            setSubmitting(false);
-        }
-    };
 
     const handleDelete = async (componentId) => {
         if (!confirm('Are you sure you want to delete this component?')) return;
 
         try {
-            const response = await fetch(`/api/components/${componentId}`, {
+            const response = await fetch(`/api/components/${componentId}?requesterId=${user.authUser.$id}`, {
                 method: 'DELETE',
             });
 
@@ -145,7 +72,7 @@ export default function ProjectComponents({ project, user, showToast, canModify,
                         <Button
                             variant=""
                             size="sm"
-                            onClick={() => setShowAddModal(true)}
+                            onClick={() => router.push(`/projects/${project.$id}/components/new`)}
                             style={{
                                 backgroundColor: '#054653',
                                 color: 'white',
@@ -185,7 +112,7 @@ export default function ProjectComponents({ project, user, showToast, canModify,
                     {!searchTerm && canModify && (
                         <Button
                             variant=""
-                            onClick={() => setShowAddModal(true)}
+                            onClick={() => router.push(`/projects/${project.$id}/components/new`)}
                             style={{
                                 backgroundColor: '#054653',
                                 color: 'white',
@@ -242,8 +169,8 @@ export default function ProjectComponents({ project, user, showToast, canModify,
 
                                         <div className="flex-grow-1 overflow-hidden">
                                             <div
-                                                className="mb-1 d-flex align-items-center gap-2 cursor-pointer"
-                                                onClick={() => window.location.href = `/projects/${project.$id}/components/${component.$id}`}
+                                                className="mb-1 d-flex align-items-center gap-2"
+                                                onClick={() => router.push(`/projects/${project.$id}/components/${component.$id}`)}
                                                 style={{ cursor: 'pointer' }}
                                                 onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
                                                 onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
@@ -288,7 +215,7 @@ export default function ProjectComponents({ project, user, showToast, canModify,
                                                 variant=""
                                                 size="sm"
                                                 className="flex-grow-1"
-                                                onClick={() => handleEdit(component)}
+                                                onClick={() => router.push(`/projects/${project.$id}/components/${component.$id}/edit`)}
                                                 style={{
                                                     backgroundColor: 'white',
                                                     border: '2px solid #cbd5e1',
@@ -342,230 +269,6 @@ export default function ProjectComponents({ project, user, showToast, canModify,
                     ))}
                 </Row>
             )}
-
-            {/* Add Component Modal */}
-            <Modal show={showAddModal} onHide={() => !submitting && setShowAddModal(false)} size="lg">
-                <Modal.Header closeButton style={{ borderBottom: '2px solid #e9ecef' }}>
-                    <Modal.Title>
-                        <i className="bi bi-plus-circle me-2" style={{ color: '#054653' }}></i>
-                        Add Component
-                    </Modal.Title>
-                </Modal.Header>
-                <Form onSubmit={handleSubmit}>
-                    <Modal.Body className="p-4">
-                        <Form.Group className="mb-3">
-                            <Form.Label className="small fw-semibold">Name <span className="text-danger">*</span></Form.Label>
-                            <Form.Control
-                                type="text"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="e.g., Backend API"
-                                required
-                                disabled={submitting}
-                                style={{
-                                    borderColor: '#e2e8f0',
-                                    padding: '0.75rem',
-                                    borderRadius: '8px'
-                                }}
-                            />
-                        </Form.Group>
-
-                        <Form.Group className="mb-3">
-                            <Form.Label className="small fw-semibold">Description</Form.Label>
-                            <Form.Control
-                                as="textarea"
-                                rows={3}
-                                placeholder="Component description..."
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                disabled={submitting}
-                                style={{
-                                    borderColor: '#e2e8f0',
-                                    padding: '0.75rem',
-                                    borderRadius: '8px'
-                                }}
-                            />
-                        </Form.Group>
-
-                        <Form.Group className="mb-3">
-                            <Form.Label className="small fw-semibold">Component Leader</Form.Label>
-                            <Form.Select
-                                value={formData.leaderId}
-                                onChange={(e) => setFormData({ ...formData, leaderId: e.target.value })}
-                                disabled={submitting}
-                                style={{
-                                    borderColor: '#e2e8f0',
-                                    padding: '0.75rem',
-                                    borderRadius: '8px'
-                                }}
-                            >
-                                <option value="">No leader assigned</option>
-                                {teamMembers.map((member) => (
-                                    <option key={member.accountId} value={member.accountId}>
-                                        {member.firstName} {member.lastName} (@{member.username})
-                                    </option>
-                                ))}
-                            </Form.Select>
-                            <Form.Text className="text-muted small">
-                                Optional: Assign a team member as the component leader
-                            </Form.Text>
-                        </Form.Group>
-                    </Modal.Body>
-                    <Modal.Footer style={{ borderTop: '2px solid #e9ecef' }}>
-                        <Button
-                            variant=""
-                            onClick={() => setShowAddModal(false)}
-                            disabled={submitting}
-                            style={{
-                                backgroundColor: 'white',
-                                border: '2px solid #cbd5e1',
-                                color: '#64748b',
-                                padding: '0.5rem 1.5rem',
-                                borderRadius: '8px',
-                                fontSize: '0.875rem',
-                                fontWeight: '500'
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant=""
-                            type="submit"
-                            disabled={submitting}
-                            style={{
-                                backgroundColor: '#054653',
-                                color: 'white',
-                                border: 'none',
-                                padding: '0.5rem 1.5rem',
-                                borderRadius: '8px',
-                                fontSize: '0.875rem',
-                                fontWeight: '600'
-                            }}
-                        >
-                            {submitting ? (
-                                <>
-                                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    Creating...
-                                </>
-                            ) : (
-                                'Create Component'
-                            )}
-                        </Button>
-                    </Modal.Footer>
-                </Form>
-            </Modal>
-
-            {/* Edit Component Modal */}
-            <Modal show={showEditModal} onHide={() => !submitting && setShowEditModal(false)} size="lg">
-                <Modal.Header closeButton style={{ borderBottom: '2px solid #e9ecef' }}>
-                    <Modal.Title>
-                        <i className="bi bi-pencil me-2" style={{ color: '#054653' }}></i>
-                        Edit Component
-                    </Modal.Title>
-                </Modal.Header>
-                <Form onSubmit={handleUpdate}>
-                    <Modal.Body className="p-4">
-                        <Form.Group className="mb-3">
-                            <Form.Label className="small fw-semibold">Name <span className="text-danger">*</span></Form.Label>
-                            <Form.Control
-                                type="text"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="e.g., Backend API"
-                                required
-                                disabled={submitting}
-                                style={{
-                                    borderColor: '#e2e8f0',
-                                    padding: '0.75rem',
-                                    borderRadius: '8px'
-                                }}
-                            />
-                        </Form.Group>
-
-                        <Form.Group className="mb-3">
-                            <Form.Label className="small fw-semibold">Description</Form.Label>
-                            <Form.Control
-                                as="textarea"
-                                rows={3}
-                                placeholder="Component description..."
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                disabled={submitting}
-                                style={{
-                                    borderColor: '#e2e8f0',
-                                    padding: '0.75rem',
-                                    borderRadius: '8px'
-                                }}
-                            />
-                        </Form.Group>
-
-                        <Form.Group className="mb-3">
-                            <Form.Label className="small fw-semibold">Component Leader</Form.Label>
-                            <Form.Select
-                                value={formData.leaderId}
-                                onChange={(e) => setFormData({ ...formData, leaderId: e.target.value })}
-                                disabled={submitting}
-                                style={{
-                                    borderColor: '#e2e8f0',
-                                    padding: '0.75rem',
-                                    borderRadius: '8px'
-                                }}
-                            >
-                                <option value="">No leader assigned</option>
-                                {teamMembers.map((member) => (
-                                    <option key={member.accountId} value={member.accountId}>
-                                        {member.firstName} {member.lastName} (@{member.username})
-                                    </option>
-                                ))}
-                            </Form.Select>
-                            <Form.Text className="text-muted small">
-                                Optional: Assign a team member as the component leader
-                            </Form.Text>
-                        </Form.Group>
-                    </Modal.Body>
-                    <Modal.Footer style={{ borderTop: '2px solid #e9ecef' }}>
-                        <Button
-                            variant=""
-                            onClick={() => setShowEditModal(false)}
-                            disabled={submitting}
-                            style={{
-                                backgroundColor: 'white',
-                                border: '2px solid #cbd5e1',
-                                color: '#64748b',
-                                padding: '0.5rem 1.5rem',
-                                borderRadius: '8px',
-                                fontSize: '0.875rem',
-                                fontWeight: '500'
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant=""
-                            type="submit"
-                            disabled={submitting}
-                            style={{
-                                backgroundColor: '#054653',
-                                color: 'white',
-                                border: 'none',
-                                padding: '0.5rem 1.5rem',
-                                borderRadius: '8px',
-                                fontSize: '0.875rem',
-                                fontWeight: '600'
-                            }}
-                        >
-                            {submitting ? (
-                                <>
-                                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    Updating...
-                                </>
-                            ) : (
-                                'Update Component'
-                            )}
-                        </Button>
-                    </Modal.Footer>
-                </Form>
-            </Modal>
         </div>
     );
 }

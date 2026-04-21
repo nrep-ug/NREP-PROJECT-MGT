@@ -135,15 +135,43 @@ export default function ComponentDetailPage() {
             <Toast toast={toast} onClose={hideToast} />
 
             <div className="mb-4">
-                <div className="d-flex align-items-center gap-3 mb-3">
-                    <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        onClick={() => router.push(`/projects/${project.$id}?tab=components`)}
-                    >
-                        <i className="bi bi-arrow-left"></i> Back
-                    </Button>
-                    <h2 className="mb-0">{component.name}</h2>
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                    <div className="d-flex align-items-center gap-3">
+                        <Button
+                            variant="outline-secondary"
+                            size="sm"
+                            onClick={() => router.push(`/projects/${project.$id}?tab=components`)}
+                        >
+                            <i className="bi bi-arrow-left"></i> Back
+                        </Button>
+                        <h2 className="mb-0">{component.name}</h2>
+                    </div>
+                    {(user?.isAdmin || teamMembers.some(m => m.accountId === user?.authUser?.$id)) && (
+                        <Button
+                            variant=""
+                            size="sm"
+                            onClick={() => router.push(`/projects/${project.$id}/components/${component.$id}/edit`)}
+                            style={{
+                                backgroundColor: '#054653',
+                                color: 'white',
+                                border: 'none',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                fontSize: '0.875rem',
+                                fontWeight: '600',
+                                transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#043840';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#054653';
+                            }}
+                        >
+                            <i className="bi bi-pencil-square me-2"></i>
+                            Edit Component
+                        </Button>
+                    )}
                 </div>
                 <p className="text-muted">
                     Project: <strong>{project.name}</strong> ({project.code})
