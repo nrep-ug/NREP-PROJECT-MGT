@@ -9,13 +9,13 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminUsers, Query, DB_ID } from '@/lib/appwriteAdmin';
 
 export const dynamic = 'force-dynamic';
 
-const COL_TIMESHEETS = 'pms_timesheets';
-const COL_ENTRIES = 'pms_timesheet_entries';
-const COL_USERS = 'pms_users';
+const COL_TIMESHEETS = COLLECTIONS.TIMESHEETS;
+const COL_ENTRIES = COLLECTIONS.TIMESHEET_ENTRIES;
+const COL_USERS = COLLECTIONS.USERS;
 
 /**
  * GET /api/timesheets/team

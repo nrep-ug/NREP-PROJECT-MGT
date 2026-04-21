@@ -4,12 +4,12 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { verifyStaffAccess } from '@/lib/authHelpers';
 
 export const dynamic = 'force-dynamic';
 
-const COL_USERS = 'pms_users';
+const COL_USERS = COLLECTIONS.USERS;
 
 /**
  * GET /api/accounts

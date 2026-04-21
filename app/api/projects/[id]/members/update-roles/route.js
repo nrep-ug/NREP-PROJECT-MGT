@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { adminTeams as teams, adminDatabases as databases, adminUsers, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminTeams as teams, adminDatabases as databases, adminUsers, DB_ID } from '@/lib/appwriteAdmin';
 import { verifyAdminAccess } from '@/lib/authHelpers';
 
 const COLLECTIONS = {
-  PROJECTS: 'pms_projects',
+  PROJECTS: COLLECTIONS.PROJECTS,
 };
 
 /**

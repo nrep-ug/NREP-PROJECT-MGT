@@ -4,9 +4,9 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminUsers, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
 
-const COL_USERS = 'pms_users';
+const COL_USERS = COLLECTIONS.USERS;
 
 /**
  * PATCH /api/admin/users/[userId]
@@ -167,7 +167,7 @@ export async function PATCH(request, { params }) {
         const projectsToAdd = newProjectIds.filter(id => !currentProjectIds.includes(id));
         for (const projectId of projectsToAdd) {
           try {
-            const project = await adminDatabases.getDocument(DB_ID, 'pms_projects', projectId);
+            const project = await adminDatabases.getDocument(DB_ID, COLLECTIONS.PROJECTS, projectId);
             if (project.projectTeamId) {
               await adminTeams.createMembership(
                 project.projectTeamId,
@@ -186,7 +186,7 @@ export async function PATCH(request, { params }) {
         const projectsToRemove = currentProjectIds.filter(id => !newProjectIds.includes(id));
         for (const projectId of projectsToRemove) {
           try {
-            const project = await adminDatabases.getDocument(DB_ID, 'pms_projects', projectId);
+            const project = await adminDatabases.getDocument(DB_ID, COLLECTIONS.PROJECTS, projectId);
             // Need to find membership ID first to delete it
             // This is tricky without listing memberships.
             // Alternative: List memberships of the team and find the user.

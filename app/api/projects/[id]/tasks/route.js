@@ -4,10 +4,10 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { verifyStaffAccess } from '@/lib/authHelpers';
 
-const COL_TASKS = 'pms_tasks';
+const COL_TASKS = COLLECTIONS.TASKS;
 
 /**
  * GET /api/projects/[id]/tasks

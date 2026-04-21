@@ -6,10 +6,10 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminUsers, Query, DB_ID } from '@/lib/appwriteAdmin';
 
-const COL_ENTRIES = 'pms_timesheet_entries';
-const COL_TIMESHEETS = 'pms_timesheets';
+const COL_ENTRIES = COLLECTIONS.TIMESHEET_ENTRIES;
+const COL_TIMESHEETS = COLLECTIONS.TIMESHEETS;
 
 /**
  * GET /api/timesheets/entries/[id]

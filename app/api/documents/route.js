@@ -5,14 +5,14 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminUsers, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { getProjectDocPermissions } from '@/lib/rbac';
 import { verifyStaffAccess } from '@/lib/authHelpers';
 import { nowUTC } from '@/lib/date';
 
-const COL_DOCUMENTS = 'pms_documents';
-const COL_VERSIONS = 'pms_document_versions';
-const COL_FOLDERS = 'pms_document_folders';
+const COL_DOCUMENTS = COLLECTIONS.DOCUMENTS;
+const COL_VERSIONS = COLLECTIONS.DOCUMENT_VERSIONS;
+const COL_FOLDERS = COLLECTIONS.DOCUMENT_FOLDERS;
 
 /**
  * Check if user has access to a document/folder

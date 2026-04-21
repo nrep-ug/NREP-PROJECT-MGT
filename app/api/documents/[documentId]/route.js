@@ -4,12 +4,12 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminStorage, adminUsers, ID, Query, DB_ID, BUCKET_DOCS } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminStorage, adminUsers, ID, Query, DB_ID, BUCKET_DOCS } from '@/lib/appwriteAdmin';
 import { nowUTC } from '@/lib/date';
 
-const COL_DOCUMENTS = 'pms_documents';
-const COL_VERSIONS = 'pms_document_versions';
-const COL_PROJECTS = 'pms_projects';
+const COL_DOCUMENTS = COLLECTIONS.DOCUMENTS;
+const COL_VERSIONS = COLLECTIONS.DOCUMENT_VERSIONS;
+const COL_PROJECTS = COLLECTIONS.PROJECTS;
 
 /**
  * Check if user can manage document (uploader, project manager, or admin)

@@ -4,12 +4,12 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminUsers, adminDatabases, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminUsers, adminDatabases, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { formatDate } from '@/lib/date';
 
 export const dynamic = 'force-dynamic';
 
-const COL_USERS = 'pms_users';
+const COL_USERS = COLLECTIONS.USERS;
 
 /**
  * Helper function to send notification

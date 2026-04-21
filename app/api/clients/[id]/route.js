@@ -6,10 +6,10 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminUsers, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { verifyAdminAccess, verifyStaffAccess } from '@/lib/authHelpers';
 
-const COL_CLIENTS = 'pms_clients';
+const COL_CLIENTS = COLLECTIONS.CLIENTS;
 
 /**
  * GET /api/clients/[id]
@@ -37,7 +37,7 @@ export async function GET(request, { params }) {
       try {
         const contactProfiles = await adminDatabases.listDocuments(
           DB_ID,
-          'pms_users',
+          COLLECTIONS.USERS,
           [
             Query.equal('accountId', client.primaryContactId),
             Query.limit(1)
@@ -124,7 +124,7 @@ export async function PUT(request, { params }) {
       try {
         const contactProfile = await adminDatabases.listDocuments(
           DB_ID,
-          'pms_users',
+          COLLECTIONS.USERS,
           [
             Query.equal('accountId', primaryContactId),
             Query.limit(1)
@@ -184,7 +184,7 @@ export async function PUT(request, { params }) {
       try {
         const oldContactProfiles = await adminDatabases.listDocuments(
           DB_ID,
-          'pms_users',
+          COLLECTIONS.USERS,
           [
             Query.equal('accountId', oldContactId),
             Query.limit(1)
@@ -198,7 +198,7 @@ export async function PUT(request, { params }) {
 
           await adminDatabases.updateDocument(
             DB_ID,
-            'pms_users',
+            COLLECTIONS.USERS,
             userProfile.$id,
             { clientOrganizationIds: updatedClientOrgs }
           );
@@ -213,7 +213,7 @@ export async function PUT(request, { params }) {
       try {
         const newContactProfiles = await adminDatabases.listDocuments(
           DB_ID,
-          'pms_users',
+          COLLECTIONS.USERS,
           [
             Query.equal('accountId', newContactId),
             Query.limit(1)
@@ -227,7 +227,7 @@ export async function PUT(request, { params }) {
           if (!currentClientOrgs.includes(id)) {
             await adminDatabases.updateDocument(
               DB_ID,
-              'pms_users',
+              COLLECTIONS.USERS,
               userProfile.$id,
               { clientOrganizationIds: [...currentClientOrgs, id] }
             );
@@ -297,7 +297,7 @@ export async function DELETE(request, { params }) {
       try {
         const contactProfiles = await adminDatabases.listDocuments(
           DB_ID,
-          'pms_users',
+          COLLECTIONS.USERS,
           [
             Query.equal('accountId', client.primaryContactId),
             Query.limit(1)
@@ -311,7 +311,7 @@ export async function DELETE(request, { params }) {
 
           await adminDatabases.updateDocument(
             DB_ID,
-            'pms_users',
+            COLLECTIONS.USERS,
             userProfile.$id,
             { clientOrganizationIds: updatedClientOrgs }
           );

@@ -4,11 +4,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, ID, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, ID, DB_ID } from '@/lib/appwriteAdmin';
 import { getProjectDocPermissions } from '@/lib/rbac';
 import { verifyStaffAccess } from '@/lib/authHelpers';
 
-const COL_COMPONENTS = 'pms_project_components';
+const COL_COMPONENTS = COLLECTIONS.PROJECT_COMPONENTS;
 
 export async function POST(request) {
     try {

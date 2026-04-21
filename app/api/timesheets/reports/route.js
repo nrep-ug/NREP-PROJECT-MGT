@@ -43,15 +43,15 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, Query, DB_ID, adminTeams } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, Query, DB_ID, adminTeams } from '@/lib/appwriteAdmin';
 import moment from 'moment-timezone';
 
 export const dynamic = 'force-dynamic';
 
-const COL_ENTRIES = 'pms_timesheet_entries';
-const COL_TIMESHEETS = 'pms_timesheets';
-const COL_PROJECTS = 'pms_projects';
-const COL_ACCOUNTS = 'pms_users';
+const COL_ENTRIES = COLLECTIONS.TIMESHEET_ENTRIES;
+const COL_TIMESHEETS = COLLECTIONS.TIMESHEETS;
+const COL_PROJECTS = COLLECTIONS.PROJECTS;
+const COL_ACCOUNTS = COLLECTIONS.USERS;
 
 /**
  * GET /api/timesheets/reports

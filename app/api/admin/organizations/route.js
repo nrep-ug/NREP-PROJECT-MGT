@@ -4,9 +4,9 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminUsers, Query, DB_ID } from '@/lib/appwriteAdmin';
 
-const COL_ORGANIZATIONS = 'pms_organizations';
+const COL_ORGANIZATIONS = COLLECTIONS.ORGANIZATIONS;
 
 /**
  * GET /api/admin/organizations
@@ -37,7 +37,7 @@ export async function GET(request) {
     // Determine collection based on type
     let collectionId = COL_ORGANIZATIONS;
     if (type === 'client') {
-      collectionId = 'pms_clients';
+      collectionId = COLLECTIONS.CLIENTS;
     }
 
     // Build queries

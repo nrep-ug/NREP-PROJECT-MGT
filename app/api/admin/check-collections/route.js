@@ -4,16 +4,16 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, DB_ID } from '@/lib/appwriteAdmin';
 
 export async function GET(request) {
   try {
     // Try to list a few key collections to see if they exist
     const collectionsToCheck = [
-      'pms_projects',
-      'pms_tasks',
-      'pms_users',
-      'pms_milestones',
+      COLLECTIONS.PROJECTS,
+      COLLECTIONS.TASKS,
+      COLLECTIONS.USERS,
+      COLLECTIONS.MILESTONES,
     ];
 
     let allExist = true;

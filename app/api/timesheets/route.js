@@ -6,13 +6,13 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminUsers, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { getTimesheetPermissions } from '@/lib/rbac';
 import { nowUTC } from '@/lib/date';
 import { formatDate } from '@/lib/date';
 
-const COL_TIMESHEETS = 'pms_timesheets';
-const COL_ENTRIES = 'pms_timesheet_entries';
+const COL_TIMESHEETS = COLLECTIONS.TIMESHEETS;
+const COL_ENTRIES = COLLECTIONS.TIMESHEET_ENTRIES;
 
 /**
  * Helper function to send notification
@@ -68,7 +68,7 @@ async function getApprovers(timesheetId) {
 
     if (projectIds.length > 0) {
       const { adminTeams } = require('@/lib/appwriteAdmin');
-      const COL_PROJECTS = 'pms_projects';
+      const COL_PROJECTS = COLLECTIONS.PROJECTS;
 
       for (const projectId of projectIds) {
         try {
@@ -267,7 +267,7 @@ export async function PATCH(request) {
     const employee = await adminUsers.get(timesheet.accountId);
 
     // We need the user profile (from database) to check supervisorId, as account object doesn't have it
-    const userProfiles = await adminDatabases.listDocuments(DB_ID, 'pms_users', [
+    const userProfiles = await adminDatabases.listDocuments(DB_ID, COLLECTIONS.USERS, [
       Query.equal('accountId', timesheet.accountId),
       Query.limit(1)
     ]);

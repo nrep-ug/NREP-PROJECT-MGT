@@ -115,7 +115,7 @@ export default function ProjectDocumentsClient({ project, user }) {
       // Get the latest version from the versions collection
       const versionsResponse = await databases.listDocuments(
         DB_ID,
-        'pms_document_versions',
+        COLLECTIONS.DOCUMENT_VERSIONS,
         [
           Query.equal('documentId', doc.$id),
           Query.orderDesc('versionNo'),

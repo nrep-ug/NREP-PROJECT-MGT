@@ -5,12 +5,12 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminTeams, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminTeams, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { verifyAdminAccess, verifyStaffAccess } from '@/lib/authHelpers';
 import { getProjectDocPermissions } from '@/lib/rbac';
 
-const COL_PROJECTS = 'pms_projects';
-const COL_COMPONENTS = 'pms_project_components';
+const COL_PROJECTS = COLLECTIONS.PROJECTS;
+const COL_COMPONENTS = COLLECTIONS.PROJECT_COMPONENTS;
 
 export async function GET(request) {
   try {

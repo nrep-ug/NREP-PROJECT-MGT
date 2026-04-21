@@ -6,11 +6,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { getTimesheetPermissions } from '@/lib/rbac';
 
 const COL_TEMPLATES = 'pms_timesheet_templates';
-const COL_PROJECTS = 'pms_projects';
+const COL_PROJECTS = COLLECTIONS.PROJECTS;
 
 /**
  * GET /api/timesheets/templates

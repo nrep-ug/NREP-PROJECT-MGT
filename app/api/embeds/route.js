@@ -5,11 +5,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { getProjectDocPermissions } from '@/lib/rbac';
 import { verifyStaffAccess } from '@/lib/authHelpers';
 
-const COL_EMBEDS = 'pms_embeds';
+const COL_EMBEDS = COLLECTIONS.EMBEDS;
 
 export async function GET(request) {
   try {

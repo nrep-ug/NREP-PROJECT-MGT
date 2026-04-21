@@ -4,13 +4,13 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminUsers, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
 
-const COL_ENTRIES = 'pms_timesheet_entries';
-const COL_TIMESHEETS = 'pms_timesheets';
-const COL_USERS = 'pms_users';
-const COL_PROJECTS = 'pms_projects';
-const COL_TASKS = 'pms_tasks';
+const COL_ENTRIES = COLLECTIONS.TIMESHEET_ENTRIES;
+const COL_TIMESHEETS = COLLECTIONS.TIMESHEETS;
+const COL_USERS = COLLECTIONS.USERS;
+const COL_PROJECTS = COLLECTIONS.PROJECTS;
+const COL_TASKS = COLLECTIONS.TASKS;
 
 /**
  * GET /api/projects/[id]/timesheets

@@ -5,11 +5,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminUsers, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { verifyAdminAccess, verifyStaffAccess } from '@/lib/authHelpers';
 import { getOrgDocPermissions } from '@/lib/rbac';
 
-const COL_CLIENTS = 'pms_clients';
+const COL_CLIENTS = COLLECTIONS.CLIENTS;
 
 /**
  * GET /api/clients
@@ -49,7 +49,7 @@ export async function GET(request) {
       try {
         const contactsRes = await adminDatabases.listDocuments(
           DB_ID,
-          'pms_users',
+          COLLECTIONS.USERS,
           [Query.equal('accountId', primaryContactIds)]
         );
 
@@ -113,7 +113,7 @@ export async function POST(request) {
       try {
         const contactProfile = await adminDatabases.listDocuments(
           DB_ID,
-          'pms_users',
+          COLLECTIONS.USERS,
           [
             Query.equal('accountId', primaryContactId),
             Query.limit(1)
@@ -189,7 +189,7 @@ export async function POST(request) {
       try {
         const contactProfile = await adminDatabases.listDocuments(
           DB_ID,
-          'pms_users',
+          COLLECTIONS.USERS,
           [
             Query.equal('accountId', primaryContactId),
             Query.limit(1)
@@ -204,7 +204,7 @@ export async function POST(request) {
           if (!currentClientOrgs.includes(client.$id)) {
             await adminDatabases.updateDocument(
               DB_ID,
-              'pms_users',
+              COLLECTIONS.USERS,
               userProfile.$id,
               {
                 clientOrganizationIds: [...currentClientOrgs, client.$id]

@@ -278,6 +278,7 @@ export default function ProjectOverview({ project, user, showToast, onUpdate }) 
                     <Button
                       variant=""
                       size="sm"
+                      onClick={() => router.push(`/projects/${project.$id}/settings`)}
                       style={{
                         backgroundColor: 'white',
                         border: '2px solid #cbd5e1',

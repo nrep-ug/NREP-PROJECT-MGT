@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { sendAccountCreatedEmail } from '@/lib/nodemailer';
-import { adminDatabases, adminTeams, adminUsers, ID, Query } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminTeams, adminUsers, ID, Query } from '@/lib/appwriteAdmin';
 import { verifyAdminAccess } from '@/lib/authHelpers';
 import crypto from 'crypto';
 import { getUserProfilePermissions } from '@/lib/rbac';
 
 const DB_ID = process.env.APPWRITE_DATABASE_ID || 'pms_db';
-const COL_USERS = 'pms_users';
+const COL_USERS = COLLECTIONS.USERS;
 
 /**
  * Generate a random password
@@ -229,7 +229,7 @@ export async function POST(request) {
       for (const projectId of projectIds) {
         try {
           // Get project to find its team ID
-          const project = await adminDatabases.getDocument(DB_ID, 'pms_projects', projectId);
+          const project = await adminDatabases.getDocument(DB_ID, COLLECTIONS.PROJECTS, projectId);
 
           // Add user to project team with client_rep role
           await adminTeams.createMembership(

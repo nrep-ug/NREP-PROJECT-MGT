@@ -5,11 +5,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, adminTeams, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminUsers, adminTeams, DB_ID } from '@/lib/appwriteAdmin';
 import { verifyAdminAccess } from '@/lib/authHelpers';
 
-const COL_COMPONENTS = 'pms_project_components';
-const COL_PROJECTS = 'pms_projects';
+const COL_COMPONENTS = COLLECTIONS.PROJECT_COMPONENTS;
+const COL_PROJECTS = COLLECTIONS.PROJECTS;
 
 /**
  * Check if requester can manage a component (admin OR project manager/owner)

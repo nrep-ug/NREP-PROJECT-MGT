@@ -6,11 +6,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { verifyManagerAccess, verifyProjectAccess, verifyStaffAccess } from '@/lib/authHelpers';
 
-const COL_PROJECTS = 'pms_projects';
-const COL_USERS = 'pms_users';
+const COL_PROJECTS = COLLECTIONS.PROJECTS;
+const COL_USERS = COLLECTIONS.USERS;
 
 /**
  * GET /api/projects/[id]/members

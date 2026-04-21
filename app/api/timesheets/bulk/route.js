@@ -4,10 +4,10 @@
  */
 
 import { NextResponse } from 'next/server';
-import { adminDatabases, adminUsers, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, adminUsers, DB_ID } from '@/lib/appwriteAdmin';
 import { nowUTC, formatDate } from '@/lib/date';
 
-const COL_TIMESHEETS = 'pms_timesheets';
+const COL_TIMESHEETS = COLLECTIONS.TIMESHEETS;
 
 /**
  * Helper function to send notification
@@ -93,7 +93,7 @@ export async function POST(request) {
     // If not admin, get the projects they manage
     let managedProjectIds = [];
     if (!isAdmin) {
-      const COL_PROJECTS = 'pms_projects';
+      const COL_PROJECTS = COLLECTIONS.PROJECTS;
       const { Query, adminTeams } = require('@/lib/appwriteAdmin');
 
       const projectsResponse = await adminDatabases.listDocuments(DB_ID, COL_PROJECTS, []);
@@ -128,7 +128,7 @@ export async function POST(request) {
       failed: []
     };
 
-    const COL_ENTRIES = 'pms_timesheet_entries';
+    const COL_ENTRIES = COLLECTIONS.TIMESHEET_ENTRIES;
 
     for (const timesheetId of timesheetIds) {
       try {
@@ -171,7 +171,7 @@ export async function POST(request) {
         if (action === 'approve') {
           // Get submitter's user profile to check supervisor setting
           const { Query: Q2 } = require('@/lib/appwriteAdmin');
-          const userProfiles = await adminDatabases.listDocuments(DB_ID, 'pms_users', [
+          const userProfiles = await adminDatabases.listDocuments(DB_ID, COLLECTIONS.USERS, [
             Q2.equal('accountId', timesheet.accountId),
             Q2.limit(1)
           ]);

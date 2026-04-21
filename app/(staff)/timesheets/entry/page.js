@@ -51,7 +51,7 @@ function TimesheetEntryContent() {
     if (user) {
       loadProjects();
       loadWeekEntries();
-      loadTemplates();
+      // loadTemplates();
       if (entryId) {
         loadEntry();
       }
@@ -239,7 +239,7 @@ function TimesheetEntryContent() {
       showToast('Template saved successfully!', 'success');
       setTemplateName('');
       setShowTemplateModal(false);
-      loadTemplates(); // Reload templates
+      // loadTemplates(); // Reload templates
     } catch (err) {
       showToast(err.message || 'Failed to save template', 'danger');
     }
