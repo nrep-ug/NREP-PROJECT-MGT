@@ -2,6 +2,8 @@
  * Embeds API - Create and list embeds
  * GET: List embeds by project
  * POST: Create embed
+ * PATCH: Update embed
+ * DELETE: Delete embed
  */
 
 import { NextResponse } from 'next/server';
@@ -56,17 +58,19 @@ export async function POST(request) {
       allowFullscreen,
       isClientVisible,
       createdBy,
+      requesterId,
     } = body;
+    const actorId = requesterId || createdBy;
 
     if (!projectId || !organizationId || !projectTeamId || !title || !url) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (!createdBy) {
-      return NextResponse.json({ error: 'Unauthorized: createdBy is required' }, { status: 401 });
+    if (!actorId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
     }
 
-    const isStaff = await verifyStaffAccess(createdBy);
+    const isStaff = await verifyStaffAccess(actorId);
     if (!isStaff) {
       return NextResponse.json({ error: 'Forbidden: Only staff members can create embeds' }, { status: 403 });
     }
@@ -91,7 +95,7 @@ export async function POST(request) {
         height: height || 650,
         allowFullscreen: allowFullscreen !== undefined ? allowFullscreen : true,
         isClientVisible: isClientVisible !== undefined ? isClientVisible : false,
-        createdBy: createdBy || null,
+        createdBy: actorId,
       },
       permissions
     );
@@ -100,5 +104,91 @@ export async function POST(request) {
   } catch (error) {
     console.error('[API /embeds POST]', error);
     return NextResponse.json({ error: error.message || 'Failed to create embed' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request) {
+  try {
+    const body = await request.json();
+    const {
+      embedId,
+      title,
+      provider,
+      url,
+      width,
+      height,
+      allowFullscreen,
+      isClientVisible,
+      requesterId,
+    } = body;
+
+    if (!embedId) {
+      return NextResponse.json({ error: 'embedId is required' }, { status: 400 });
+    }
+
+    if (!requesterId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+    }
+
+    const isStaff = await verifyStaffAccess(requesterId);
+    if (!isStaff) {
+      return NextResponse.json({ error: 'Forbidden: Only staff members can update embeds' }, { status: 403 });
+    }
+
+    if (!title || !url) {
+      return NextResponse.json({ error: 'title and url are required' }, { status: 400 });
+    }
+
+    if (!url.startsWith('https://')) {
+      return NextResponse.json({ error: 'URL must be HTTPS' }, { status: 400 });
+    }
+
+    const embed = await adminDatabases.updateDocument(
+      DB_ID,
+      COL_EMBEDS,
+      embedId,
+      {
+        title,
+        provider: provider || '',
+        url,
+        width: width || 1000,
+        height: height || 650,
+        allowFullscreen: allowFullscreen !== undefined ? allowFullscreen : true,
+        isClientVisible: isClientVisible !== undefined ? isClientVisible : false,
+      }
+    );
+
+    return NextResponse.json({ embed });
+  } catch (error) {
+    console.error('[API /embeds PATCH]', error);
+    return NextResponse.json({ error: error.message || 'Failed to update embed' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const embedId = searchParams.get('embedId');
+    const requesterId = searchParams.get('requesterId');
+
+    if (!embedId) {
+      return NextResponse.json({ error: 'embedId is required' }, { status: 400 });
+    }
+
+    if (!requesterId) {
+      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
+    }
+
+    const isStaff = await verifyStaffAccess(requesterId);
+    if (!isStaff) {
+      return NextResponse.json({ error: 'Forbidden: Only staff members can delete embeds' }, { status: 403 });
+    }
+
+    await adminDatabases.deleteDocument(DB_ID, COL_EMBEDS, embedId);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[API /embeds DELETE]', error);
+    return NextResponse.json({ error: error.message || 'Failed to delete embed' }, { status: 500 });
   }
 }

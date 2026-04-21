@@ -1,48 +1,115 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Button, Modal, Form, Card, Badge, Table, Row, Col, InputGroup } from 'react-bootstrap';
+import { useState } from 'react';
+import { Button, Modal, Form, Card, Badge, Row, Col, InputGroup } from 'react-bootstrap';
 import { useProjectEmbeds } from '@/hooks/useProjects';
+
+const EMPTY_FORM_DATA = {
+  title: '',
+  provider: '',
+  url: '',
+  width: 1000,
+  height: 650,
+  allowFullscreen: true,
+  isClientVisible: false,
+};
+
+const getEmbedFormData = (embed) => ({
+  title: embed?.title || '',
+  provider: embed?.provider || '',
+  url: embed?.url || '',
+  width: embed?.width || 1000,
+  height: embed?.height || 650,
+  allowFullscreen: embed?.allowFullscreen !== undefined ? embed.allowFullscreen : true,
+  isClientVisible: embed?.isClientVisible || false,
+});
 
 export default function ProjectEmbeds({ project, user, showToast, canModify }) {
   const { data: embeds = [], isLoading: loading, refetch } = useProjectEmbeds(project?.$id);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const requesterId = user?.accountId || user?.authUser?.$id || user?.$id;
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [formMode, setFormMode] = useState('create');
+  const [activeEmbed, setActiveEmbed] = useState(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewEmbed, setPreviewEmbed] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [formData, setFormData] = useState({
-    title: '',
-    provider: '',
-    url: '',
-    width: 1000,
-    height: 650,
-    allowFullscreen: true,
-    isClientVisible: false,
-  });
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [formData, setFormData] = useState(() => ({ ...EMPTY_FORM_DATA }));
+
+  const isViewMode = formMode === 'view';
+  const isEditMode = formMode === 'edit';
+
+  const openCreateModal = () => {
+    setFormMode('create');
+    setActiveEmbed(null);
+    setFormData({ ...EMPTY_FORM_DATA });
+    setShowFormModal(true);
+  };
+
+  const openDetailsModal = (embed) => {
+    setFormMode('view');
+    setActiveEmbed(embed);
+    setFormData(getEmbedFormData(embed));
+    setShowFormModal(true);
+  };
+
+  const openEditModal = (embed) => {
+    setFormMode('edit');
+    setActiveEmbed(embed);
+    setFormData(getEmbedFormData(embed));
+    setShowFormModal(true);
+  };
+
+  const closeFormModal = () => {
+    setShowFormModal(false);
+    setFormMode('create');
+    setActiveEmbed(null);
+    setFormData({ ...EMPTY_FORM_DATA });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isViewMode) return;
+
+    if (!requesterId) {
+      showToast('Unable to identify the current user.', 'danger');
+      return;
+    }
+
+    if (isEditMode && !activeEmbed?.$id) {
+      showToast('Unable to identify the selected embed.', 'danger');
+      return;
+    }
+
     try {
+      setSaving(true);
       const response = await fetch('/api/embeds', {
-        method: 'POST',
+        method: isEditMode ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          embedId: activeEmbed?.$id,
           projectId: project.$id,
           organizationId: project.organizationId,
           projectTeamId: project.projectTeamId,
           ...formData,
-          createdBy: user.$id,
+          requesterId,
+          createdBy: isEditMode ? undefined : requesterId,
         }),
       });
+      const data = await response.json().catch(() => ({}));
 
-      if (!response.ok) throw new Error('Failed to create embed');
+      if (!response.ok) {
+        throw new Error(data.error || `Failed to ${isEditMode ? 'update' : 'create'} embed`);
+      }
 
-      showToast('Embed created successfully!', 'success');
-      setShowAddModal(false);
-      setFormData({ title: '', provider: '', url: '', width: 1000, height: 650, allowFullscreen: true, isClientVisible: false });
+      showToast(`Embed ${isEditMode ? 'updated' : 'created'} successfully!`, 'success');
+      closeFormModal();
       refetch();
     } catch (err) {
-      showToast(err.message || 'Failed to create embed', 'danger');
+      showToast(err.message || `Failed to ${isEditMode ? 'update' : 'create'} embed`, 'danger');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -53,6 +120,45 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
 
   const handleOpenInNewTab = (url) => {
     window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleDeleteEmbed = async () => {
+    if (!requesterId) {
+      showToast('Unable to identify the current user.', 'danger');
+      return;
+    }
+
+    if (!activeEmbed?.$id) {
+      showToast('Unable to identify the selected embed.', 'danger');
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete "${activeEmbed.title}"?`);
+    if (!confirmed) return;
+
+    try {
+      setDeleting(true);
+      const params = new URLSearchParams({
+        embedId: activeEmbed.$id,
+        requesterId,
+      });
+      const response = await fetch(`/api/embeds?${params.toString()}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete embed');
+      }
+
+      showToast('Embed deleted successfully!', 'success');
+      closeFormModal();
+      refetch();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete embed', 'danger');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const getProviderIcon = (provider) => {
@@ -118,7 +224,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
             <Button
               variant=""
               size="sm"
-              onClick={() => setShowAddModal(true)}
+              onClick={openCreateModal}
               style={{
                 backgroundColor: '#054653',
                 color: 'white',
@@ -158,7 +264,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
           {!searchTerm && canModify && (
             <Button
               variant=""
-              onClick={() => setShowAddModal(true)}
+              onClick={openCreateModal}
               style={{
                 backgroundColor: '#054653',
                 color: 'white',
@@ -276,6 +382,34 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                       variant=""
                       size="sm"
                       className="flex-grow-1"
+                      title="View details"
+                      onClick={() => openDetailsModal(embed)}
+                      style={{
+                        backgroundColor: 'white',
+                        border: '2px solid #cbd5e1',
+                        color: '#64748b',
+                        padding: '0.5rem',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#054653';
+                        e.currentTarget.style.color = '#054653';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#cbd5e1';
+                        e.currentTarget.style.color = '#64748b';
+                      }}
+                    >
+                      <i className="bi bi-info-circle"></i>
+                    </Button>
+                    <Button
+                      variant=""
+                      size="sm"
+                      className="flex-grow-1"
+                      title="Preview embed"
                       onClick={() => handlePreview(embed)}
                       style={{
                         backgroundColor: 'white',
@@ -298,10 +432,40 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                     >
                       <i className="bi bi-eye"></i>
                     </Button>
+                    {canModify && (
+                      <Button
+                        variant=""
+                        size="sm"
+                        className="flex-grow-1"
+                        title="Edit embed"
+                        onClick={() => openEditModal(embed)}
+                        style={{
+                          backgroundColor: 'white',
+                          border: '2px solid #cbd5e1',
+                          color: '#64748b',
+                          padding: '0.5rem',
+                          borderRadius: '8px',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#14B8A6';
+                          e.currentTarget.style.color = '#14B8A6';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#cbd5e1';
+                          e.currentTarget.style.color = '#64748b';
+                        }}
+                      >
+                        <i className="bi bi-pencil-square"></i>
+                      </Button>
+                    )}
                     <Button
                       variant=""
                       size="sm"
                       className="flex-grow-1"
+                      title="Open in new tab"
                       onClick={() => handleOpenInNewTab(embed.url)}
                       style={{
                         backgroundColor: 'white',
@@ -332,12 +496,15 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
         </Row>
       )}
 
-      {/* Add Embed Modal */}
-      <Modal show={showAddModal} onHide={() => setShowAddModal(false)} size="lg">
+      {/* Embed Form Modal */}
+      <Modal show={showFormModal} onHide={closeFormModal} size="lg">
         <Modal.Header closeButton style={{ borderBottom: '2px solid #e9ecef' }}>
           <Modal.Title>
-            <i className="bi bi-plus-circle me-2" style={{ color: '#054653' }}></i>
-            Add Embed
+            <i
+              className={`bi ${isViewMode ? 'bi-info-circle' : isEditMode ? 'bi-pencil-square' : 'bi-plus-circle'} me-2`}
+              style={{ color: '#054653' }}
+            ></i>
+            {isViewMode ? 'Embed Details' : isEditMode ? 'Edit Embed' : 'Add Embed'}
           </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleSubmit}>
@@ -350,6 +517,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g., Project Mockups"
                 required
+                disabled={isViewMode || saving}
                 style={{
                   borderColor: '#e2e8f0',
                   padding: '0.75rem',
@@ -365,6 +533,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                 placeholder="e.g., Google Slides, Figma, Miro"
                 value={formData.provider}
                 onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+                disabled={isViewMode || saving}
                 style={{
                   borderColor: '#e2e8f0',
                   padding: '0.75rem',
@@ -384,6 +553,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                 value={formData.url}
                 onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                 required
+                disabled={isViewMode || saving}
                 style={{
                   borderColor: '#e2e8f0',
                   padding: '0.75rem',
@@ -403,6 +573,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                     type="number"
                     value={formData.width}
                     onChange={(e) => setFormData({ ...formData, width: parseInt(e.target.value) || 1000 })}
+                    disabled={isViewMode || saving}
                     style={{
                       borderColor: '#e2e8f0',
                       padding: '0.75rem',
@@ -418,6 +589,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                     type="number"
                     value={formData.height}
                     onChange={(e) => setFormData({ ...formData, height: parseInt(e.target.value) || 650 })}
+                    disabled={isViewMode || saving}
                     style={{
                       borderColor: '#e2e8f0',
                       padding: '0.75rem',
@@ -434,6 +606,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                 label="Allow fullscreen"
                 checked={formData.allowFullscreen}
                 onChange={(e) => setFormData({ ...formData, allowFullscreen: e.target.checked })}
+                disabled={isViewMode || saving}
               />
             </Form.Group>
 
@@ -443,6 +616,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                 label="Visible to clients"
                 checked={formData.isClientVisible}
                 onChange={(e) => setFormData({ ...formData, isClientVisible: e.target.checked })}
+                disabled={isViewMode || saving}
               />
               <Form.Text className="text-muted small">
                 Enable this to make the embed visible in the client portal
@@ -452,7 +626,9 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
           <Modal.Footer style={{ borderTop: '2px solid #e9ecef' }}>
             <Button
               variant=""
-              onClick={() => setShowAddModal(false)}
+              type="button"
+              onClick={closeFormModal}
+              disabled={saving || deleting}
               style={{
                 backgroundColor: 'white',
                 border: '2px solid #cbd5e1',
@@ -463,23 +639,65 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                 fontWeight: '500'
               }}
             >
-              Cancel
+              {isViewMode ? 'Close' : 'Cancel'}
             </Button>
-            <Button
-              variant=""
-              type="submit"
-              style={{
-                backgroundColor: '#054653',
-                color: 'white',
-                border: 'none',
-                padding: '0.5rem 1.5rem',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-                fontWeight: '600'
-              }}
-            >
-              Create Embed
-            </Button>
+            {isViewMode && canModify ? (
+              <>
+                <Button
+                  variant=""
+                  type="button"
+                  onClick={handleDeleteEmbed}
+                  disabled={deleting}
+                  style={{
+                    backgroundColor: 'white',
+                    border: '2px solid #dc3545',
+                    color: '#dc3545',
+                    padding: '0.5rem 1.5rem',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  {deleting ? 'Deleting...' : 'Delete Embed'}
+                </Button>
+                <Button
+                  variant=""
+                  type="button"
+                  onClick={() => activeEmbed && openEditModal(activeEmbed)}
+                  disabled={deleting}
+                  style={{
+                    backgroundColor: '#054653',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1.5rem',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  Edit Embed
+                </Button>
+              </>
+            ) : (
+              !isViewMode && (
+                <Button
+                  variant=""
+                  type="submit"
+                  disabled={saving}
+                  style={{
+                    backgroundColor: '#054653',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1.5rem',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  {saving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create Embed'}
+                </Button>
+              )
+            )}
           </Modal.Footer>
         </Form>
       </Modal>
