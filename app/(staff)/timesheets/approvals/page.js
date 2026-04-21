@@ -37,22 +37,43 @@ export default function TimesheetsApprovalsPage() {
   const [bulkApproving, setBulkApproving] = useState(false);
   const [bulkRejecting, setBulkRejecting] = useState(false);
   const { toast, showToast, hideToast } = useToast();
+  const requesterId = user?.accountId || user?.authUser?.$id;
+  const selfActionMessage = 'You cannot approve or reject your own timesheet.';
+
+  const isOwnTimesheet = (timesheet) => {
+    return !!requesterId && (
+      timesheet?.accountId === requesterId ||
+      timesheet?.user?.accountId === requesterId
+    );
+  };
+
+  const canApproveTimesheet = (timesheet) => {
+    return timesheet?.status === 'submitted' && (timesheet?.canApprove || user?.isAdmin) && !isOwnTimesheet(timesheet);
+  };
+
+  const canRejectTimesheet = (timesheet) => {
+    return timesheet?.status === 'submitted' && (timesheet?.canApprove || user?.isAdmin) && !isOwnTimesheet(timesheet);
+  };
+
+  const canSelectTimesheet = (timesheet) => {
+    return canApproveTimesheet(timesheet) || canRejectTimesheet(timesheet);
+  };
 
   // Access check is handled by the API
   // Admins, Project Managers, and Supervisors can access
 
   useEffect(() => {
-    if (user?.organizationId) {
+    if (user?.organizationId && requesterId) {
       loadTimesheets();
     }
-  }, [user, statusFilter, weekFilter, page]); // Reload when page changes
+  }, [user, requesterId, statusFilter, weekFilter, page]); // Reload when page changes
 
   const loadTimesheets = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
         organizationId: user.organizationId,
-        requesterId: user.authUser.$id,
+        requesterId,
         page: page.toString(),
         limit: LIMIT.toString(),
         ...(statusFilter && { status: statusFilter }),
@@ -97,6 +118,16 @@ export default function TimesheetsApprovalsPage() {
   };
 
   const openApproveModal = (timesheet) => {
+    if (isOwnTimesheet(timesheet)) {
+      showToast(selfActionMessage, 'warning');
+      return;
+    }
+
+    if (!canApproveTimesheet(timesheet)) {
+      showToast('You are not allowed to approve this timesheet at its current approval stage.', 'warning');
+      return;
+    }
+
     setSelectedTimesheet(timesheet);
     setApprovalComments('');
     setShowApproveModal(true);
@@ -116,7 +147,7 @@ export default function TimesheetsApprovalsPage() {
         body: JSON.stringify({
           timesheetId: selectedTimesheet.$id,
           action: 'approve',
-          managerId: user.authUser.$id,
+          managerId: requesterId,
           approvalComments
         }),
       });
@@ -139,10 +170,12 @@ export default function TimesheetsApprovalsPage() {
   };
 
   const openBulkApproveModal = () => {
-    if (selectedIds.length === 0) {
+    const actionableIds = getSelectedActionableIds();
+    if (actionableIds.length === 0) {
       showToast('Please select timesheets to approve', 'warning');
       return;
     }
+    setSelectedIds(actionableIds);
     setApprovalComments('');
     setShowBulkApproveModal(true);
   };
@@ -153,15 +186,21 @@ export default function TimesheetsApprovalsPage() {
       return;
     }
 
+    const actionableIds = getSelectedActionableIds();
+    if (actionableIds.length === 0) {
+      showToast('Please select timesheets you are allowed to approve', 'warning');
+      return;
+    }
+
     setBulkApproving(true);
     try {
       const response = await fetch('/api/timesheets/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          timesheetIds: selectedIds,
+          timesheetIds: actionableIds,
           action: 'approve',
-          managerId: user.authUser.$id,
+          managerId: requesterId,
           approvalComments
         }),
       });
@@ -184,6 +223,11 @@ export default function TimesheetsApprovalsPage() {
   };
 
   const handleReject = async () => {
+    if (isOwnTimesheet(selectedTimesheet)) {
+      showToast(selfActionMessage, 'warning');
+      return;
+    }
+
     if (!rejectionComments.trim()) {
       showToast('Please provide rejection comments', 'warning');
       return;
@@ -197,7 +241,7 @@ export default function TimesheetsApprovalsPage() {
         body: JSON.stringify({
           timesheetId: selectedTimesheet.$id,
           action: 'reject',
-          managerId: user.authUser.$id,
+          managerId: requesterId,
           rejectionComments
         }),
       });
@@ -225,15 +269,21 @@ export default function TimesheetsApprovalsPage() {
       return;
     }
 
+    const actionableIds = getSelectedActionableIds();
+    if (actionableIds.length === 0) {
+      showToast('Please select timesheets you are allowed to reject', 'warning');
+      return;
+    }
+
     setBulkRejecting(true);
     try {
       const response = await fetch('/api/timesheets/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          timesheetIds: selectedIds,
+          timesheetIds: actionableIds,
           action: 'reject',
-          managerId: user.authUser.$id,
+          managerId: requesterId,
           rejectionComments
         }),
       });
@@ -256,35 +306,64 @@ export default function TimesheetsApprovalsPage() {
   };
 
   const openRejectModal = (timesheet) => {
+    if (isOwnTimesheet(timesheet)) {
+      showToast(selfActionMessage, 'warning');
+      return;
+    }
+
+    if (!canRejectTimesheet(timesheet)) {
+      showToast('You are not allowed to reject this timesheet at its current approval stage.', 'warning');
+      return;
+    }
+
     setSelectedTimesheet(timesheet);
     setRejectionComments('');
     setShowRejectModal(true);
   };
 
   const openBulkRejectModal = () => {
-    if (selectedIds.length === 0) {
+    const actionableIds = getSelectedActionableIds();
+    if (actionableIds.length === 0) {
       showToast('Please select timesheets to reject', 'warning');
       return;
     }
+    setSelectedIds(actionableIds);
     setRejectionComments('');
     setShowBulkRejectModal(true);
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === filteredTimesheets.length) {
+    const selectableIds = filteredTimesheets.filter(canSelectTimesheet).map(ts => ts.$id);
+    const selectedVisibleIds = selectedIds.filter(id => selectableIds.includes(id));
+
+    if (selectedVisibleIds.length === selectableIds.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredTimesheets.map(ts => ts.$id));
+      setSelectedIds(selectableIds);
     }
   };
 
-  const toggleSelectOne = (id) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter(sid => sid !== id));
+  const toggleSelectOne = (timesheet) => {
+    if (!canSelectTimesheet(timesheet)) {
+      if (isOwnTimesheet(timesheet)) {
+        showToast(selfActionMessage, 'warning');
+      }
+      return;
+    }
+
+    if (selectedIds.includes(timesheet.$id)) {
+      setSelectedIds(selectedIds.filter(sid => sid !== timesheet.$id));
     } else {
-      setSelectedIds([...selectedIds, id]);
+      setSelectedIds([...selectedIds, timesheet.$id]);
     }
   };
+
+  function getSelectedActionableIds() {
+    return selectedIds.filter((id) => {
+      const timesheet = filteredTimesheets.find(ts => ts.$id === id);
+      return timesheet && canSelectTimesheet(timesheet);
+    });
+  }
 
   const getStatusBadge = (timesheet) => {
     const status = timesheet.status;
@@ -317,6 +396,8 @@ export default function TimesheetsApprovalsPage() {
 
     return userName.includes(query) || username.includes(query) || projects.includes(query);
   });
+  const selectableTimesheetIds = filteredTimesheets.filter(canSelectTimesheet).map(ts => ts.$id);
+  const selectedActionableCount = getSelectedActionableIds().length;
 
   if (authLoading || loading) {
     return (
@@ -391,10 +472,10 @@ export default function TimesheetsApprovalsPage() {
       </Card>
 
       {/* Bulk Actions Bar */}
-      {selectedIds.length > 0 && (
+      {selectedActionableCount > 0 && (
         <Alert variant="info" className="d-flex justify-content-between align-items-center">
           <span>
-            <strong>{selectedIds.length}</strong> timesheet(s) selected
+            <strong>{selectedActionableCount}</strong> timesheet(s) selected
           </span>
           <div>
             <Button size="sm" variant="success" onClick={openBulkApproveModal} className="me-2">
@@ -434,7 +515,8 @@ export default function TimesheetsApprovalsPage() {
                     <th style={{ width: '40px' }}>
                       <Form.Check
                         type="checkbox"
-                        checked={selectedIds.length === filteredTimesheets.length && filteredTimesheets.length > 0}
+                        checked={selectableTimesheetIds.length > 0 && selectableTimesheetIds.every(id => selectedIds.includes(id))}
+                        disabled={selectableTimesheetIds.length === 0}
                         onChange={toggleSelectAll}
                       />
                     </th>
@@ -449,14 +531,25 @@ export default function TimesheetsApprovalsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTimesheets.map((ts) => (
+                  {filteredTimesheets.map((ts) => {
+                    const ownTimesheet = isOwnTimesheet(ts);
+                    const canApproveRow = canApproveTimesheet(ts);
+                    const canRejectRow = canRejectTimesheet(ts);
+                    const rowActionTitle = ownTimesheet
+                      ? selfActionMessage
+                      : ts.approvalStage === 'supervisor'
+                        ? 'Approve (Supervisor)'
+                        : 'Approve (Final)';
+
+                    return (
                     <tr key={ts.$id}>
                       <td>
                         <Form.Check
                           type="checkbox"
                           checked={selectedIds.includes(ts.$id)}
-                          onChange={() => toggleSelectOne(ts.$id)}
-                          disabled={!ts.canApprove && ts.status === 'submitted'}
+                          onChange={() => toggleSelectOne(ts)}
+                          disabled={!canSelectTimesheet(ts)}
+                          title={ownTimesheet ? selfActionMessage : undefined}
                         />
                       </td>
                       <td>
@@ -531,8 +624,8 @@ export default function TimesheetsApprovalsPage() {
                                 size="sm"
                                 variant={ts.approvalStage === 'admin' ? 'outline-warning' : 'outline-success'}
                                 onClick={() => openApproveModal(ts)}
-                                title={ts.approvalStage === 'supervisor' ? "Approve (Supervisor)" : "Approve (Final)"}
-                                disabled={!ts.canApprove}
+                                title={rowActionTitle}
+                                disabled={!canApproveRow}
                               >
                                 <i className="bi bi-check"></i>
                               </Button>
@@ -540,17 +633,23 @@ export default function TimesheetsApprovalsPage() {
                                 size="sm"
                                 variant="outline-danger"
                                 onClick={() => openRejectModal(ts)}
-                                title="Reject"
-                                disabled={!ts.canApprove && !user?.isAdmin}
+                                title={ownTimesheet ? selfActionMessage : 'Reject'}
+                                disabled={!canRejectRow}
                               >
                                 <i className="bi bi-x"></i>
                               </Button>
+                              {ownTimesheet && (
+                                <div className="small text-muted align-self-center ms-1">
+                                  Cannot approve or reject own timesheet
+                                </div>
+                              )}
                             </>
                           )}
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </Table>
             </div>
@@ -632,7 +731,7 @@ export default function TimesheetsApprovalsPage() {
         </Modal.Header>
         <Modal.Body>
           <Alert variant="warning">
-            <strong>Important:</strong> You are about to reject {selectedIds.length} timesheet(s). The same feedback will be sent to all selected employees.
+            <strong>Important:</strong> You are about to reject {selectedActionableCount} timesheet(s). The same feedback will be sent to all selected employees.
           </Alert>
 
           <Form.Group>
@@ -667,7 +766,7 @@ export default function TimesheetsApprovalsPage() {
             ) : (
               <>
                 <i className="bi bi-x-circle me-2"></i>
-                Reject {selectedIds.length} Timesheet(s)
+                Reject {selectedActionableCount} Timesheet(s)
               </>
             )}
           </Button>
@@ -730,7 +829,7 @@ export default function TimesheetsApprovalsPage() {
         </Modal.Header>
         <Modal.Body>
           <Alert variant="success">
-            <strong>Bulk Approval:</strong> You are about to approve {selectedIds.length} timesheet(s). The same comments will be sent to all selected employees.
+            <strong>Bulk Approval:</strong> You are about to approve {selectedActionableCount} timesheet(s). The same comments will be sent to all selected employees.
           </Alert>
 
           <Form.Group>
@@ -765,7 +864,7 @@ export default function TimesheetsApprovalsPage() {
             ) : (
               <>
                 <i className="bi bi-check-circle me-2"></i>
-                Approve {selectedIds.length} Timesheet(s)
+                Approve {selectedActionableCount} Timesheet(s)
               </>
             )}
           </Button>

@@ -27,6 +27,12 @@ export default function TimesheetDetailsPage() {
   const { toast, showToast, hideToast } = useToast();
 
   const timesheetId = params.timesheetId;
+  const requesterId = user?.accountId || user?.authUser?.$id;
+  const selfActionMessage = 'You cannot approve or reject your own timesheet.';
+
+  const isOwnTimesheet = (ts) => {
+    return !!requesterId && (ts?.accountId === requesterId || ts?.user?.accountId === requesterId);
+  };
 
   useEffect(() => {
     if (user?.organizationId && timesheetId) {
@@ -67,6 +73,11 @@ export default function TimesheetDetailsPage() {
   };
 
   const handleApprove = async () => {
+    if (isOwnTimesheet(timesheet)) {
+      showToast(selfActionMessage, 'warning');
+      return;
+    }
+
     if (!approvalComments.trim()) {
       showToast('Please provide approval comments', 'warning');
       return;
@@ -80,7 +91,7 @@ export default function TimesheetDetailsPage() {
         body: JSON.stringify({
           timesheetId: timesheet.$id,
           action: 'approve',
-          managerId: user.authUser.$id,
+          managerId: requesterId,
           approvalComments
         }),
       });
@@ -104,6 +115,11 @@ export default function TimesheetDetailsPage() {
   };
 
   const handleReject = async () => {
+    if (isOwnTimesheet(timesheet)) {
+      showToast(selfActionMessage, 'warning');
+      return;
+    }
+
     if (!rejectionComments.trim()) {
       showToast('Please provide rejection comments', 'warning');
       return;
@@ -117,7 +133,7 @@ export default function TimesheetDetailsPage() {
         body: JSON.stringify({
           timesheetId: timesheet.$id,
           action: 'reject',
-          managerId: user.authUser.$id,
+          managerId: requesterId,
           rejectionComments
         }),
       });
@@ -156,7 +172,7 @@ export default function TimesheetDetailsPage() {
 
     try {
       const response = await fetch(
-        `/api/timesheets/entries/${entry.$id}?requesterId=${user.authUser.$id}`,
+        `/api/timesheets/entries/${entry.$id}?requesterId=${requesterId}`,
         { method: 'DELETE' }
       );
 
@@ -244,14 +260,15 @@ export default function TimesheetDetailsPage() {
 
   // Check if user can approve
   const approvalStage = getApprovalStage(timesheet);
+  const ownTimesheet = isOwnTimesheet(timesheet);
   let canApprove = false;
   let approveButtonLabel = 'Approve Timesheet';
 
-  if (timesheet?.status === 'submitted') {
+  if (timesheet?.status === 'submitted' && !ownTimesheet) {
     if (approvalStage === 'supervisor') {
       // Can approve if user is the supervisor of the submitter
       // Check both direct check and if we are admin acting as supervisor
-      if (user?.authUser?.$id === timesheet.user?.supervisorId) {
+      if (requesterId === timesheet.user?.supervisorId) {
         canApprove = true;
         approveButtonLabel = 'Approve (Supervisor)';
       } else if (user?.isAdmin && timesheet.user?.supervisorId) {
@@ -271,13 +288,13 @@ export default function TimesheetDetailsPage() {
 
   // Check if can Reject (Admins can always reject, Supervisor can reject if it's their turn)
   let canReject = false;
-  if (timesheet?.status === 'submitted') {
+  if (timesheet?.status === 'submitted' && !ownTimesheet) {
     if (user?.isAdmin) canReject = true;
-    else if (approvalStage === 'supervisor' && user?.authUser?.$id === timesheet.user?.supervisorId) canReject = true;
+    else if (approvalStage === 'supervisor' && requesterId === timesheet.user?.supervisorId) canReject = true;
   }
 
   // Check if user can edit (owner and timesheet is draft or rejected)
-  const isOwner = timesheet?.accountId === user?.authUser?.$id;
+  const isOwner = ownTimesheet;
   const canEdit = isOwner && (timesheet?.status === 'draft' || timesheet?.status === 'rejected');
 
   return (
@@ -567,31 +584,37 @@ export default function TimesheetDetailsPage() {
       </Card>
 
       {/* Action Buttons */}
-      {(canApprove || canReject) && timesheet.status === 'submitted' && (
+      {(canApprove || canReject || (ownTimesheet && timesheet.status === 'submitted')) && timesheet.status === 'submitted' && (
         <Card className="border-0 shadow-sm mb-4">
           <Card.Body>
             <h6 className="mb-3">Actions</h6>
-            <div className="d-flex gap-2">
-              {canApprove && (
-                <Button
-                  variant="success"
-                  onClick={() => setShowApproveModal(true)}
-                >
-                  <i className="bi bi-check-circle me-2"></i>
-                  {approveButtonLabel}
-                </Button>
-              )}
-              {canReject && (
-                <Button
-                  variant="danger"
-                  onClick={() => setShowRejectModal(true)}
-                >
-                  <i className="bi bi-x-circle me-2"></i>
-                  Reject Timesheet
-                </Button>
-              )}
-            </div>
-            {!canApprove && !canReject && (
+            {ownTimesheet ? (
+              <Alert variant="warning" className="mb-0">
+                {selfActionMessage}
+              </Alert>
+            ) : (
+              <div className="d-flex gap-2">
+                {canApprove && (
+                  <Button
+                    variant="success"
+                    onClick={() => setShowApproveModal(true)}
+                  >
+                    <i className="bi bi-check-circle me-2"></i>
+                    {approveButtonLabel}
+                  </Button>
+                )}
+                {canReject && (
+                  <Button
+                    variant="danger"
+                    onClick={() => setShowRejectModal(true)}
+                  >
+                    <i className="bi bi-x-circle me-2"></i>
+                    Reject Timesheet
+                  </Button>
+                )}
+              </div>
+            )}
+            {!ownTimesheet && !canApprove && !canReject && (
               <Alert variant="info" className="mb-0">
                 You are viewing this timesheet, but action is currently required from {approvalStage === 'supervisor' ? 'the Supervisor' : 'an Administrator'}.
               </Alert>
