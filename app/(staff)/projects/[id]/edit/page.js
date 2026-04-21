@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, Form, Button, Row, Col, Alert } from 'react-bootstrap';
 import { useAuth } from '@/hooks/useAuth';
-import { useProject } from '@/hooks/useProjects';
+import { projectKeys, useProject } from '@/hooks/useProjects';
 import AppLayout from '@/components/AppLayout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Toast, { useToast } from '@/components/Toast';
@@ -12,6 +13,7 @@ import Toast, { useToast } from '@/components/Toast';
 export default function EditProjectPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(params.id);
   const [clients, setClients] = useState([]);
@@ -110,6 +112,8 @@ export default function EditProjectPage() {
       }
 
       showToast('Project updated successfully!', 'success');
+      queryClient.setQueryData(projectKeys.detail(params.id), data.project);
+      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
 
       // Navigate back to the project detail page
       setTimeout(() => {
