@@ -50,10 +50,12 @@ export default function NewUserPage() {
   const loadData = async () => {
     setLoadingData(true);
     try {
+      const requesterId = user?.accountId || user?.authUser?.$id;
+
       // Parallel data fetching
       const [orgsRes, projectsRes, supervisorsRes] = await Promise.all([
-        fetch(`/api/admin/organizations?requesterId=${user.authUser.$id}&type=client`),
-        fetch(`/api/projects?organizationId=${user.organizationId}`),
+        fetch(`/api/admin/organizations?requesterId=${requesterId}&type=client`),
+        fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`),
         databases.listDocuments(
           DB_ID,
           COLLECTIONS.USERS,

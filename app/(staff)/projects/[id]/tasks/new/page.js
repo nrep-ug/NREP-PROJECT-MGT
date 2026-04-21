@@ -34,12 +34,13 @@ function NewTaskContent() {
   });
 
   const [selectedMilestone, setSelectedMilestone] = useState(null);
+  const requesterId = user?.accountId || user?.authUser?.$id;
 
   useEffect(() => {
-    if (user && params.id) {
+    if (user && requesterId && params.id) {
       loadData();
     }
-  }, [user, params.id]);
+  }, [user, requesterId, params.id]);
 
   // Pre-fill milestone from query params
   useEffect(() => {
@@ -80,7 +81,7 @@ function NewTaskContent() {
       setMilestones(milestonesResponse.documents);
 
       // Load project members
-      const membersResponse = await fetch(`/api/projects/${params.id}/members?requesterId=${user?.authUser?.$id}`);
+      const membersResponse = await fetch(`/api/projects/${params.id}/members?requesterId=${requesterId}`);
       const membersData = await membersResponse.json();
       if (membersResponse.ok) {
         setProjectMembers(membersData.members || []);

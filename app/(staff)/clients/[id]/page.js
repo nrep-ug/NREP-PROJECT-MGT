@@ -29,22 +29,23 @@ export default function ClientDetailsPage() {
     const loadData = async () => {
         try {
             setLoading(true);
+            const requesterId = user?.accountId || user?.authUser?.$id;
 
             // Fetch Client Details
-            const clientRes = await fetch(`/api/clients/${params.id}?requesterId=${user?.authUser?.$id}`);
+            const clientRes = await fetch(`/api/clients/${params.id}?requesterId=${requesterId}`);
             if (!clientRes.ok) throw new Error('Failed to fetch client details');
             const clientData = await clientRes.json();
             setClient(clientData.client);
 
             // Fetch Projects linked to this client
-            const projectsRes = await fetch(`/api/projects?organizationId=${user.organizationId}&clientId=${params.id}`);
+            const projectsRes = await fetch(`/api/projects?organizationId=${user.organizationId}&clientId=${params.id}&requesterId=${requesterId}`);
             if (projectsRes.ok) {
                 const projectsData = await projectsRes.json();
                 setProjects(projectsData.projects || []);
             }
 
             // Fetch Users linked to this client
-            const usersRes = await fetch(`/api/admin/users?organizationId=${user.organizationId}&clientOrganizationId=${params.id}`);
+            const usersRes = await fetch(`/api/admin/users?organizationId=${user.organizationId}&clientOrganizationId=${params.id}&requesterId=${requesterId}`);
             if (usersRes.ok) {
                 const usersData = await usersRes.json();
                 setUsers(usersData.users || []);

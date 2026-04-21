@@ -27,12 +27,13 @@ export default function TeamMemberDetailPage() {
 
   // Check if current user can manage members
   const canManage = user?.isAdmin;
+  const requesterId = user?.accountId || user?.authUser?.$id;
 
   useEffect(() => {
-    if (user && params.id && params.memberId) {
+    if (user && requesterId && params.id && params.memberId) {
       loadData();
     }
-  }, [user, params.id, params.memberId]);
+  }, [user, requesterId, params.id, params.memberId]);
 
   const loadData = async () => {
     try {
@@ -47,7 +48,7 @@ export default function TeamMemberDetailPage() {
       setProject(projectDoc);
 
       // Load member from project team
-      const membersResponse = await fetch(`/api/projects/${params.id}/members?requesterId=${user?.authUser?.$id}`);
+      const membersResponse = await fetch(`/api/projects/${params.id}/members?requesterId=${requesterId}`);
       const membersData = await membersResponse.json();
 
       if (membersResponse.ok) {
@@ -105,7 +106,7 @@ export default function TeamMemberDetailPage() {
         body: JSON.stringify({
           membershipId: member.membershipId,
           roles: selectedRoles,
-          requesterId: user?.authUser?.$id || user?.id,
+          requesterId,
           organizationId: project.organizationId
         })
       });

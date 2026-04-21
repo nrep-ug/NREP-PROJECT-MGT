@@ -24,6 +24,7 @@ export default function TaskDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const { toast, showToast, hideToast } = useToast();
+  const requesterId = user?.accountId || user?.authUser?.$id;
 
   const [formData, setFormData] = useState({
     milestoneId: '',
@@ -38,10 +39,10 @@ export default function TaskDetailPage() {
   });
 
   useEffect(() => {
-    if (user && params.id && params.taskId) {
+    if (user && requesterId && params.id && params.taskId) {
       loadData();
     }
-  }, [user, params.id, params.taskId]);
+  }, [user, requesterId, params.id, params.taskId]);
 
   const loadData = async () => {
     try {
@@ -99,7 +100,7 @@ export default function TaskDetailPage() {
       setMilestones(milestonesResponse.documents);
 
       // Load project members
-      const membersResponse = await fetch(`/api/projects/${params.id}/members?requesterId=${user?.authUser?.$id}`);
+      const membersResponse = await fetch(`/api/projects/${params.id}/members?requesterId=${requesterId}`);
       const membersData = await membersResponse.json();
       if (membersResponse.ok) {
         setProjectMembers(membersData.members || []);

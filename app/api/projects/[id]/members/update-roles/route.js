@@ -2,10 +2,6 @@ import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminTeams as teams, adminDatabases as databases, adminUsers, DB_ID } from '@/lib/appwriteAdmin';
 import { verifyAdminAccess } from '@/lib/authHelpers';
 
-const COLLECTIONS = {
-  PROJECTS: COLLECTIONS.PROJECTS,
-};
-
 /**
  * PUT /api/projects/[id]/members/update-roles
  * Update a member's roles in the project team

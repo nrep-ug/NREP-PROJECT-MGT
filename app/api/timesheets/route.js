@@ -257,6 +257,7 @@ export async function PATCH(request) {
   try {
     const body = await request.json();
     const { timesheetId, action, managerId, rejectionComments, approvalComments } = body;
+    console.log("PATCH body: ", body);
 
     if (!timesheetId || !action) {
       return NextResponse.json({ error: 'Missing timesheetId or action' }, { status: 400 });

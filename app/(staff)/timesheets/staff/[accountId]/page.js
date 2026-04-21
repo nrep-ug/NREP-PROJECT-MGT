@@ -91,7 +91,8 @@ export default function StaffTimesheetsPage() {
 
     const loadProjects = async () => {
         try {
-            const response = await fetch(`/api/projects?organizationId=${user.organizationId}`);
+            const requesterId = user?.accountId || user?.authUser?.$id;
+            const response = await fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
             const data = await response.json();
             if (response.ok) {
                 const projectList = data.projects || [];
@@ -105,9 +106,10 @@ export default function StaffTimesheetsPage() {
     const loadStaffTimesheets = async () => {
         try {
             setLoading(true);
+            const requesterId = user?.accountId || user?.authUser?.$id;
             const params = new URLSearchParams({
                 organizationId: user.organizationId,
-                requesterId: user.authUser.$id,
+                requesterId,
                 ...(appliedStartDate && { startDate: appliedStartDate }),
                 ...(appliedEndDate && { endDate: appliedEndDate }),
                 ...(appliedStatus && { status: appliedStatus })

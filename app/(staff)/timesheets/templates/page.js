@@ -36,7 +36,7 @@ export default function TemplatesPage() {
   const [deletingTemplateId, setDeletingTemplateId] = useState(null);
 
   useEffect(() => {
-    if (user?.authUser?.$id && user?.organizationId) {
+    if ((user?.accountId || user?.authUser?.$id) && user?.organizationId) {
       loadData();
     }
   }, [user]);
@@ -46,9 +46,11 @@ export default function TemplatesPage() {
     setError('');
 
     try {
+      const requesterId = user?.accountId || user?.authUser?.$id;
+
       // Load templates
       const templatesRes = await fetch(
-        `/api/timesheets/templates?accountId=${user.authUser.$id}&organizationId=${user.organizationId}`
+        `/api/timesheets/templates?accountId=${requesterId}&organizationId=${user.organizationId}`
       );
       const templatesData = await templatesRes.json();
 
@@ -59,7 +61,7 @@ export default function TemplatesPage() {
       setTemplates(templatesData.templates || []);
 
       // Load projects for display
-      const projectsRes = await fetch(`/api/projects?organizationId=${user.organizationId}`);
+      const projectsRes = await fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
       const projectsData = await projectsRes.json();
       if (projectsRes.ok) {
         setProjects(projectsData.projects || []);
@@ -121,7 +123,8 @@ export default function TemplatesPage() {
 
     try {
       // Delete old template
-      await fetch(`/api/timesheets/templates?templateId=${editingTemplate.$id}`, {
+      const requesterId = user?.accountId || user?.authUser?.$id;
+      await fetch(`/api/timesheets/templates?templateId=${editingTemplate.$id}&accountId=${requesterId}`, {
         method: 'DELETE'
       });
 
@@ -130,7 +133,7 @@ export default function TemplatesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          accountId: user.authUser.$id,
+          accountId: requesterId,
           organizationId: user.organizationId,
           name: editForm.name,
           projectId: editForm.projectId,
@@ -162,7 +165,8 @@ export default function TemplatesPage() {
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`/api/timesheets/templates?templateId=${deletingTemplateId}`, {
+      const requesterId = user?.accountId || user?.authUser?.$id;
+      const response = await fetch(`/api/timesheets/templates?templateId=${deletingTemplateId}&accountId=${requesterId}`, {
         method: 'DELETE'
       });
 

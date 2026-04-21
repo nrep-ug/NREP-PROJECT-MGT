@@ -10,6 +10,7 @@ export default function ProjectDocuments({ project, user, showToast, canModify }
   const { data: documents = [], isLoading: loading, refetch } = useProjectDocuments(project?.$id);
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const requesterId = user?.accountId || user?.authUser?.$id || user?.$id;
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -32,12 +33,13 @@ export default function ProjectDocuments({ project, user, showToast, canModify }
           projectId: project.$id,
           organizationId: project.organizationId,
           projectTeamId: project.projectTeamId,
-          uploaderId: user.$id,
+          uploaderId: requesterId,
           title: file.name,
           category: 'other',
           fileId: uploadedFile.$id,
           mimeType: file.type,
           sizeBytes: file.size,
+          requesterId,
         }),
       });
 

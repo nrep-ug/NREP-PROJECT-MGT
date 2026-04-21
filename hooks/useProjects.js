@@ -144,19 +144,16 @@ export function useProjectEmbeds(projectId) {
 
 export function useProjectMembers(projectId, requesterId) {
     return useQuery({
-        queryKey: projectKeys.team(projectId),
+        queryKey: [...projectKeys.team(projectId), requesterId],
         queryFn: async () => {
-            const url = requesterId
-              ? `/api/projects/${projectId}/members?requesterId=${requesterId}`
-              : `/api/projects/${projectId}/members`;
-            const response = await fetch(url);
+            const response = await fetch(`/api/projects/${projectId}/members?requesterId=${requesterId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch project members');
             }
             const data = await response.json();
             return data.members || [];
         },
-        enabled: !!projectId,
+        enabled: !!projectId && !!requesterId,
     });
 }
 

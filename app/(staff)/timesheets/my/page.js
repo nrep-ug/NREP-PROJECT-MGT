@@ -30,23 +30,31 @@ export default function TimesheetsPage() {
   const { toast, showToast, hideToast } = useToast();
 
   const weekEnd = getWeekEnd(weekStart);
+  const requesterId = user?.accountId || user?.authUser?.$id;
   const canEdit = !timesheet || timesheet.status === 'draft' || timesheet.status === 'rejected';
 
   useEffect(() => {
-    if (user) {
+    if (user && requesterId) {
       loadProjects();
     }
-  }, [user]);
+  }, [user, requesterId]);
 
   useEffect(() => {
-    if (user) {
+    if (user && requesterId) {
       loadTimesheetData();
     }
-  }, [user, weekStart]);
+  }, [user, requesterId, weekStart]);
 
   const loadProjects = async () => {
+    if (!user?.organizationId || !requesterId) return;
+
     try {
-      const response = await fetch(`/api/projects?organizationId=${user.organizationId}`);
+      const params = new URLSearchParams({
+        organizationId: user.organizationId,
+        requesterId,
+      });
+
+      const response = await fetch(`/api/projects?${params.toString()}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -58,10 +66,18 @@ export default function TimesheetsPage() {
   };
 
   const loadTimesheetData = async () => {
+    if (!requesterId) return;
+
     try {
       setLoading(true);
 
-      const response = await fetch(`/api/timesheets?accountId=${user.authUser.$id}&weekStart=${weekStart}`);
+      const params = new URLSearchParams({
+        accountId: requesterId,
+        weekStart,
+        requesterId,
+      });
+
+      const response = await fetch(`/api/timesheets?${params.toString()}`);
       const data = await response.json();
 
       if (response.ok && data.timesheet) {
@@ -131,7 +147,7 @@ export default function TimesheetsPage() {
 
     try {
       const response = await fetch(
-        `/api/timesheets/entries/${entry.$id}?requesterId=${user.authUser.$id}`,
+        `/api/timesheets/entries/${entry.$id}?requesterId=${requesterId}`,
         { method: 'DELETE' }
       );
 
@@ -169,7 +185,8 @@ export default function TimesheetsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           timesheetId: timesheet.$id,
-          action: 'submit'
+          action: 'submit',
+          requesterId,
         }),
       });
 
@@ -204,7 +221,8 @@ export default function TimesheetsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           timesheetId: timesheet.$id,
-          action: 'unsubmit'
+          action: 'unsubmit',
+          requesterId,
         }),
       });
 

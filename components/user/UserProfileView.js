@@ -2,6 +2,7 @@
 
 import { Card, Row, Col, Badge, ListGroup } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 /**
  * Reusable User Profile View Component
@@ -12,18 +13,20 @@ import { useState, useEffect } from 'react';
  * @param {boolean} props.showAdminControls - Whether to show admin-specific controls (edit button, etc.)
  */
 export default function UserProfileView({ user, showAdminControls = false }) {
+    const { user: currentUser } = useAuth();
     const [clientOrgs, setClientOrgs] = useState([]);
     const [projects, setProjects] = useState([]);
     const [loadingExtras, setLoadingExtras] = useState(false);
+    const requesterId = currentUser?.accountId || currentUser?.authUser?.$id;
 
     // Load extra details for client users (names of orgs/projects) if only IDs are present
     // Note: user object might already have them expanded if fetched via certain APIs,
     // but usually pms_users stores IDs.
     useEffect(() => {
-        if (user && user.userType === 'client' && (user.clientOrganizationIds?.length > 0 || user.projectIds?.length > 0)) {
+        if (requesterId && user && user.userType === 'client' && (user.clientOrganizationIds?.length > 0 || user.projectIds?.length > 0)) {
             loadClientExtras();
         }
-    }, [user]);
+    }, [user, requesterId]);
 
     const loadClientExtras = async () => {
         setLoadingExtras(true);
@@ -36,23 +39,12 @@ export default function UserProfileView({ user, showAdminControls = false }) {
             // Fetch Client Orgs
             // Using Promise.allSettled to handle potential failures gracefully
             const orgsPromise = user.clientOrganizationIds?.length > 0
-                ? Promise.all(user.clientOrganizationIds.map(id => fetch(`/api/clients/${id}?requesterId=${currentUser?.authUser?.$id}`).then(r => r.json()).catch(() => null)))
+                ? Promise.all(user.clientOrganizationIds.map(id => fetch(`/api/clients/${id}?requesterId=${requesterId}`).then(r => r.json()).catch(() => null)))
                 : Promise.resolve([]);
 
             // Fetch Projects
-            // Note: Individual project fetch endpoint might be needed if /api/projects is list-only
-            // Assuming we can fetch project by ID: /api/projects/[id] (Wait, do we have that? Yes, usually)
-            // Or filter list by IDs. Let's try individual fetch for now.
-            const projectsPromise = user.projectIds?.length > 0
-                ? Promise.all(user.projectIds.map(id => fetch(`/api/projects?id=${id}`).then(r => r.json()).then(d => d.projects?.[0]).catch(() => null)))
-                : Promise.resolve([]);
-            // Note: api/projects?id=... is not standard list filter usually. 
-            // Often list is ?search=... or similar. 
-            // Actually, let's use the `/api/projects/[id]` endpoint if it exists. 
-            // Checking previous files... `api/projects/[id]/route.js` exists.
-            // So:
             const projectsPromiseFixed = user.projectIds?.length > 0
-                ? Promise.all(user.projectIds.map(id => fetch(`/api/projects/${id}`).then(r => r.json()).then(d => d.project).catch(() => null)))
+                ? Promise.all(user.projectIds.map(id => fetch(`/api/projects/${id}?requesterId=${requesterId}`).then(r => r.json()).then(d => d.project).catch(() => null)))
                 : Promise.resolve([]);
 
             const [orgsResults, projectsResults] = await Promise.all([orgsPromise, projectsPromiseFixed]);

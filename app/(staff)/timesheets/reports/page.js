@@ -93,7 +93,8 @@ export default function TimesheetReportsPage() {
 
   const loadProjects = async () => {
     try {
-      const response = await fetch(`/api/projects?organizationId=${user.organizationId}`);
+      const requesterId = user?.accountId || user?.authUser?.$id;
+      const response = await fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
       const data = await response.json();
       if (response.ok) {
         setProjects(data.projects || []);
@@ -105,7 +106,8 @@ export default function TimesheetReportsPage() {
 
   const loadAccounts = async () => {
     try {
-      const response = await fetch(`/api/accounts?organizationId=${user.organizationId}&requesterId=${user.authUser.$id}`);
+      const requesterId = user?.accountId || user?.authUser?.$id;
+      const response = await fetch(`/api/accounts?organizationId=${user.organizationId}&requesterId=${requesterId}`);
       const data = await response.json();
       if (response.ok) {
         setAccounts(data.accounts || []);

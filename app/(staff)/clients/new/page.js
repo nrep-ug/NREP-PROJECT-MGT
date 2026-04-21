@@ -51,7 +51,8 @@ export default function NewClientPage() {
   const loadClientUsers = async () => {
     try {
       setLoadingUsers(true);
-      const response = await fetch(`/api/admin/users?organizationId=${user.organizationId}`);
+      const requesterId = user?.accountId || user?.authUser?.$id;
+      const response = await fetch(`/api/admin/users?organizationId=${user.organizationId}&requesterId=${requesterId}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch users');
@@ -116,7 +117,7 @@ export default function NewClientPage() {
         body: JSON.stringify({
           ...formData,
           organizationId: user.organizationId,
-          requesterId: user.authUser?.$id || user.accountId,
+          requesterId: user.accountId || user.authUser?.$id,
         }),
       });
 

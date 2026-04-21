@@ -114,8 +114,10 @@ export default function EditUserPage() {
 
   const loadClientData = async () => {
     try {
+      const requesterId = user?.accountId || user?.authUser?.$id;
+
       // Fetch Organizations
-      const orgsResponse = await fetch(`/api/admin/organizations?requesterId=${user.authUser.$id}&type=client`);
+      const orgsResponse = await fetch(`/api/admin/organizations?requesterId=${requesterId}&type=client`);
       if (orgsResponse.ok) {
         const data = await orgsResponse.json();
         setClientOrganizations(data.organizations || []);
@@ -127,7 +129,7 @@ export default function EditUserPage() {
       // Fetching all projects for now might be heavy if there are many, 
       // but for filtering purposes we need them available.
       // Better approach: Fetch projects where organizationId == admin's org (already doing this for scoped access)
-      const projectsResponse = await fetch(`/api/projects?organizationId=${user.organizationId}`);
+      const projectsResponse = await fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
       if (projectsResponse.ok) {
         const data = await projectsResponse.json();
         setProjects(data.projects || []);
@@ -149,7 +151,7 @@ export default function EditUserPage() {
     setSaving(true);
     try {
       const updateData = {
-        requesterId: user.authUser.$id,
+        requesterId: user?.accountId || user?.authUser?.$id,
         role: userRole,
         firstName,
         lastName,

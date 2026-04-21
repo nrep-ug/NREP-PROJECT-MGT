@@ -20,11 +20,12 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
   // Check if current user can manage members
   // TODO: Also check if user has 'manager' role in this specific project team
   const canManage = currentUser?.isAdmin;
+  const requesterId = currentUser?.accountId || currentUser?.authUser?.$id || currentUser?.id;
 
   // Fetch project members
   const fetchMembers = async () => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/members?requesterId=${currentUser?.authUser?.$id || currentUser?.id}`);
+      const response = await fetch(`/api/projects/${projectId}/members?requesterId=${requesterId}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -40,7 +41,7 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
   // Fetch available staff
   const fetchStaff = async () => {
     try {
-      const response = await fetch(`/api/staff?organizationId=${organizationId}&requesterId=${currentUser?.authUser?.$id || currentUser?.id}`);
+      const response = await fetch(`/api/staff?organizationId=${organizationId}&requesterId=${requesterId}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -56,11 +57,11 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
   };
 
   useEffect(() => {
-    if (projectId && organizationId) {
+    if (projectId && organizationId && requesterId) {
       fetchMembers();
       fetchStaff();
     }
-  }, [projectId, organizationId]);
+  }, [projectId, organizationId, requesterId]);
 
   const handleAddMember = async () => {
     if (!selectedStaff) {
@@ -76,7 +77,7 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
         body: JSON.stringify({
           userId: selectedStaff,
           roles: selectedRoles,
-          requesterId: currentUser?.authUser?.$id || currentUser?.id,
+          requesterId,
           organizationId
         })
       });
@@ -107,7 +108,7 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
 
     try {
       const response = await fetch(
-        `/api/projects/${projectId}/members?membershipId=${membershipId}&requesterId=${currentUser?.authUser?.$id || currentUser?.id}&organizationId=${organizationId}`,
+        `/api/projects/${projectId}/members?membershipId=${membershipId}&requesterId=${requesterId}&organizationId=${organizationId}`,
         { method: 'DELETE' }
       );
 

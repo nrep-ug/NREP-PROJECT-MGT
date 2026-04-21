@@ -67,6 +67,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
   // Staff and client lists for selection
   const [staffMembers, setStaffMembers] = useState([]);
   const [clients, setClients] = useState([]);
+  const requesterId = user?.accountId || user?.authUser?.$id;
 
   // Check if user can manage documents (admin or project manager)
   const canManage = user?.isAdmin || (
@@ -92,7 +93,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
   const loadStaffAndClients = async () => {
     try {
       // Load staff members from project team
-      const teamResponse = await fetch(`/api/projects/${project.$id}/members?requesterId=${user?.authUser?.$id}`);
+      const teamResponse = await fetch(`/api/projects/${project.$id}/members?requesterId=${requesterId}`);
       if (teamResponse.ok) {
         const teamData = await teamResponse.json();
         // Filter out clients from staff members list
@@ -119,7 +120,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
 
   const loadFolders = async () => {
     try {
-      const response = await fetch(`/api/documents/folders?projectId=${project.$id}&requesterId=${user.authUser.$id}&isClient=false`);
+      const response = await fetch(`/api/documents/folders?projectId=${project.$id}&requesterId=${requesterId}&isClient=false`);
       const data = await response.json();
 
       if (response.ok) {
@@ -138,7 +139,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
       setLoading(true);
       const parentFolderId = currentFolder?.$id || 'null';
       const response = await fetch(
-        `/api/documents?projectId=${project.$id}&parentFolderId=${parentFolderId}&requesterId=${user.authUser.$id}&isClient=false`
+        `/api/documents?projectId=${project.$id}&parentFolderId=${parentFolderId}&requesterId=${requesterId}&isClient=false`
       );
       const data = await response.json();
 
@@ -188,11 +189,11 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
     try {
       const endpoint = item.title ? `/api/documents/${item.$id}` : `/api/documents/folders`;
       const body = item.title ? {
-        requesterId: user.authUser.$id,
+        requesterId,
         parentFolderId: targetFolderId
       } : {
         folderId: item.$id,
-        requesterId: user.authUser.$id,
+        requesterId,
         parentFolderId: targetFolderId
       };
 
@@ -239,12 +240,13 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
           projectId: project.$id,
           organizationId: project.organizationId,
           projectTeamId: project.projectTeamId,
-          uploaderId: user.authUser.$id,
+          uploaderId: requesterId,
           title: uploadTitle,
           category: uploadCategory,
           fileId: uploadedFile.$id,
           mimeType: uploadFile.type,
           sizeBytes: uploadFile.size,
+          requesterId,
           parentFolderId: uploadFolderId || currentFolder?.$id,
           isClientVisible: uploadIsClientVisible,
           isStaffVisible: uploadIsStaffVisible,
@@ -280,7 +282,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
           projectId: project.$id,
           name: folderName,
           parentFolderId: currentFolder?.$id,
-          createdBy: user.authUser.$id,
+          createdBy: requesterId,
           isClientVisible: folderIsClientVisible,
           isStaffVisible: folderIsStaffVisible,
           staffList: folderStaffList,
@@ -316,7 +318,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          requesterId: user.authUser.$id,
+          requesterId,
           title: renameValue
         }),
       });
@@ -343,7 +345,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           folderId: selectedFolder.$id,
-          requesterId: user.authUser.$id,
+          requesterId,
           name: renameValue
         }),
       });
@@ -365,14 +367,14 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
       const endpoint = selectedDoc ? `/api/documents/${selectedDoc.$id}` : `/api/documents/folders`;
       const method = 'PATCH';
       const body = selectedDoc ? {
-        requesterId: user.authUser.$id,
+        requesterId,
         isClientVisible: permIsClientVisible,
         isStaffVisible: permIsStaffVisible,
         staffList: permStaffList,
         clientList: permClientList
       } : {
         folderId: selectedFolder.$id,
-        requesterId: user.authUser.$id,
+        requesterId,
         isClientVisible: permIsClientVisible,
         isStaffVisible: permIsStaffVisible,
         staffList: permStaffList,
@@ -416,7 +418,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          requesterId: user.authUser.$id,
+          requesterId,
           fileId: uploadedFile.$id,
           mimeType: replaceFile.type,
           sizeBytes: replaceFile.size
@@ -439,7 +441,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
   const handleDeleteDocument = async () => {
     try {
       const response = await fetch(
-        `/api/documents/${selectedDoc.$id}?requesterId=${user.authUser.$id}`,
+        `/api/documents/${selectedDoc.$id}?requesterId=${requesterId}`,
         { method: 'DELETE' }
       );
 
@@ -456,7 +458,7 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
   const handleDeleteFolder = async () => {
     try {
       const response = await fetch(
-        `/api/documents/folders?folderId=${selectedFolder.$id}&requesterId=${user.authUser.$id}`,
+        `/api/documents/folders?folderId=${selectedFolder.$id}&requesterId=${requesterId}`,
         { method: 'DELETE' }
       );
 
@@ -580,8 +582,8 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
   const canManageItem = (item) => {
     if (user?.isAdmin) return true;
     if (canManage) return true;
-    if (item.uploaderId === user.authUser.$id) return true;
-    if (item.createdBy === user.authUser.$id) return true;
+    if (item.uploaderId === requesterId) return true;
+    if (item.createdBy === requesterId) return true;
     return false;
   };
 

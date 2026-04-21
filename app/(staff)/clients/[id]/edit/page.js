@@ -54,7 +54,8 @@ export default function EditClientPage() {
   const loadClientData = async () => {
     try {
       setLoadingClient(true);
-      const response = await fetch(`/api/clients/${params.id}?requesterId=${user?.authUser?.$id}`);
+      const requesterId = user?.accountId || user?.authUser?.$id;
+      const response = await fetch(`/api/clients/${params.id}?requesterId=${requesterId}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch client');
@@ -85,7 +86,8 @@ export default function EditClientPage() {
   const loadClientUsers = async () => {
     try {
       setLoadingUsers(true);
-      const response = await fetch(`/api/admin/users?organizationId=${user.organizationId}`);
+      const requesterId = user?.accountId || user?.authUser?.$id;
+      const response = await fetch(`/api/admin/users?organizationId=${user.organizationId}&requesterId=${requesterId}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch users');
@@ -149,7 +151,7 @@ export default function EditClientPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          requesterId: user.authUser?.$id || user.accountId,
+          requesterId: user.accountId || user.authUser?.$id,
         }),
       });
 

@@ -27,6 +27,7 @@ function TimesheetEntryContent() {
   // Convert ISO dates to YYYY-MM-DD format for date input
   const weekStart = weekStartRaw ? formatDate(weekStartRaw, 'YYYY-MM-DD') : null;
   const weekEnd = weekEndRaw ? formatDate(weekEndRaw, 'YYYY-MM-DD') : null;
+  const requesterId = user?.accountId || user?.authUser?.$id;
 
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState([]);
@@ -48,7 +49,7 @@ function TimesheetEntryContent() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && requesterId) {
       loadProjects();
       loadWeekEntries();
       // loadTemplates();
@@ -56,13 +57,13 @@ function TimesheetEntryContent() {
         loadEntry();
       }
     }
-  }, [user, entryId]);
+  }, [user, requesterId, entryId]);
 
   useEffect(() => {
-    if (entryForm.projectId) {
+    if (entryForm.projectId && requesterId) {
       loadTasksForProject(entryForm.projectId);
     }
-  }, [entryForm.projectId]);
+  }, [entryForm.projectId, requesterId]);
 
   // Auto-calculate hours when start or end time changes
   useEffect(() => {
@@ -82,7 +83,12 @@ function TimesheetEntryContent() {
 
   const loadProjects = async () => {
     try {
-      const response = await fetch(`/api/projects?organizationId=${user.organizationId}`);
+      const params = new URLSearchParams({
+        organizationId: user.organizationId,
+        requesterId,
+      });
+
+      const response = await fetch(`/api/projects?${params.toString()}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -102,7 +108,7 @@ function TimesheetEntryContent() {
     }
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/tasks?requesterId=${user?.authUser?.$id}`);
+      const response = await fetch(`/api/projects/${projectId}/tasks?requesterId=${requesterId}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -115,7 +121,13 @@ function TimesheetEntryContent() {
 
   const loadWeekEntries = async () => {
     try {
-      const response = await fetch(`/api/timesheets?accountId=${user.authUser.$id}&weekStart=${weekStartRaw}`);
+      const params = new URLSearchParams({
+        accountId: requesterId,
+        weekStart: weekStartRaw,
+        requesterId,
+      });
+
+      const response = await fetch(`/api/timesheets?${params.toString()}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -173,7 +185,7 @@ function TimesheetEntryContent() {
   const loadTemplates = async () => {
     try {
       const response = await fetch(
-        `/api/timesheets/templates?accountId=${user.authUser.$id}&organizationId=${user.organizationId}`
+        `/api/timesheets/templates?accountId=${requesterId}&organizationId=${user.organizationId}`
       );
       const data = await response.json();
 
@@ -219,7 +231,7 @@ function TimesheetEntryContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          accountId: user.authUser.$id,
+          accountId: requesterId,
           organizationId: user.organizationId,
           name: templateName,
           projectId: entryForm.projectId,
@@ -321,7 +333,7 @@ function TimesheetEntryContent() {
         hours,
         startTime: isoStartTime,
         endTime: isoEndTime,
-        requesterId: user.authUser.$id
+        requesterId
       };
 
       if (entryId) {
@@ -345,10 +357,11 @@ function TimesheetEntryContent() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            accountId: user.authUser.$id,
+            accountId: requesterId,
             organizationId: user.organizationId,
             weekStart: weekStartRaw, // Use ISO format for API
-            entries: [payload]
+            entries: [payload],
+            requesterId,
           }),
         });
 
