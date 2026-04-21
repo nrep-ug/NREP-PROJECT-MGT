@@ -23,6 +23,8 @@ export async function POST(request) {
             requesterId
         } = body;
 
+        console.log(body);
+
         if (!requesterId) {
             return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
         }

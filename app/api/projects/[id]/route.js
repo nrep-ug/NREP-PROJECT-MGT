@@ -73,7 +73,7 @@ export async function PATCH(request, { params }) {
     }
 
     // Allow updating only safe fields
-    const allowedFields = ['name', 'description', 'startDate', 'endDate', 'status', 'budgetAmount', 'clientId', 'fundingPartners', 'implementingPartners', 'technologies', 'themes'];
+    const allowedFields = ['name', 'description', 'startDate', 'endDate', 'status', 'budgetAmount', 'budgetCurrency', 'clientId', 'fundingPartners', 'implementingPartners', 'technologies', 'themes'];
     const updates = {};
 
     for (const field of allowedFields) {

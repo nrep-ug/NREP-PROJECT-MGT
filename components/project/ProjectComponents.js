@@ -29,6 +29,7 @@ export default function ProjectComponents({ project, user, showToast, canModify,
                     projectId: project.$id,
                     organizationId: project.organizationId,
                     projectTeamId: project.projectTeamId,
+                    requesterId: user.accountId,
                     ...formData,
                 }),
             });
@@ -52,6 +53,7 @@ export default function ProjectComponents({ project, user, showToast, canModify,
             name: component.name,
             description: component.description || '',
             leaderId: component.leaderId || '',
+            requesterId: user.accountId,
         });
         setShowEditModal(true);
     };

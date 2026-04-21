@@ -63,6 +63,7 @@ export async function POST(request) {
       endDate,
       status,
       budgetAmount,
+      budgetCurrency,
       createdBy,
       requesterId, // ID of the user making the request (for authorization)
       components // Array of components to create
@@ -113,6 +114,7 @@ export async function POST(request) {
       endDate: endDate || null,
       status: status || 'planned',
       budgetAmount: budgetAmount || 0,
+      budgetCurrency: budgetCurrency || 'USD',
       createdBy,
     };
 

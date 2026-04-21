@@ -1,9 +1,12 @@
 'use client';
 
 import { Row, Col, Card, Badge, Button } from 'react-bootstrap';
+import { useRouter } from 'next/navigation';
 import { formatDate } from '@/lib/date';
 
 export default function ProjectOverview({ project, user, showToast, onUpdate }) {
+  const router = useRouter();
+
   const getStatusVariant = (status) => {
     switch (status) {
       case 'active': return 'success';
@@ -242,11 +245,12 @@ export default function ProjectOverview({ project, user, showToast, onUpdate }) 
               </div>
 
               <div className="d-grid gap-2">
-                {user?.isAdmin && (
+                {(user?.isAdmin || project.createdBy === user?.authUser?.$id) && (
                   <>
                     <Button
                       variant=""
                       size="sm"
+                      onClick={() => router.push(`/projects/${project.$id}/edit`)}
                       style={{
                         backgroundColor: 'white',
                         border: '2px solid #cbd5e1',
