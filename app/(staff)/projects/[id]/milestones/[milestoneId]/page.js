@@ -134,7 +134,7 @@ export default function MilestoneDetailPage() {
       setShowDeleteModal(false);
 
       setTimeout(() => {
-        router.push(`/projects/${project.$id}?tab=milestones`);
+        window.location.href = `/projects/${project.$id}?tab=milestones`;
       }, 1000);
     } catch (err) {
       console.error('Failed to delete activity schedule:', err);

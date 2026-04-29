@@ -202,16 +202,20 @@ export default function EditMilestonePage() {
     }
 
     try {
-      await databases.deleteDocument(
-        DB_ID,
-        COLLECTIONS.MILESTONES,
-        params.milestoneId
+      const response = await fetch(
+        `/api/projects/${project.$id}/milestones?milestoneId=${params.milestoneId}&requesterId=${user.authUser.$id}`,
+        { method: 'DELETE' }
       );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete Activity Schedule');
+      }
 
       showToast('Activity Schedule deleted successfully!', 'success');
 
       setTimeout(() => {
-        router.push(`/projects/${project.$id}?tab=milestones`);
+        window.location.href = `/projects/${project.$id}?tab=milestones`;
       }, 1000);
     } catch (err) {
       console.error('Failed to delete Activity Schedule:', err);

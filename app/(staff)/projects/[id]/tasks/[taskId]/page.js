@@ -266,7 +266,7 @@ export default function TaskDetailPage() {
       showToast('Task deleted successfully!', 'success');
 
       setTimeout(() => {
-        router.push(`/projects/${project.$id}?tab=tasks`);
+        window.location.href = `/projects/${project.$id}?tab=tasks`;
       }, 1000);
     } catch (err) {
       console.error('Failed to delete task:', err);
