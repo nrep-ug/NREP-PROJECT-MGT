@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Card, Button, Row, Col, Badge, Alert, Table, ProgressBar, Dropdown } from 'react-bootstrap';
+import { Card, Button, Row, Col, Badge, Alert, Table, ProgressBar, Dropdown, Modal } from 'react-bootstrap';
 import { useAuth } from '@/hooks/useAuth';
 import { databases, COLLECTIONS, DB_ID, Query } from '@/lib/appwriteClient';
 import { useProjectComponents } from '@/hooks/useProjects';
@@ -19,6 +19,8 @@ export default function MilestoneDetailPage() {
   const [milestone, setMilestone] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
@@ -100,7 +102,46 @@ export default function MilestoneDetailPage() {
 
   const canEdit = () => {
     if (!user) return false;
-    return user.isAdmin; // Or check if user is project manager
+    if (user.isAdmin) return true;
+    // Creator can edit
+    if (milestone?.createdBy === user.authUser.$id) return true;
+    return false;
+  };
+
+  const canDelete = () => {
+    if (!user || !milestone) return false;
+    // Admins can always delete
+    if (user.isAdmin) return true;
+    // Creator can delete
+    if (milestone.createdBy === user.authUser.$id) return true;
+    return false;
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/projects/${project.$id}/milestones?milestoneId=${milestone.$id}&requesterId=${user.authUser.$id}`,
+        { method: 'DELETE' }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete activity schedule');
+      }
+
+      showToast('Activity Schedule deleted successfully!', 'success');
+      setShowDeleteModal(false);
+
+      setTimeout(() => {
+        router.push(`/projects/${project.$id}?tab=milestones`);
+      }, 1000);
+    } catch (err) {
+      console.error('Failed to delete activity schedule:', err);
+      showToast(err.message || 'Failed to delete activity schedule', 'danger');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Calculate Activity Schedule progress based on tasks
@@ -145,15 +186,22 @@ export default function MilestoneDetailPage() {
     }
 
     try {
-      await databases.updateDocument(
-        DB_ID,
-        COLLECTIONS.MILESTONES,
-        params.milestoneId,
-        {
+      const response = await fetch(`/api/projects/${project.$id}/milestones`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          milestoneId: params.milestoneId,
           status: newStatus,
           updatedBy: user.authUser.$id,
-        }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update Activity Schedule status');
+      }
 
       // Update local state
       setMilestone(prev => ({ ...prev, status: newStatus }));
@@ -267,6 +315,17 @@ export default function MilestoneDetailPage() {
                 <i className="bi bi-pencil me-1"></i>
                 Edit
               </Button>
+
+              {canDelete() && (
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={() => setShowDeleteModal(true)}
+                >
+                  <i className="bi bi-trash me-1"></i>
+                  Delete
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -566,6 +625,44 @@ export default function MilestoneDetailPage() {
           </Card>
         </Col>
       </Row>
+
+      {/* Delete Confirmation Modal */}
+      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Delete Activity Schedule</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Alert variant="danger">
+            <i className="bi bi-exclamation-triangle me-2"></i>
+            Are you sure you want to delete this activity schedule? This action cannot be undone.
+          </Alert>
+          <p className="mb-1"><strong>Activity Schedule:</strong> {milestone?.name}</p>
+          {tasks.length > 0 && (
+            <Alert variant="warning" className="mt-3 mb-0">
+              <i className="bi bi-info-circle me-2"></i>
+              This activity schedule has <strong>{tasks.length}</strong> linked task(s). You must remove or reassign them before deleting.
+            </Alert>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleDelete} disabled={deleting || tasks.length > 0}>
+            {deleting ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Deleting...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-trash me-2"></i>
+                Delete Activity Schedule
+              </>
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </AppLayout>
   );
 }

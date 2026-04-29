@@ -161,11 +161,13 @@ export default function EditMilestonePage() {
     setSubmitting(true);
 
     try {
-      await databases.updateDocument(
-        DB_ID,
-        COLLECTIONS.MILESTONES,
-        params.milestoneId,
-        {
+      const response = await fetch(`/api/projects/${project.$id}/milestones`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          milestoneId: params.milestoneId,
           name: formData.name,
           description: formData.description || null,
           status: formData.status,
@@ -174,8 +176,13 @@ export default function EditMilestonePage() {
           actualDueDate: formData.actualDueDate || null,
           components: formData.components || [],
           updatedBy: user.authUser.$id,
-        }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update Activity Schedule');
+      }
 
       showToast('Activity Schedule updated successfully!', 'success');
 

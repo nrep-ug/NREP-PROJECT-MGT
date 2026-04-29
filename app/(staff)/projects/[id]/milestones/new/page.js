@@ -117,12 +117,12 @@ export default function NewMilestonePage() {
     setSubmitting(true);
 
     try {
-      await databases.createDocument(
-        DB_ID,
-        COLLECTIONS.MILESTONES,
-        ID.unique(),
-        {
-          projectId: project.$id,
+      const response = await fetch(`/api/projects/${project.$id}/milestones`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           name: formData.name,
           description: formData.description || null,
           status: formData.status,
@@ -131,18 +131,13 @@ export default function NewMilestonePage() {
           actualDueDate: formData.actualDueDate || null,
           components: formData.components || [],
           createdBy: user.authUser.$id,
-        },
-        [
-          // Read: Anyone in the organization can read
-          Permission.read(Role.team(project.organizationId)),
-          // Update: Admins and project managers can update
-          Permission.update(Role.label('admin')),
-          Permission.update(Role.team(project.projectTeamId, 'manager')),
-          // Delete: Admins and project managers can delete
-          Permission.delete(Role.label('admin')),
-          Permission.delete(Role.team(project.projectTeamId, 'manager')),
-        ]
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create Activity Schedule');
+      }
 
       showToast('Activity Schedule created successfully!', 'success');
 

@@ -215,11 +215,13 @@ export default function TaskDetailPage() {
     setSubmitting(true);
 
     try {
-      await databases.updateDocument(
-        DB_ID,
-        COLLECTIONS.TASKS,
-        params.taskId,
-        {
+      const response = await fetch(`/api/projects/${project.$id}/tasks`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskId: params.taskId,
           milestoneId: formData.milestoneId || null,
           title: formData.title,
           description: formData.description || null,
@@ -230,8 +232,13 @@ export default function TaskDetailPage() {
           dueDate: formData.dueDate || null,
           assignedTo: formData.assignedTo,
           updatedBy: user.authUser.$id,
-        }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update task');
+      }
 
       showToast('Task updated successfully!', 'success');
       setEditing(false);
@@ -246,11 +253,15 @@ export default function TaskDetailPage() {
 
   const handleDelete = async () => {
     try {
-      await databases.deleteDocument(
-        DB_ID,
-        COLLECTIONS.TASKS,
-        params.taskId
+      const response = await fetch(
+        `/api/projects/${project.$id}/tasks?taskId=${params.taskId}&requesterId=${user.authUser.$id}`,
+        { method: 'DELETE' }
       );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete task');
+      }
 
       showToast('Task deleted successfully!', 'success');
 
@@ -265,15 +276,22 @@ export default function TaskDetailPage() {
 
   const handleQuickStatusUpdate = async (newStatus) => {
     try {
-      await databases.updateDocument(
-        DB_ID,
-        COLLECTIONS.TASKS,
-        params.taskId,
-        {
+      const response = await fetch(`/api/projects/${project.$id}/tasks`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskId: params.taskId,
           status: newStatus,
           updatedBy: user.authUser.$id,
-        }
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update task status');
+      }
 
       showToast('Task status updated successfully!', 'success');
       loadData(); // Reload to get fresh data
@@ -406,6 +424,17 @@ export default function TaskDetailPage() {
                 <i className="bi bi-pencil me-1"></i>
                 Edit
               </Button>
+
+              {(user.isAdmin || task.createdBy === user.authUser.$id) && (
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={() => setShowDeleteModal(true)}
+                >
+                  <i className="bi bi-trash me-1"></i>
+                  Delete
+                </Button>
+              )}
             </div>
           )}
         </div>

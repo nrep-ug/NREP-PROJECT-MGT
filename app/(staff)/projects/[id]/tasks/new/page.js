@@ -206,12 +206,12 @@ function NewTaskContent() {
     setSubmitting(true);
 
     try {
-      await databases.createDocument(
-        DB_ID,
-        COLLECTIONS.TASKS,
-        ID.unique(),
-        {
-          projectId: project.$id,
+      const response = await fetch(`/api/projects/${project.$id}/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           milestoneId: formData.milestoneId || null,
           title: formData.title,
           description: formData.description || null,
@@ -222,17 +222,13 @@ function NewTaskContent() {
           dueDate: formData.dueDate || null,
           assignedTo: formData.assignedTo,
           createdBy: user.authUser.$id,
-        },
-        [
-          // Read: Anyone in the organization can read
-          Permission.read(Role.team(project.organizationId)),
-          // Update: Any project team member can update (this allows task status changes)
-          Permission.update(Role.team(project.projectTeamId)),
-          // Delete: Only admins and project managers can delete
-          Permission.delete(Role.label('admin')),
-          Permission.delete(Role.team(project.projectTeamId, 'manager')),
-        ]
-      );
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create task');
+      }
 
       showToast('Task created successfully!', 'success');
 
