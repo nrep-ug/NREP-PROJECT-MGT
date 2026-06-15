@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
-import { verifyStaffAccess, verifyProjectMembership } from '@/lib/authHelpers';
+import { verifyStaffAccess, verifyAdminAccess, verifyProjectMembership } from '@/lib/authHelpers';
 
 const COL_ROLES = COLLECTIONS.PROJECT_ROLES;
 const COL_PROJECTS = COLLECTIONS.PROJECTS;
@@ -52,11 +52,14 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'slug and name are required' }, { status: 400 });
     }
 
-    // Verify requester is admin or project manager
-    const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
-    const isManager = await verifyProjectMembership(requesterId, project.projectTeamId, ['manager', 'owner']);
-    if (!isManager) {
-      return NextResponse.json({ error: 'Only admins or project managers can create roles' }, { status: 403 });
+    // Verify requester is org admin OR project manager/owner
+    const isAdmin = await verifyAdminAccess(requesterId);
+    if (!isAdmin) {
+      const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+      const isManager = await verifyProjectMembership(requesterId, project.projectTeamId, ['manager', 'owner']);
+      if (!isManager) {
+        return NextResponse.json({ error: 'Only admins or project managers can create roles' }, { status: 403 });
+      }
     }
 
     // Check slug uniqueness within the project

@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
-import { verifyProjectMembership } from '@/lib/authHelpers';
+import { verifyAdminAccess, verifyProjectMembership } from '@/lib/authHelpers';
 
 const COL_ROLES = COLLECTIONS.PROJECT_ROLES;
 const COL_PROJECTS = COLLECTIONS.PROJECTS;
@@ -21,11 +21,14 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'requesterId is required' }, { status: 401 });
     }
 
-    // Verify requester is admin or project manager
-    const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
-    const isManager = await verifyProjectMembership(requesterId, project.projectTeamId, ['manager', 'owner']);
-    if (!isManager) {
-      return NextResponse.json({ error: 'Only admins or project managers can edit roles' }, { status: 403 });
+    // Verify requester is org admin OR project manager/owner
+    const isAdmin = await verifyAdminAccess(requesterId);
+    if (!isAdmin) {
+      const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+      const isManager = await verifyProjectMembership(requesterId, project.projectTeamId, ['manager', 'owner']);
+      if (!isManager) {
+        return NextResponse.json({ error: 'Only admins or project managers can edit roles' }, { status: 403 });
+      }
     }
 
     // Get the existing role to verify it belongs to this project
@@ -68,11 +71,14 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'requesterId is required' }, { status: 401 });
     }
 
-    // Verify requester is admin or project manager
+    // Verify requester is org admin OR project manager/owner
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
-    const isManager = await verifyProjectMembership(requesterId, project.projectTeamId, ['manager', 'owner']);
-    if (!isManager) {
-      return NextResponse.json({ error: 'Only admins or project managers can delete roles' }, { status: 403 });
+    const isAdmin = await verifyAdminAccess(requesterId);
+    if (!isAdmin) {
+      const isManager = await verifyProjectMembership(requesterId, project.projectTeamId, ['manager', 'owner']);
+      if (!isManager) {
+        return NextResponse.json({ error: 'Only admins or project managers can delete roles' }, { status: 403 });
+      }
     }
 
     // Get the role
