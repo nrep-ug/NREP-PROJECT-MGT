@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { Card, Button, Badge, Modal, Form, Alert, Row, Col, InputGroup } from 'react-bootstrap';
 import { useRouter } from 'next/navigation';
 import { getStaffRoleOptions, getRoleColor, getRoleName } from '@/lib/projectRoles';
+import { useProjectRoles } from '@/hooks/useProjectRoles';
 
-export default function ProjectStaffAssignment({ projectId, organizationId, currentUser, showToast }) {
+export default function ProjectStaffAssignment({ projectId, projectTeamId, organizationId, currentUser, canManageTeam, showToast }) {
   const router = useRouter();
   const [members, setMembers] = useState([]);
   const [availableStaff, setAvailableStaff] = useState([]);
@@ -17,10 +18,12 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
 
-  // Check if current user can manage members
-  // TODO: Also check if user has 'manager' role in this specific project team
-  const canManage = currentUser?.isAdmin;
+  // Use canManageTeam from parent (checks project team roles, not just org admin)
+  const canManage = canManageTeam;
   const requesterId = currentUser?.accountId || currentUser?.authUser?.$id || currentUser?.id;
+
+  // Fetch dynamic roles from DB
+  const { data: dynamicRoles = [] } = useProjectRoles(projectId, requesterId);
 
   // Fetch project members
   const fetchMembers = async () => {
@@ -126,9 +129,9 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
     }
   };
 
-  // Get badge variant for project role
+  // Get badge variant for project role — use dynamic roles if available
   const getRoleBadgeVariant = (role) => {
-    return getRoleColor(role);
+    return getRoleColor(role, dynamicRoles);
   };
 
   // Filter out staff already in the project
@@ -202,8 +205,11 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
           <div className="d-flex flex-wrap gap-1">
             {member.projectRoles && member.projectRoles.length > 0 ? (
               member.projectRoles.map((role) => (
-                <Badge key={role} bg={getRoleBadgeVariant(role)} style={{ fontSize: '0.7rem' }}>
-                  {getRoleName(role)}
+                <Badge
+                  key={role}
+                  style={{ fontSize: '0.7rem', backgroundColor: getRoleBadgeVariant(role), color: '#fff' }}
+                >
+                  {getRoleName(role, dynamicRoles)}
                 </Badge>
               ))
             ) : (
@@ -268,19 +274,16 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
             />
           </InputGroup>
 
-          {/* Role Filter */}
+          {/* Role Filter — dynamically populated from DB */}
           <Form.Select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            style={{ maxWidth: '150px' }}
+            style={{ maxWidth: '180px' }}
           >
             <option value="all">All Roles</option>
-            <option value="manager">Manager</option>
-            <option value="lead">Lead</option>
-            <option value="developer">Developer</option>
-            <option value="designer">Designer</option>
-            <option value="qa">QA</option>
-            <option value="member">Member</option>
+            {getStaffRoleOptions(dynamicRoles).map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </Form.Select>
 
           {/* Add Staff Button */}
@@ -471,14 +474,14 @@ export default function ProjectStaffAssignment({ projectId, organizationId, curr
 
               <Form.Group className="mb-3">
                 <Form.Label>Project Roles</Form.Label>
-                {getStaffRoleOptions().map((roleOption) => (
+                {getStaffRoleOptions(dynamicRoles).map((roleOption) => (
                   <Form.Check
                     key={roleOption.value}
                     type="checkbox"
                     id={`role-${roleOption.value}`}
                     label={
                       <>
-                        <strong>{roleOption.label}</strong> - {roleOption.description}
+                        <strong>{roleOption.label}</strong>{roleOption.description ? ` - ${roleOption.description}` : ''}
                       </>
                     }
                     checked={selectedRoles.includes(roleOption.value)}

@@ -7,7 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, Query, DB_ID, ID } from '@/lib/appwriteAdmin';
-import { verifyStaffAccess, verifyAdminAccess, verifyProjectAccess } from '@/lib/authHelpers';
+import { verifyStaffAccess, verifyAdminAccess, verifyProjectAccess, verifyProjectMembership } from '@/lib/authHelpers';
 import { getProjectDocPermissions } from '@/lib/rbac';
 
 const COL_TASKS = COLLECTIONS.TASKS;
@@ -46,6 +46,15 @@ export async function POST(request, { params }) {
 
     // Get project details to set correct permissions
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+
+    // Verify user is a member of this project team (or an admin)
+    const isAdmin = await verifyAdminAccess(createdBy);
+    if (!isAdmin) {
+      const isMember = await verifyProjectMembership(createdBy, project.projectTeamId);
+      if (!isMember) {
+        return NextResponse.json({ error: 'Forbidden: You must be assigned to this project to create tasks' }, { status: 403 });
+      }
+    }
     
     // Generate RBAC permissions
     const permissions = getProjectDocPermissions(project.organizationId, project.projectTeamId);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { COLLECTIONS, adminTeams as teams, adminDatabases as databases, adminUsers, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminTeams as teams, adminDatabases as databases, adminUsers, DB_ID, Query } from '@/lib/appwriteAdmin';
 import { verifyAdminAccess } from '@/lib/authHelpers';
 
 /**
@@ -54,18 +54,25 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Validate roles to only allow known values
-    const allowedRoles = ['owner', 'manager', 'contributor', 'viewer', 'client_rep'];
-    const invalidRoles = roles.filter((r) => !allowedRoles.includes(r));
+    // Validate roles dynamically against project roles in DB + system role 'owner'
+    const projectRoles = await databases.listDocuments(DB_ID, COLLECTIONS.PROJECT_ROLES, [
+      Query.equal('projectId', id),
+      Query.limit(100),
+    ]);
+    const validSlugs = projectRoles.documents.map(r => r.slug);
+    // 'owner' is a system-level Appwrite team role, not stored in pms_project_roles
+    validSlugs.push('owner');
+
+    const invalidRoles = roles.filter((r) => !validSlugs.includes(r));
     if (invalidRoles.length > 0) {
       return NextResponse.json(
-        { error: `Invalid roles: ${invalidRoles.join(', ')}. Allowed: ${allowedRoles.join(', ')}` },
+        { error: `Invalid roles: ${invalidRoles.join(', ')}. Allowed: ${validSlugs.join(', ')}` },
         { status: 400 }
       );
     }
 
     // Update membership roles
-    const updatedMembership = await teams.updateMembershipRoles(
+    const updatedMembership = await teams.updateMembership(
       project.projectTeamId,
       membershipId,
       roles

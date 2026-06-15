@@ -8,9 +8,11 @@ import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, adminTeams, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { verifyAdminAccess, verifyStaffAccess } from '@/lib/authHelpers';
 import { getProjectDocPermissions } from '@/lib/rbac';
+import { getDefaultRoleDocuments } from '@/lib/projectRoles';
 
 const COL_PROJECTS = COLLECTIONS.PROJECTS;
 const COL_COMPONENTS = COLLECTIONS.PROJECT_COMPONENTS;
+const COL_ROLES = COLLECTIONS.PROJECT_ROLES;
 
 export async function GET(request) {
   try {
@@ -164,6 +166,22 @@ export async function POST(request) {
           }
         }
       }
+    }
+    // 5. Seed default project roles
+    try {
+      const defaultRoleDocs = getDefaultRoleDocuments(project.$id, createdBy);
+      for (const roleDoc of defaultRoleDocs) {
+        await adminDatabases.createDocument(
+          DB_ID,
+          COL_ROLES,
+          ID.unique(),
+          roleDoc,
+          permissions
+        );
+      }
+    } catch (error) {
+      console.error('[API /projects POST] Failed to seed default roles:', error);
+      // Non-fatal — project was still created successfully
     }
 
     return NextResponse.json({ project }, { status: 201 });

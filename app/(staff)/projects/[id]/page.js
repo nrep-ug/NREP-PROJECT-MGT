@@ -17,6 +17,7 @@ import ProjectDocumentsNew from '@/components/project/ProjectDocumentsNew';
 import ProjectEmbeds from '@/components/project/ProjectEmbeds';
 import ProjectStaffAssignment from '@/components/project/ProjectStaffAssignment';
 import ProjectComponents from '@/components/project/ProjectComponents';
+import ProjectRolesSettings from '@/components/project/ProjectRolesSettings';
 
 function ProjectDetailContent() {
   const params = useParams();
@@ -28,13 +29,29 @@ function ProjectDetailContent() {
   const [activeTab, setActiveTab] = useState('overview');
   const { toast, showToast, hideToast } = useToast();
 
-  // Check permissions
-  const canModify = user?.isAdmin || teamMembers.some(m => m.accountId === user?.$id);
+  // Determine the current user's project team roles
+  const currentUserId = user?.accountId || user?.authUser?.$id;
+  const currentUserMember = teamMembers.find(m => m.accountId === currentUserId);
+  const currentUserProjectRoles = currentUserMember?.projectRoles || [];
+
+  // Permission levels based on project team roles:
+  // canModifyProject: Can create/edit tasks, milestones, embeds, components (manager or lead)
+  const canModifyProject = user?.isAdmin || currentUserProjectRoles.some(
+    r => ['manager', 'owner', 'lead'].includes(r)
+  );
+  // isProjectMember: Is assigned to the project (any role except client_rep) — can upload docs
+  const isProjectMember = user?.isAdmin || (
+    currentUserMember && !currentUserProjectRoles.every(r => r === 'client_rep')
+  );
+  // canManageTeam: Can add/remove team members (manager or owner)
+  const canManageTeam = user?.isAdmin || currentUserProjectRoles.some(
+    r => ['manager', 'owner'].includes(r)
+  );
 
   // Set active tab from URL query parameter
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['overview', 'team', 'tasks', 'milestones', 'documents', 'embeds', 'components'].includes(tab)) {
+    if (tab && ['overview', 'team', 'tasks', 'milestones', 'documents', 'embeds', 'components', 'settings'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -268,8 +285,10 @@ function ProjectDetailContent() {
             >
               <ProjectStaffAssignment
                 projectId={project.$id}
+                projectTeamId={project.projectTeamId}
                 organizationId={user?.organizationId}
                 currentUser={user}
+                canManageTeam={canManageTeam}
                 showToast={showToast}
               />
             </Tab>
@@ -282,7 +301,7 @@ function ProjectDetailContent() {
                 </span>
               }
             >
-              <ProjectTasks project={project} user={user} showToast={showToast} canModify={canModify} />
+              <ProjectTasks project={project} user={user} showToast={showToast} canModify={canModifyProject} />
             </Tab>
             <Tab
               eventKey="milestones"
@@ -293,7 +312,7 @@ function ProjectDetailContent() {
                 </span>
               }
             >
-              <ProjectMilestones project={project} user={user} showToast={showToast} canModify={canModify} />
+              <ProjectMilestones project={project} user={user} showToast={showToast} canModify={canModifyProject} />
             </Tab>
             <Tab
               eventKey="documents"
@@ -304,7 +323,7 @@ function ProjectDetailContent() {
                 </span>
               }
             >
-              <ProjectDocumentsNew project={project} user={user} showToast={showToast} canManage={canModify} />
+              <ProjectDocumentsNew project={project} user={user} showToast={showToast} canManage={canModifyProject} canUpload={isProjectMember} />
             </Tab>
             <Tab
               eventKey="embeds"
@@ -315,7 +334,7 @@ function ProjectDetailContent() {
                 </span>
               }
             >
-              <ProjectEmbeds project={project} user={user} showToast={showToast} canModify={canModify} />
+              <ProjectEmbeds project={project} user={user} showToast={showToast} canModify={canModifyProject} />
             </Tab>
             <Tab
               eventKey="components"
@@ -326,8 +345,43 @@ function ProjectDetailContent() {
                 </span>
               }
             >
-              <ProjectComponents project={project} user={user} showToast={showToast} canModify={canModify} teamMembers={teamMembers} />
+              <ProjectComponents project={project} user={user} showToast={showToast} canModify={canModifyProject} teamMembers={teamMembers} />
             </Tab>
+            {/* Settings tab — visible only to admin / manager / owner */}
+            {canManageTeam && (
+              <Tab
+                eventKey="settings"
+                title={
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <i className="bi bi-gear"></i>
+                    <span className="d-none d-sm-inline">Settings</span>
+                  </span>
+                }
+              >
+                <div className="py-3">
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <p className="text-muted mb-0">
+                      Manage project roles, permissions, and advanced settings.
+                    </p>
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      onClick={() => router.push(`/projects/${project.$id}/settings`)}
+                      style={{ borderRadius: '8px' }}
+                    >
+                      <i className="bi bi-box-arrow-up-right me-1"></i>
+                      Open Full Settings
+                    </Button>
+                  </div>
+                  {/* Inline roles preview */}
+                  <ProjectRolesSettings
+                    projectId={project.$id}
+                    requesterId={currentUserId}
+                    showToast={showToast}
+                  />
+                </div>
+              </Tab>
+            )}
           </Tabs>
         </Card.Body>
       </Card>

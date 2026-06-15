@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, ID, DB_ID } from '@/lib/appwriteAdmin';
 import { getProjectDocPermissions } from '@/lib/rbac';
-import { verifyStaffAccess } from '@/lib/authHelpers';
+import { verifyStaffAccess, verifyAdminAccess, verifyProjectMembership } from '@/lib/authHelpers';
 
 const COL_COMPONENTS = COLLECTIONS.PROJECT_COMPONENTS;
 
@@ -36,6 +36,15 @@ export async function POST(request) {
 
         if (!projectId || !name || !name.trim()) {
             return NextResponse.json({ error: 'projectId and name are required' }, { status: 400 });
+        }
+
+        // Verify user is a member of this project team (or an admin)
+        const isAdmin = await verifyAdminAccess(requesterId);
+        if (!isAdmin) {
+            const isMember = await verifyProjectMembership(requesterId, projectTeamId);
+            if (!isMember) {
+                return NextResponse.json({ error: 'Forbidden: You must be assigned to this project to create components' }, { status: 403 });
+            }
         }
 
         // Get permissions (same as project)

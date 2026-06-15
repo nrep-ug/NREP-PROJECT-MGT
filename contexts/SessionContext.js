@@ -82,6 +82,9 @@ export function SessionProvider({ children }) {
           organizationId: sessionData.organizationId,
           organizationName: sessionData.organizationName,
 
+          // Team memberships (for project-level role checks)
+          teams: sessionData.teams || [],
+
           // Role labels and permissions
           labels: sessionData.labels || [],
           isAdmin: sessionData.isAdmin || false,

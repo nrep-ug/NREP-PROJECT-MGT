@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { getProjectDocPermissions } from '@/lib/rbac';
-import { verifyStaffAccess } from '@/lib/authHelpers';
+import { verifyStaffAccess, verifyAdminAccess, verifyProjectMembership } from '@/lib/authHelpers';
 
 const COL_EMBEDS = COLLECTIONS.EMBEDS;
 
@@ -73,6 +73,15 @@ export async function POST(request) {
     const isStaff = await verifyStaffAccess(actorId);
     if (!isStaff) {
       return NextResponse.json({ error: 'Forbidden: Only staff members can create embeds' }, { status: 403 });
+    }
+
+    // Verify user is a member of this project team (or an admin)
+    const isAdmin = await verifyAdminAccess(actorId);
+    if (!isAdmin) {
+      const isMember = await verifyProjectMembership(actorId, projectTeamId);
+      if (!isMember) {
+        return NextResponse.json({ error: 'Forbidden: You must be assigned to this project to create embeds' }, { status: 403 });
+      }
     }
 
     // Validate URL is HTTPS for security

@@ -7,7 +7,7 @@
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, adminUsers, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
 import { getProjectDocPermissions } from '@/lib/rbac';
-import { verifyStaffAccess } from '@/lib/authHelpers';
+import { verifyStaffAccess, verifyAdminAccess, verifyProjectMembership } from '@/lib/authHelpers';
 import { nowUTC } from '@/lib/date';
 
 const COL_DOCUMENTS = COLLECTIONS.DOCUMENTS;
@@ -185,6 +185,15 @@ export async function POST(request) {
 
     if ( !documentId || !projectId || !organizationId || !projectTeamId || !uploaderId || !title || !fileId || !mimeType || !sizeBytes) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Verify user is a member of this project team (or an admin)
+    const isAdmin = await verifyAdminAccess(requesterId);
+    if (!isAdmin) {
+      const isMember = await verifyProjectMembership(requesterId, projectTeamId);
+      if (!isMember) {
+        return NextResponse.json({ error: 'Forbidden: You must be assigned to this project to upload documents' }, { status: 403 });
+      }
     }
 
     const permissions = getProjectDocPermissions(organizationId, projectTeamId);

@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import Toast, { useToast } from '@/components/Toast';
 import { formatDate } from '@/lib/date';
 import { getStaffRoleOptions, getRoleColor, getRoleName } from '@/lib/projectRoles';
+import { useProjectRoles } from '@/hooks/useProjectRoles';
 
 export default function TeamMemberDetailPage() {
   const params = useParams();
@@ -25,9 +26,11 @@ export default function TeamMemberDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const { toast, showToast, hideToast } = useToast();
 
-  // Check if current user can manage members
-  const canManage = user?.isAdmin;
+  // Check if current user can manage members (admin OR project manager/owner)
   const requesterId = user?.accountId || user?.authUser?.$id;
+
+  // Fetch dynamic roles from DB
+  const { data: dynamicRoles = [] } = useProjectRoles(params.id, requesterId);
 
   useEffect(() => {
     if (user && requesterId && params.id && params.memberId) {
@@ -178,6 +181,14 @@ export default function TeamMemberDetailPage() {
     );
   }
 
+  // Compute canManage after project is loaded — admin OR manager/owner in this project team
+  const canManage = user?.isAdmin || (
+    user?.teams?.some(
+      t => t.teamId === project.projectTeamId &&
+        t.roles?.some(r => ['manager', 'owner'].includes(r))
+    )
+  );
+
   const stats = getTaskStats();
 
   return (
@@ -218,7 +229,10 @@ export default function TeamMemberDetailPage() {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => setShowEditRoleModal(true)}
+              onClick={() => {
+                setSelectedRoles(member.projectRoles || []);
+                setShowEditRoleModal(true);
+              }}
             >
               <i className="bi bi-pencil me-1"></i>
               Edit Roles
@@ -303,8 +317,11 @@ export default function TeamMemberDetailPage() {
                 <div className="d-flex flex-wrap gap-1">
                   {member.projectRoles && member.projectRoles.length > 0 ? (
                     member.projectRoles.map((role) => (
-                      <Badge key={role} bg={getRoleColor(role)}>
-                        {getRoleName(role)}
+                      <Badge
+                        key={role}
+                        style={{ backgroundColor: getRoleColor(role, dynamicRoles), color: '#fff' }}
+                      >
+                        {getRoleName(role, dynamicRoles)}
                       </Badge>
                     ))
                   ) : (
@@ -446,14 +463,14 @@ export default function TeamMemberDetailPage() {
           </p>
           <Form.Group className="mb-3">
             <Form.Label>Project Roles</Form.Label>
-            {getStaffRoleOptions().map((roleOption) => (
+            {getStaffRoleOptions(dynamicRoles).map((roleOption) => (
               <Form.Check
                 key={roleOption.value}
                 type="checkbox"
                 id={`role-${roleOption.value}`}
                 label={
                   <>
-                    <strong>{roleOption.label}</strong> - {roleOption.description}
+                    <strong>{roleOption.label}</strong>{roleOption.description ? ` - ${roleOption.description}` : ''}
                   </>
                 }
                 checked={selectedRoles.includes(roleOption.value)}

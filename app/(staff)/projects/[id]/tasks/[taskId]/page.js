@@ -119,15 +119,17 @@ export default function TaskDetailPage() {
     // Admins can always edit
     if (user.isAdmin) return true;
 
-    // Project managers can edit
-    // Note: We'd need to check if user is a manager in the project team
-    // For now, we'll check if they're assigned to the task or created it
+    // Project managers/leads can edit any task
+    if (user.teams?.some(
+      t => t.teamId === project?.projectTeamId &&
+        t.roles?.some(r => ['manager', 'owner', 'lead'].includes(r))
+    )) return true;
 
     // Check if user is assigned to the task
-    if (task.assignedTo && task.assignedTo.includes(user.authUser.$id)) return true;
+    if (task.assignedTo && task.assignedTo.includes(requesterId)) return true;
 
     // Check if user created the task
-    if (task.createdBy === user.authUser.$id) return true;
+    if (task.createdBy === requesterId) return true;
 
     return false;
   };
@@ -231,7 +233,7 @@ export default function TaskDetailPage() {
           startDate: formData.startDate || null,
           dueDate: formData.dueDate || null,
           assignedTo: formData.assignedTo,
-          updatedBy: user.authUser.$id,
+          updatedBy: requesterId,
         }),
       });
 
@@ -254,7 +256,7 @@ export default function TaskDetailPage() {
   const handleDelete = async () => {
     try {
       const response = await fetch(
-        `/api/projects/${project.$id}/tasks?taskId=${params.taskId}&requesterId=${user.authUser.$id}`,
+        `/api/projects/${project.$id}/tasks?taskId=${params.taskId}&requesterId=${requesterId}`,
         { method: 'DELETE' }
       );
 
@@ -284,7 +286,7 @@ export default function TaskDetailPage() {
         body: JSON.stringify({
           taskId: params.taskId,
           status: newStatus,
-          updatedBy: user.authUser.$id,
+          updatedBy: requesterId,
         }),
       });
 
@@ -425,7 +427,7 @@ export default function TaskDetailPage() {
                 Edit
               </Button>
 
-              {(user.isAdmin || task.createdBy === user.authUser.$id) && (
+              {(user.isAdmin || task.createdBy === requesterId) && (
                 <Button
                   variant="outline-danger"
                   size="sm"
@@ -648,7 +650,7 @@ export default function TaskDetailPage() {
               </Form.Group>
 
               <div className="d-flex justify-content-between align-items-center mt-4">
-                {(user.isAdmin || task.createdBy === user.authUser.$id) && (
+                {(user.isAdmin || task.createdBy === requesterId) && (
                   <Button
                     variant="outline-danger"
                     onClick={() => setShowDeleteModal(true)}

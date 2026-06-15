@@ -7,7 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, DB_ID, ID, Query } from '@/lib/appwriteAdmin';
-import { verifyStaffAccess, verifyAdminAccess, verifyProjectAccess } from '@/lib/authHelpers';
+import { verifyStaffAccess, verifyAdminAccess, verifyProjectAccess, verifyProjectMembership } from '@/lib/authHelpers';
 import { getProjectDocPermissions } from '@/lib/rbac';
 
 const COL_MILESTONES = COLLECTIONS.MILESTONES;
@@ -45,6 +45,15 @@ export async function POST(request, { params }) {
 
     // Get project details to set correct permissions
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+
+    // Verify user is a member of this project team (or an admin)
+    const isAdmin = await verifyAdminAccess(createdBy);
+    if (!isAdmin) {
+      const isMember = await verifyProjectMembership(createdBy, project.projectTeamId);
+      if (!isMember) {
+        return NextResponse.json({ error: 'Forbidden: You must be assigned to this project to create activity schedules' }, { status: 403 });
+      }
+    }
     
     // Generate RBAC permissions
     const permissions = getProjectDocPermissions(project.organizationId, project.projectTeamId);

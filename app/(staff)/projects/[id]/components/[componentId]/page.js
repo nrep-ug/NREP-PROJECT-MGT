@@ -146,7 +146,11 @@ export default function ComponentDetailPage() {
                         </Button>
                         <h2 className="mb-0">{component.name}</h2>
                     </div>
-                    {(user?.isAdmin || teamMembers.some(m => m.accountId === user?.authUser?.$id)) && (
+                    {(user?.isAdmin || (() => {
+                        const userId = user?.accountId || user?.authUser?.$id;
+                        const member = teamMembers.find(m => m.accountId === userId);
+                        return member?.projectRoles?.some(r => ['manager', 'owner', 'lead'].includes(r));
+                    })()) && (
                         <Button
                             variant=""
                             size="sm"

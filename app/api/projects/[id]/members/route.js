@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
+const COL_ROLES = COLLECTIONS.PROJECT_ROLES;
 import { verifyManagerAccess, verifyProjectAccess, verifyStaffAccess } from '@/lib/authHelpers';
 
 const COL_PROJECTS = COLLECTIONS.PROJECTS;
@@ -110,9 +111,14 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Validate roles
-    const validRoles = ['owner', 'manager', 'contributor', 'viewer', 'client_rep', 'lead', 'developer', 'designer', 'qa', 'member'];
-    const invalidRoles = roles.filter(role => !validRoles.includes(role));
+    // Validate roles dynamically against project roles in DB
+    const projectRolesDocs = await adminDatabases.listDocuments(DB_ID, COL_ROLES, [
+      Query.equal('projectId', projectId),
+      Query.limit(100),
+    ]);
+    const validSlugs = projectRolesDocs.documents.map(r => r.slug);
+    validSlugs.push('owner'); // system-level Appwrite team role
+    const invalidRoles = roles.filter(role => !validSlugs.includes(role));
     if (invalidRoles.length > 0) {
       return NextResponse.json(
         { error: `Invalid roles: ${invalidRoles.join(', ')}` },

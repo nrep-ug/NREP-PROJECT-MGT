@@ -26,10 +26,10 @@ async function canManageComponent(componentId, requesterId) {
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, component.projectId);
     if (!project.projectTeamId) return false;
 
-    // Check if user is a manager or owner in the project team
+    // Check if user is a manager, owner, or lead in the project team
     const memberships = await adminTeams.listMemberships(project.projectTeamId);
     const userMembership = memberships.memberships.find(
-      (m) => m.userId === requesterId && (m.roles.includes('manager') || m.roles.includes('owner'))
+      (m) => m.userId === requesterId && (m.roles.includes('manager') || m.roles.includes('owner') || m.roles.includes('lead'))
     );
     return !!userMembership;
   } catch (err) {

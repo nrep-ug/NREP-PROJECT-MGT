@@ -8,7 +8,7 @@ import DocumentPreviewModal from './DocumentPreviewModal';
 import DocumentHistoryModal from './DocumentHistoryModal';
 import DocumentMoveModal from './DocumentMoveModal';
 
-export default function ProjectDocumentsNew({ project, user, showToast }) {
+export default function ProjectDocumentsNew({ project, user, showToast, canManage: canManageProp, canUpload: canUploadProp }) {
   const [documents, setDocuments] = useState([]);
   const [folders, setFolders] = useState([]);
   const [currentFolder, setCurrentFolder] = useState(null);
@@ -69,18 +69,9 @@ export default function ProjectDocumentsNew({ project, user, showToast }) {
   const [clients, setClients] = useState([]);
   const requesterId = user?.accountId || user?.authUser?.$id;
 
-  // Check if user can manage documents (admin or project manager)
-  const canManage = user?.isAdmin || (
-    project?.projectTeamId && user?.teams?.some(
-      team => team.teamId === project.projectTeamId && team.roles.includes('manager')
-    )
-  );
-
-  const canUpload = user?.isAdmin || (
-    project?.projectTeamId && user?.teams?.some(
-      team => team.teamId === project.projectTeamId
-    )
-  );
+  // Use props for permission checks (computed by parent based on project team roles)
+  const canManage = canManageProp !== undefined ? canManageProp : user?.isAdmin;
+  const canUpload = canUploadProp !== undefined ? canUploadProp : user?.isAdmin;
 
   useEffect(() => {
     if (project?.$id) {

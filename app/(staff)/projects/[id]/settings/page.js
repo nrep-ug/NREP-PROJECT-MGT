@@ -8,6 +8,7 @@ import { useProject } from '@/hooks/useProjects';
 import AppLayout from '@/components/AppLayout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Toast, { useToast } from '@/components/Toast';
+import ProjectRolesSettings from '@/components/project/ProjectRolesSettings';
 
 export default function ProjectSettingsPage() {
     const params = useParams();
@@ -19,6 +20,16 @@ export default function ProjectSettingsPage() {
     const [deleteConfirmCode, setDeleteConfirmCode] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const { toast, showToast, hideToast } = useToast();
+
+    const requesterId = user?.accountId || user?.authUser?.$id;
+
+    // Check if current user can manage settings (admin OR project manager/owner)
+    const canManageSettings = user?.isAdmin || (
+        user?.teams?.some(
+            t => t.teamId === project?.projectTeamId &&
+                t.roles?.some(r => ['manager', 'owner'].includes(r))
+        )
+    );
 
     if (authLoading || projectLoading) {
         return (
@@ -39,13 +50,13 @@ export default function ProjectSettingsPage() {
         );
     }
 
-    // Must be admin to view settings (specifically destructive actions)
-    if (!user?.isAdmin) {
+    // Must be admin or project manager to view settings
+    if (!canManageSettings) {
         return (
             <AppLayout user={user}>
                 <Alert variant="danger">
                     <i className="bi bi-shield-lock me-2"></i>
-                    <strong>Access Denied.</strong> Only administrators can access project settings.
+                    <strong>Access Denied.</strong> Only administrators and project managers can access project settings.
                 </Alert>
                 <Button
                     variant="link"
@@ -137,6 +148,13 @@ export default function ProjectSettingsPage() {
                         </div>
                     </Card.Body>
                 </Card>
+
+                {/* Roles Management Section */}
+                <ProjectRolesSettings
+                    projectId={project.$id}
+                    requesterId={requesterId}
+                    showToast={showToast}
+                />
 
                 {/* Danger Zone */}
                 <Card className="border border-danger shadow-sm rounded-4">
