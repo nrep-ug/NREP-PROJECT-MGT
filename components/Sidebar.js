@@ -49,7 +49,7 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
         style={{
           backgroundColor: 'white',
           border: '2px solid #e2e8f0',
-          color: '#054653',
+          color: '#357C9D',
           width: '40px',
           height: '40px',
           borderRadius: '10px',
@@ -65,14 +65,14 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
           zIndex: 1050
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#054653';
+          e.currentTarget.style.backgroundColor = '#357C9D';
           e.currentTarget.style.color = 'white';
-          e.currentTarget.style.borderColor = '#054653';
+          e.currentTarget.style.borderColor = '#357C9D';
           e.currentTarget.style.transform = 'scale(1.05)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'white';
-          e.currentTarget.style.color = '#054653';
+          e.currentTarget.style.color = '#357C9D';
           e.currentTarget.style.borderColor = '#e2e8f0';
           e.currentTarget.style.transform = 'scale(1)';
         }}
@@ -85,8 +85,8 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
         className={`modern-sidebar ${isMobile && isMobileOpen ? 'mobile-open' : ''}`}
         style={{
           width: isMobile ? '260px' : sidebarWidth,
-          background: 'linear-gradient(180deg, #054653 0%, #043840 100%)',
-          boxShadow: '4px 0 20px rgba(5, 70, 83, 0.15)'
+          background: 'linear-gradient(180deg, #357C9D 0%, #043840 100%)',
+          boxShadow: '4px 0 20px rgba(53, 124, 157, 0.15)'
         }}
       >
         {/* Logo/Brand */}
@@ -106,12 +106,12 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
                     width: '40px',
                     height: '40px',
                     borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #14B8A6 0%, #0d9488 100%)',
+                    background: 'linear-gradient(135deg, #2E9ECC 0%, #0d9488 100%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginRight: '0.75rem',
-                    boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)'
+                    boxShadow: '0 4px 12px rgba(46, 158, 204, 0.3)'
                   }}
                 >
                   <i className="bi bi-lightning-charge-fill" style={{ fontSize: '1.25rem', color: 'white' }}></i>
@@ -124,11 +124,11 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
                   width: '40px',
                   height: '40px',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #14B8A6 0%, #0d9488 100%)',
+                  background: 'linear-gradient(135deg, #2E9ECC 0%, #0d9488 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)'
+                  boxShadow: '0 4px 12px rgba(46, 158, 204, 0.3)'
                 }}
               >
                 <i className="bi bi-lightning-charge-fill" style={{ fontSize: '1.25rem', color: 'white' }}></i>
@@ -140,9 +140,9 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
               bg=""
               className="mt-2 w-100"
               style={{
-                backgroundColor: 'rgba(20, 184, 166, 0.2)',
-                color: '#14B8A6',
-                border: '1px solid rgba(20, 184, 166, 0.3)',
+                backgroundColor: 'rgba(46, 158, 204, 0.2)',
+                color: '#2E9ECC',
+                border: '1px solid rgba(46, 158, 204, 0.3)',
                 padding: '0.5rem',
                 borderRadius: '8px',
                 fontWeight: '600',
@@ -169,7 +169,7 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
               width: '48px',
               height: '48px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #14B8A6 0%, #0d9488 100%)',
+              background: 'linear-gradient(135deg, #2E9ECC 0%, #0d9488 100%)',
               color: 'white',
               display: 'flex',
               alignItems: 'center',
@@ -177,7 +177,7 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
               fontWeight: '700',
               fontSize: '1.25rem',
               flexShrink: 0,
-              boxShadow: '0 4px 12px rgba(20, 184, 166, 0.25)',
+              boxShadow: '0 4px 12px rgba(46, 158, 204, 0.25)',
               textTransform: 'uppercase'
             }}>
               {user.profile?.firstName?.[0] || user.email?.[0] || 'U'}
@@ -223,14 +223,14 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
               width: '44px',
               height: '44px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #14B8A6 0%, #0d9488 100%)',
+              background: 'linear-gradient(135deg, #2E9ECC 0%, #0d9488 100%)',
               color: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: '700',
               fontSize: '1.1rem',
-              boxShadow: '0 4px 12px rgba(20, 184, 166, 0.25)',
+              boxShadow: '0 4px 12px rgba(46, 158, 204, 0.25)',
               textTransform: 'uppercase'
             }}>
               {user.profile?.firstName?.[0] || user.email?.[0] || 'U'}
@@ -267,13 +267,13 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
                   marginBottom: '0.5rem',
                   borderRadius: '10px',
                   color: isActive ? 'white' : 'rgba(255, 255, 255, 0.7)',
-                  backgroundColor: isActive ? 'rgba(20, 184, 166, 0.2)' : 'transparent',
+                  backgroundColor: isActive ? 'rgba(46, 158, 204, 0.2)' : 'transparent',
                   textDecoration: 'none',
                   transition: 'all 0.2s ease',
                   position: 'relative',
                   fontWeight: isActive ? '600' : '500',
                   fontSize: '0.95rem',
-                  border: isActive ? '1px solid rgba(20, 184, 166, 0.3)' : '1px solid transparent',
+                  border: isActive ? '1px solid rgba(46, 158, 204, 0.3)' : '1px solid transparent',
                   justifyContent: showLabels ? 'flex-start' : 'center'
                 }}
                 onMouseEnter={(e) => {
@@ -296,7 +296,7 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
                   style={{
                     fontSize: '1.25rem',
                     minWidth: '1.25rem',
-                    color: isActive ? '#14B8A6' : 'inherit'
+                    color: isActive ? '#2E9ECC' : 'inherit'
                   }}
                 ></i>
                 {showLabels && (
@@ -310,9 +310,9 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
                     transform: 'translateY(-50%)',
                     width: '4px',
                     height: '60%',
-                    backgroundColor: '#14B8A6',
+                    backgroundColor: '#2E9ECC',
                     borderRadius: '0 4px 4px 0',
-                    boxShadow: '0 0 12px rgba(20, 184, 166, 0.5)'
+                    boxShadow: '0 0 12px rgba(46, 158, 204, 0.5)'
                   }} />
                 )}
               </Nav.Link>

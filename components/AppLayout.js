@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Container } from 'react-bootstrap';
-import Sidebar from './Sidebar';
 import { usePathname } from 'next/navigation';
+import Sidebar from './Sidebar';
+import styles from './AppLayout.module.css';
 
 export default function AppLayout({ user, children }) {
   const pathname = usePathname();
@@ -60,16 +60,14 @@ export default function AppLayout({ user, children }) {
         isMobileOpen={isMobileOpen}
         onToggle={toggleSidebar}
       />
-      <div
-        className="main-content"
-        style={{
-          marginLeft: isMobile ? '0' : sidebarWidth
-        }}
+      <main
+        className={styles.mainContent}
+        style={{ '--sidebar-current-width': sidebarWidth }}
       >
-        <Container fluid className="py-3">
+        <div className={styles.contentFrame}>
           {children}
-        </Container>
-      </div>
+        </div>
+      </main>
     </>
   );
 }
