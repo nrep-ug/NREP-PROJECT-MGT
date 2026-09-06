@@ -178,7 +178,7 @@ export default function ClientsPage() {
                             style={{
                               width: '40px',
                               height: '40px',
-                              background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
+                              background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)',
                               fontSize: '1rem'
                             }}>
                             {client.name.substring(0, 2).toUpperCase()}

@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import AppLayout from '@/components/AppLayout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Toast, { useToast } from '@/components/Toast';
+import { authenticatedFetch } from '@/lib/apiClient';
 
 export default function ClientDetailsPage() {
     const router = useRouter();
@@ -45,7 +46,7 @@ export default function ClientDetailsPage() {
             }
 
             // Fetch Users linked to this client
-            const usersRes = await fetch(`/api/admin/users?organizationId=${user.organizationId}&clientOrganizationId=${params.id}&requesterId=${requesterId}`);
+            const usersRes = await authenticatedFetch(`/api/admin/users?clientOrganizationId=${encodeURIComponent(params.id)}`);
             if (usersRes.ok) {
                 const usersData = await usersRes.json();
                 setUsers(usersData.users || []);

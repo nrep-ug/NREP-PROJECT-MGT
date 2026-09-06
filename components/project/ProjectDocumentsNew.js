@@ -639,8 +639,8 @@ export default function ProjectDocumentsNew({ project, user, showToast, canManag
     const extension = fileName.split('.').pop()?.toLowerCase();
     const colorMap = {
       pdf: '#dc3545',
-      doc: '#054653',
-      docx: '#054653',
+      doc: '#357C9D',
+      docx: '#357C9D',
       xls: '#198754',
       xlsx: '#198754',
       ppt: '#f59e0b',
@@ -683,8 +683,8 @@ export default function ProjectDocumentsNew({ project, user, showToast, canManag
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(5, 70, 83, 0.1)',
-          border: '2px dashed #054653',
+          backgroundColor: 'rgba(53, 124, 157, 0.1)',
+          border: '2px dashed #357C9D',
           zIndex: 100,
           display: 'flex',
           alignItems: 'center',
@@ -693,7 +693,7 @@ export default function ProjectDocumentsNew({ project, user, showToast, canManag
           pointerEvents: 'none'
         }}>
           <div className="text-center p-4 bg-white rounded-3 shadow">
-            <i className="bi bi-cloud-upload" style={{ fontSize: '3rem', color: '#054653' }}></i>
+            <i className="bi bi-cloud-upload" style={{ fontSize: '3rem', color: '#357C9D' }}></i>
             <h5 className="mt-2 text-primary">Drop files to upload</h5>
           </div>
         </div>
@@ -715,8 +715,8 @@ export default function ProjectDocumentsNew({ project, user, showToast, canManag
               onClick={openCreateFolderModal}
               style={{
                 backgroundColor: 'white',
-                border: '2px solid #054653',
-                color: '#054653',
+                border: '2px solid #357C9D',
+                color: '#357C9D',
                 borderRadius: '8px',
                 padding: '0.5rem 1rem',
                 fontSize: '0.875rem',
@@ -735,7 +735,7 @@ export default function ProjectDocumentsNew({ project, user, showToast, canManag
               onClick={openUploadModal}
               disabled={uploading}
               style={{
-                backgroundColor: '#054653',
+                backgroundColor: '#357C9D',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',

@@ -98,14 +98,14 @@ export default function NewComponentPage() {
           variant="link"
           onClick={() => router.push(`/projects/${params.id}?tab=components`)}
           className="p-0 mb-3 text-decoration-none"
-          style={{ color: '#054653', fontWeight: '500' }}
+          style={{ color: '#357C9D', fontWeight: '500' }}
         >
           <i className="bi bi-arrow-left me-2"></i>
           Back to Components
         </Button>
 
         {/* Hero Header Card */}
-        <Card className="border-0 shadow-sm" style={{ background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)' }}>
+        <Card className="border-0 shadow-sm" style={{ background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)' }}>
           <Card.Body className="text-white p-4">
             <div className="d-flex justify-content-between align-items-center">
               <div className="d-flex align-items-center">
@@ -145,13 +145,13 @@ export default function NewComponentPage() {
                 style={{
                   width: '36px',
                   height: '36px',
-                  background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
-                  boxShadow: '0 2px 8px rgba(5, 70, 83, 0.3)'
+                  background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)',
+                  boxShadow: '0 2px 8px rgba(53, 124, 157, 0.3)'
                 }}
               >
                 <i className="bi bi-box-seam text-white" style={{ fontSize: '1rem' }}></i>
               </div>
-              <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#054653', letterSpacing: '0.5px' }}>
+              <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#357C9D', letterSpacing: '0.5px' }}>
                 Component Details
               </h6>
             </div>
@@ -195,13 +195,13 @@ export default function NewComponentPage() {
                 style={{
                   width: '36px',
                   height: '36px',
-                  background: 'linear-gradient(135deg, #14B8A6 0%, #0f9488 100%)',
-                  boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)'
+                  background: 'linear-gradient(135deg, #2E9ECC 0%, #0f9488 100%)',
+                  boxShadow: '0 2px 8px rgba(46, 158, 204, 0.3)'
                 }}
               >
                 <i className="bi bi-person-badge text-white" style={{ fontSize: '1rem' }}></i>
               </div>
-              <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#14B8A6', letterSpacing: '0.5px' }}>
+              <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#2E9ECC', letterSpacing: '0.5px' }}>
                 Leadership
               </h6>
             </div>
@@ -244,10 +244,10 @@ export default function NewComponentPage() {
                 disabled={submitting}
                 className="px-5 py-3 fw-semibold border-0"
                 style={{
-                  background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
+                  background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)',
                   color: 'white',
                   borderRadius: '10px',
-                  boxShadow: '0 4px 15px rgba(5, 70, 83, 0.4)',
+                  boxShadow: '0 4px 15px rgba(53, 124, 157, 0.4)',
                   fontSize: '1rem',
                   transition: 'all 0.3s ease',
                   transform: 'translateY(0)'
@@ -255,12 +255,12 @@ export default function NewComponentPage() {
                 onMouseEnter={(e) => {
                   if (!submitting) {
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(5, 70, 83, 0.5)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(53, 124, 157, 0.5)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(5, 70, 83, 0.4)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(53, 124, 157, 0.4)';
                 }}
               >
                 {submitting ? (

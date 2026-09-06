@@ -91,6 +91,13 @@ export function SessionProvider({ children }) {
           isStaff: sessionData.isStaff || false,
           isClient: sessionData.isClient || false,
           isFinance: sessionData.isFinance || false,
+          isManager: (sessionData.labels || []).includes('manager') || sessionData.isAdmin || false,
+          financeRole: sessionData.financeRole || null,
+          financeRoles: sessionData.financeRoles || [],
+          organizationRoles: sessionData.organizationRoles || [],
+          canApproveBudgets: sessionData.canApproveBudgets || false,
+          canAdministerFinance: sessionData.canAdministerFinance || false,
+          hasProjectFinanceAccess: sessionData.hasProjectFinanceAccess || false,
 
           // Supervisor information
           isSupervisor: sessionData.isSupervisor || false,

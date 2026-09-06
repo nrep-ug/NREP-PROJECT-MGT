@@ -4,7 +4,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { COLLECTIONS, adminDatabases, adminUsers, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { COLLECTIONS, adminDatabases, Query, DB_ID } from '@/lib/appwriteAdmin';
+import { apiErrorResponse, requireAdmin, requireAuthenticatedContext } from '@/lib/serverAuth';
 
 const COL_ORGANIZATIONS = COLLECTIONS.ORGANIZATIONS;
 
@@ -14,24 +15,12 @@ const COL_ORGANIZATIONS = COLLECTIONS.ORGANIZATIONS;
  */
 export async function GET(request) {
   try {
+    const context = await requireAuthenticatedContext(request);
+    requireAdmin(context);
     const { searchParams } = new URL(request.url);
-    const requesterId = searchParams.get('requesterId');
     const type = searchParams.get('type'); // 'client' or 'staff' or undefined for all
-
-    if (!requesterId) {
-      return NextResponse.json(
-        { error: 'requesterId is required' },
-        { status: 400 }
-      );
-    }
-
-    // Verify requester is admin
-    const requester = await adminUsers.get(requesterId);
-    if (!requester.labels?.includes('admin')) {
-      return NextResponse.json(
-        { error: 'Only admins can view organizations' },
-        { status: 403 }
-      );
+    if (type && !['client', 'staff'].includes(type)) {
+      return NextResponse.json({ error: 'type must be client or staff.' }, { status: 400 });
     }
 
     // Determine collection based on type
@@ -41,15 +30,11 @@ export async function GET(request) {
     }
 
     // Build queries
-    const queries = [
-      Query.orderAsc('name'),
-      Query.limit(200)
-    ];
-
-    // Only add type filter if we are NOT using the dedicated clients collection
-    // (since pms_clients doesn't have a 'type' field, they are all clients)
-    if (type && type !== 'client') {
-      queries.push(Query.equal('type', type));
+    const queries = [Query.orderAsc('name'), Query.limit(200)];
+    if (type === 'client') {
+      queries.push(Query.equal('organizationId', context.organizationId));
+    } else {
+      queries.push(Query.equal('$id', context.organizationId));
     }
 
     // For clients, we might want to filter by status if needed, but usually we want all active ones
@@ -69,9 +54,7 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error('[API /admin/organizations GET]', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch organizations' },
-      { status: 500 }
-    );
+    const response = apiErrorResponse(error);
+    return NextResponse.json(response.body, { status: response.status });
   }
 }

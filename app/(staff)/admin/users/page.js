@@ -196,7 +196,7 @@ export default function AdminUsersPage() {
       <Toast toast={toast} onClose={hideToast} />
 
       {/* Hero Header */}
-      <Card className="border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)' }}>
+      <Card className="border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)' }}>
         <Card.Body className="text-white p-4">
           <Row className="align-items-center">
             <Col md={8}>
@@ -249,14 +249,14 @@ export default function AdminUsersPage() {
                   style={{
                     width: '60px',
                     height: '60px',
-                    background: 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)',
+                    background: 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)',
                     boxShadow: '0 4px 15px rgba(37, 99, 235, 0.3)'
                   }}
                 >
                   <i className="bi bi-people text-white" style={{ fontSize: '1.8rem' }}></i>
                 </div>
               </div>
-              <h2 className="mb-1 fw-bold" style={{ color: '#054653' }}>{stats.totalUsers}</h2>
+              <h2 className="mb-1 fw-bold" style={{ color: '#357C9D' }}>{stats.totalUsers}</h2>
               <div className="text-muted small fw-semibold">Total Users</div>
             </Card.Body>
           </Card>
@@ -282,7 +282,7 @@ export default function AdminUsersPage() {
           <div className="d-flex justify-content-between align-items-center mb-3">
             <div>
               <h5 className="mb-1 fw-bold">
-                <i className="bi bi-list-ul me-2" style={{ color: '#054653' }}></i>
+                <i className="bi bi-list-ul me-2" style={{ color: '#357C9D' }}></i>
                 All Users
               </h5>
               <p className="text-muted small mb-0">View and manage all system users</p>
@@ -464,7 +464,7 @@ export default function AdminUsersPage() {
                               style={{
                                 width: '32px',
                                 height: '32px',
-                                background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
+                                background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)',
                                 color: 'white',
                                 fontSize: '0.75rem',
                                 fontWeight: '600'
@@ -472,7 +472,7 @@ export default function AdminUsersPage() {
                             >
                               {u.firstName?.[0]}{u.lastName?.[0]}
                             </div>
-                            <strong style={{ color: '#054653' }}>@{u.username}</strong>
+                            <strong style={{ color: '#357C9D' }}>@{u.username}</strong>
                           </div>
                         </td>
                         <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
@@ -574,9 +574,9 @@ export default function AdminUsersPage() {
                 >
                   <div className="text-muted small fw-semibold">
                     <i className="bi bi-list-ul me-2"></i>
-                    Showing <span style={{ color: '#054653', fontWeight: '600' }}>{(page - 1) * limit + 1}</span> to{' '}
-                    <span style={{ color: '#054653', fontWeight: '600' }}>{Math.min(page * limit, totalUsers)}</span> of{' '}
-                    <span style={{ color: '#054653', fontWeight: '600' }}>{totalUsers}</span> users
+                    Showing <span style={{ color: '#357C9D', fontWeight: '600' }}>{(page - 1) * limit + 1}</span> to{' '}
+                    <span style={{ color: '#357C9D', fontWeight: '600' }}>{Math.min(page * limit, totalUsers)}</span> of{' '}
+                    <span style={{ color: '#357C9D', fontWeight: '600' }}>{totalUsers}</span> users
                   </div>
                   <Pagination size="sm" className="mb-0">
                     {renderPaginationItems()}

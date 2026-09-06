@@ -4,17 +4,22 @@
  */
 
 import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { apiErrorResponse, requireAdmin, requireAuthenticatedContext } from '@/lib/serverAuth';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export async function POST(request) {
   try {
-    // In production, add authentication check here
-    // Verify the user is an org admin before allowing this
+    const context = await requireAuthenticatedContext(request);
+    requireAdmin(context);
 
-    const { stdout, stderr } = await execAsync('node scripts/collections-setup.js');
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      ['scripts/collections-setup.js'],
+      { cwd: process.cwd(), timeout: 120000 }
+    );
 
     return NextResponse.json({
       success: true,
@@ -23,10 +28,7 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error('[API /admin/bootstrap/collections POST]', error);
-    return NextResponse.json({
-      error: error.message || 'Failed to run collections setup',
-      output: error.stdout || '',
-      errors: error.stderr || '',
-    }, { status: 500 });
+    const response = apiErrorResponse(error);
+    return NextResponse.json(response.body, { status: response.status });
   }
 }

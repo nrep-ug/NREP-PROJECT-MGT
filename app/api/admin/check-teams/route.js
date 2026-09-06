@@ -5,24 +5,21 @@
 
 import { NextResponse } from 'next/server';
 import { adminTeams } from '@/lib/appwriteAdmin';
+import { apiErrorResponse, requireAdmin, requireAuthenticatedContext } from '@/lib/serverAuth';
 
 export async function GET(request) {
   try {
-    // Try to list teams to see if any exist
-    const teamsResponse = await adminTeams.list();
-
-    // If we have at least 3 teams (admin, staff, client), consider it bootstrapped
-    const exist = teamsResponse.total >= 3;
+    const context = await requireAuthenticatedContext(request);
+    requireAdmin(context);
+    const team = await adminTeams.get(context.organizationId);
 
     return NextResponse.json({
-      exist,
-      total: teamsResponse.total,
+      exist: Boolean(team),
+      total: team ? 1 : 0,
     });
   } catch (error) {
     console.error('[API /admin/check-teams]', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to check teams', exist: false },
-      { status: 500 }
-    );
+    const response = apiErrorResponse(error);
+    return NextResponse.json({ ...response.body, exist: false }, { status: response.status });
   }
 }

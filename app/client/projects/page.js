@@ -116,7 +116,7 @@ export default function ClientProjectsPage() {
       <Toast toast={toast} onClose={hideToast} />
 
       {/* Hero Header */}
-      <Card className="border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)' }}>
+      <Card className="border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)' }}>
         <Card.Body className="text-white p-4">
           <Row className="align-items-center">
             <Col md={8}>

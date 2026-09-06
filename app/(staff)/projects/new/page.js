@@ -157,14 +157,14 @@ export default function NewProjectPage() {
           variant="link"
           onClick={() => router.push('/projects')}
           className="p-0 mb-3 text-decoration-none"
-          style={{ color: '#054653', fontWeight: '500' }}
+          style={{ color: '#357C9D', fontWeight: '500' }}
         >
           <i className="bi bi-arrow-left me-2"></i>
           Back to Projects
         </Button>
 
         {/* Hero Header Card */}
-        <Card className="border-0 shadow-sm" style={{ background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)' }}>
+        <Card className="border-0 shadow-sm" style={{ background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)' }}>
           <Card.Body className="text-white p-4">
             <div className="d-flex justify-content-between align-items-center">
               <div className="d-flex align-items-center">
@@ -202,13 +202,13 @@ export default function NewProjectPage() {
                 style={{
                   width: '36px',
                   height: '36px',
-                  background: 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)',
+                  background: 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)',
                   boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
                 }}
               >
                 <i className="bi bi-info-circle-fill text-white" style={{ fontSize: '1rem' }}></i>
               </div>
-              <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#054653', letterSpacing: '0.5px' }}>
+              <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#357C9D', letterSpacing: '0.5px' }}>
                 Basic Information
               </h6>
             </div>
@@ -278,13 +278,13 @@ export default function NewProjectPage() {
                 style={{
                   width: '36px',
                   height: '36px',
-                  background: 'linear-gradient(135deg, #14B8A6 0%, #0f9488 100%)',
-                  boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)'
+                  background: 'linear-gradient(135deg, #2E9ECC 0%, #0f9488 100%)',
+                  boxShadow: '0 2px 8px rgba(46, 158, 204, 0.3)'
                 }}
               >
                 <i className="bi bi-people-fill text-white" style={{ fontSize: '1rem' }}></i>
               </div>
-              <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#14B8A6', letterSpacing: '0.5px' }}>
+              <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#2E9ECC', letterSpacing: '0.5px' }}>
                 Client & Status
               </h6>
             </div>
@@ -357,7 +357,7 @@ export default function NewProjectPage() {
               <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label className="small fw-medium">
-                    <i className="bi bi-calendar-event me-2" style={{ color: '#054653' }}></i>
+                    <i className="bi bi-calendar-event me-2" style={{ color: '#357C9D' }}></i>
                     Start Date
                   </Form.Label>
                   <Form.Control
@@ -375,7 +375,7 @@ export default function NewProjectPage() {
               <Col md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label className="small fw-medium">
-                    <i className="bi bi-calendar-check me-2" style={{ color: '#14B8A6' }}></i>
+                    <i className="bi bi-calendar-check me-2" style={{ color: '#2E9ECC' }}></i>
                     End Date
                   </Form.Label>
                   <Form.Control
@@ -545,7 +545,7 @@ export default function NewProjectPage() {
                 disabled={submitting}
                 className="px-5 py-3 fw-semibold position-relative overflow-hidden border-0"
                 style={{
-                  background: 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)',
+                  background: 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)',
                   color: 'white',
                   borderRadius: '10px',
                   boxShadow: '0 4px 15px rgba(37, 99, 235, 0.4)',

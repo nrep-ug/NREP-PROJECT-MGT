@@ -189,14 +189,14 @@ export default function ProjectRolesSettings({ projectId, requesterId, showToast
         >
           <div className="d-flex justify-content-between align-items-center">
             <div className="d-flex align-items-center gap-2">
-              <i className="bi bi-shield-lock" style={{ fontSize: '1.25rem', color: '#054653' }}></i>
+              <i className="bi bi-shield-lock" style={{ fontSize: '1.25rem', color: '#357C9D' }}></i>
               <h5 className="mb-0 fw-bold" style={{ color: '#0f172a' }}>Project Roles</h5>
               <Badge bg="secondary" pill>{roles.length}</Badge>
             </div>
             <Button
               size="sm"
               style={{
-                backgroundColor: '#054653',
+                backgroundColor: '#357C9D',
                 border: 'none',
                 borderRadius: '8px',
                 fontWeight: '600',
@@ -322,7 +322,7 @@ export default function ProjectRolesSettings({ projectId, requesterId, showToast
         <Modal.Header closeButton className="border-bottom-0 pb-0">
           <Modal.Title className="fw-bold">
             <i className={`bi ${editingRole ? 'bi-pencil-square' : 'bi-plus-circle'} me-2`}
-               style={{ color: '#054653' }}></i>
+               style={{ color: '#357C9D' }}></i>
             {editingRole ? `Edit Role: ${editingRole.name}` : 'Create Custom Role'}
           </Modal.Title>
         </Modal.Header>
@@ -395,7 +395,7 @@ export default function ProjectRolesSettings({ projectId, requesterId, showToast
                           borderRadius: '50%',
                           backgroundColor: color,
                           cursor: submitting ? 'not-allowed' : 'pointer',
-                          border: formColor === color ? '3px solid #054653' : '2px solid #e2e8f0',
+                          border: formColor === color ? '3px solid #357C9D' : '2px solid #e2e8f0',
                           transition: 'all 0.15s',
                         }}
                       ></div>
@@ -442,7 +442,7 @@ export default function ProjectRolesSettings({ projectId, requesterId, showToast
             {/* Permissions */}
             <div className="mb-3">
               <Form.Label className="fw-semibold small d-flex align-items-center gap-2">
-                <i className="bi bi-key" style={{ color: '#054653' }}></i>
+                <i className="bi bi-key" style={{ color: '#357C9D' }}></i>
                 Permissions
                 <Badge bg="light" text="dark" style={{ fontSize: '0.7rem' }}>
                   {formPermissions.length}/{ALL_PERMISSIONS.length} selected
@@ -473,7 +473,7 @@ export default function ProjectRolesSettings({ projectId, requesterId, showToast
                             type="checkbox"
                             id={`perm-${perm}`}
                             label={
-                              <code style={{ fontSize: '0.75rem', color: formPermissions.includes(perm) ? '#054653' : '#94a3b8' }}>
+                              <code style={{ fontSize: '0.75rem', color: formPermissions.includes(perm) ? '#357C9D' : '#94a3b8' }}>
                                 {perm}
                               </code>
                             }
@@ -496,7 +496,7 @@ export default function ProjectRolesSettings({ projectId, requesterId, showToast
             <Button
               type="submit"
               disabled={submitting || !formName.trim() || !formSlug.trim()}
-              style={{ backgroundColor: '#054653', border: 'none', fontWeight: '600', padding: '0.5rem 1.5rem' }}
+              style={{ backgroundColor: '#357C9D', border: 'none', fontWeight: '600', padding: '0.5rem 1.5rem' }}
             >
               {submitting ? (
                 <>

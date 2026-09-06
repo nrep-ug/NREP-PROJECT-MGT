@@ -191,7 +191,7 @@ export default function ProjectStaffAssignment({ projectId, projectTeamId, organ
               flexShrink: 0
             }}
           >
-            <i className="bi bi-person-fill" style={{ fontSize: '1.5rem', color: '#054653' }}></i>
+            <i className="bi bi-person-fill" style={{ fontSize: '1.5rem', color: '#357C9D' }}></i>
           </div>
           <div className="flex-grow-1 overflow-hidden">
             <h6 className="mb-1 text-truncate">{member.firstName} {member.lastName}</h6>
@@ -346,7 +346,7 @@ export default function ProjectStaffAssignment({ projectId, projectTeamId, organ
                     flexShrink: 0
                   }}
                 >
-                  <i className="bi bi-person-badge" style={{ fontSize: '1.5rem', color: '#054653' }}></i>
+                  <i className="bi bi-person-badge" style={{ fontSize: '1.5rem', color: '#357C9D' }}></i>
                 </div>
                 <div>
                   <div className="small text-muted" style={{ fontSize: '0.75rem', fontWeight: '500' }}>Managers</div>

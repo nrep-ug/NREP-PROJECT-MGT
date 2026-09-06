@@ -100,8 +100,8 @@ export default function ProjectDocuments({ project, user, showToast, canModify }
     const extension = fileName.split('.').pop()?.toLowerCase();
     const colorMap = {
       pdf: '#dc3545',
-      doc: '#054653',
-      docx: '#054653',
+      doc: '#357C9D',
+      docx: '#357C9D',
       xls: '#198754',
       xlsx: '#198754',
       ppt: '#f59e0b',
@@ -181,7 +181,7 @@ export default function ProjectDocuments({ project, user, showToast, canModify }
                 as="span"
                 disabled={uploading}
                 style={{
-                  backgroundColor: '#054653',
+                  backgroundColor: '#357C9D',
                   color: 'white',
                   border: 'none',
                   padding: '0.5rem 1rem',
@@ -196,7 +196,7 @@ export default function ProjectDocuments({ project, user, showToast, canModify }
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#054653';
+                  e.currentTarget.style.backgroundColor = '#357C9D';
                 }}
               >
                 <i className="bi bi-cloud-upload me-2"></i>
@@ -322,8 +322,8 @@ export default function ProjectDocuments({ project, user, showToast, canModify }
                         transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#054653';
-                        e.currentTarget.style.color = '#054653';
+                        e.currentTarget.style.borderColor = '#357C9D';
+                        e.currentTarget.style.color = '#357C9D';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.borderColor = '#cbd5e1';

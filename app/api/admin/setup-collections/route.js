@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { adminDatabases, ID } from '@/lib/appwriteAdmin';
 import { collectionsDefinition } from '@/lib/collectionsDefinition';
 import { ensureAttribute, ensureIndex } from '@/lib/collectionHelpers';
+import { apiErrorResponse, requireAdmin, requireAuthenticatedContext } from '@/lib/serverAuth';
 
 const DB_ID = process.env.APPWRITE_DATABASE_ID || 'pms_db';
 
@@ -54,6 +55,8 @@ async function ensureCollection(collectionId, name) {
  */
 export async function GET(request) {
   try {
+    const context = await requireAuthenticatedContext(request);
+    requireAdmin(context);
     const collections = collectionsDefinition;
     const results = [];
 
@@ -81,10 +84,8 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error('[API /admin/setup-collections GET] Error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to check collections' },
-      { status: 500 }
-    );
+    const response = apiErrorResponse(error);
+    return NextResponse.json(response.body, { status: response.status });
   }
 }
 
@@ -94,6 +95,8 @@ export async function GET(request) {
  */
 export async function POST(request) {
   try {
+    const context = await requireAuthenticatedContext(request);
+    requireAdmin(context);
     console.log('[API /admin/setup-collections] Starting collections setup...');
 
     // First, ensure database exists
@@ -198,12 +201,7 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error('[API /admin/setup-collections POST] Error:', error);
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to setup collections',
-        details: error.stack,
-      },
-      { status: 500 }
-    );
+    const response = apiErrorResponse(error);
+    return NextResponse.json(response.body, { status: response.status });
   }
 }

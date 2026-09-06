@@ -4,13 +4,13 @@
  */
 
 import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import { adminTeams } from '@/lib/appwriteAdmin';
+import { apiErrorResponse, requireAdmin, requireAuthenticatedContext } from '@/lib/serverAuth';
 
 export async function POST(request) {
   try {
+    const context = await requireAuthenticatedContext(request);
+    requireAdmin(context);
     const body = await request.json();
     const { organizationId } = body;
 
@@ -20,39 +20,26 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-
-    console.log('[API /admin/bootstrap-teams] Starting teams bootstrap...');
-
-    // Run the npm script for teams bootstrap
-    // Pass organizationId as environment variable
-    const { stdout, stderr } = await execAsync('npm run setup:teams', {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        ORGANIZATION_ID: organizationId,
-      },
-      timeout: 120000, // 2 minute timeout
-    });
-
-    console.log('[API /admin/bootstrap-teams] stdout:', stdout);
-    if (stderr) {
-      console.warn('[API /admin/bootstrap-teams] stderr:', stderr);
+    if (organizationId !== context.organizationId) {
+      return NextResponse.json(
+        { error: 'Teams can only be bootstrapped for your organization.' },
+        { status: 403 }
+      );
     }
+
+    // Authenticated users can only reach this route after Appwrite confirms
+    // membership in this exact organization team. Verify that team directly;
+    // never launch the interactive bootstrap CLI from an HTTP request.
+    const team = await adminTeams.get(context.organizationId);
 
     return NextResponse.json({
       success: true,
-      message: 'Teams bootstrap completed',
-      output: stdout,
+      message: 'Organization team is configured.',
+      team: { $id: team.$id, name: team.name },
     });
   } catch (error) {
     console.error('[API /admin/bootstrap-teams] Error:', error);
-
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to bootstrap teams',
-        details: error.stderr || error.stdout,
-      },
-      { status: 500 }
-    );
+    const response = apiErrorResponse(error);
+    return NextResponse.json(response.body, { status: response.status });
   }
 }

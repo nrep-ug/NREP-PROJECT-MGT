@@ -258,7 +258,7 @@ export default function TeamMemberDetailPage() {
           <Card className="border-0 shadow-sm h-100">
             <Card.Body className="text-center">
               <div className="mb-2">
-                <i className="bi bi-arrow-clockwise" style={{ fontSize: '2rem', color: '#054653' }}></i>
+                <i className="bi bi-arrow-clockwise" style={{ fontSize: '2rem', color: '#357C9D' }}></i>
               </div>
               <h3 className="mb-1">{stats.inProgress}</h3>
               <div className="text-muted small">In Progress</div>

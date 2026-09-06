@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import AppLayout from '@/components/AppLayout';
 import Toast, { useToast } from '@/components/Toast';
+import { authenticatedFetch } from '@/lib/apiClient';
 
 export default function NewClientPage() {
   const router = useRouter();
@@ -51,8 +52,7 @@ export default function NewClientPage() {
   const loadClientUsers = async () => {
     try {
       setLoadingUsers(true);
-      const requesterId = user?.accountId || user?.authUser?.$id;
-      const response = await fetch(`/api/admin/users?organizationId=${user.organizationId}&requesterId=${requesterId}`);
+      const response = await authenticatedFetch('/api/admin/users');
 
       if (!response.ok) {
         throw new Error('Failed to fetch users');

@@ -156,7 +156,7 @@ export default function ComponentDetailPage() {
                             size="sm"
                             onClick={() => router.push(`/projects/${project.$id}/components/${component.$id}/edit`)}
                             style={{
-                                backgroundColor: '#054653',
+                                backgroundColor: '#357C9D',
                                 color: 'white',
                                 border: 'none',
                                 padding: '0.5rem 1rem',
@@ -169,7 +169,7 @@ export default function ComponentDetailPage() {
                                 e.currentTarget.style.backgroundColor = '#043840';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#054653';
+                                e.currentTarget.style.backgroundColor = '#357C9D';
                             }}
                         >
                             <i className="bi bi-pencil-square me-2"></i>

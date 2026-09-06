@@ -44,7 +44,7 @@ export default function ProjectOverview({ project, user, showToast, onUpdate }) 
                     backgroundColor: '#ecfdf5'
                   }}
                 >
-                  <i className="bi bi-info-circle-fill" style={{ color: '#054653', fontSize: '1rem' }}></i>
+                  <i className="bi bi-info-circle-fill" style={{ color: '#357C9D', fontSize: '1rem' }}></i>
                 </div>
                 <h5 className="mb-0 fw-bold" style={{ color: '#1e293b' }}>Project Information</h5>
               </div>
@@ -57,7 +57,7 @@ export default function ProjectOverview({ project, user, showToast, onUpdate }) 
                     </small>
                     <Badge
                       style={{
-                        backgroundColor: '#054653',
+                        backgroundColor: '#357C9D',
                         fontSize: '0.875rem',
                         fontWeight: '600',
                         padding: '0.5rem 1rem',
@@ -96,7 +96,7 @@ export default function ProjectOverview({ project, user, showToast, onUpdate }) 
                       Start Date
                     </small>
                     <div className="d-flex align-items-center gap-2">
-                      <i className="bi bi-calendar-event" style={{ color: '#14B8A6', fontSize: '1.25rem' }}></i>
+                      <i className="bi bi-calendar-event" style={{ color: '#2E9ECC', fontSize: '1.25rem' }}></i>
                       <span className="fw-semibold" style={{ color: '#1e293b' }}>
                         {project.startDate ? formatDate(project.startDate) : <span className="text-muted fst-italic">Not set</span>}
                       </span>
@@ -110,7 +110,7 @@ export default function ProjectOverview({ project, user, showToast, onUpdate }) 
                       End Date
                     </small>
                     <div className="d-flex align-items-center gap-2">
-                      <i className="bi bi-calendar-check" style={{ color: '#14B8A6', fontSize: '1.25rem' }}></i>
+                      <i className="bi bi-calendar-check" style={{ color: '#2E9ECC', fontSize: '1.25rem' }}></i>
                       <span className="fw-semibold" style={{ color: '#1e293b' }}>
                         {project.endDate ? formatDate(project.endDate) : <span className="text-muted fst-italic">Not set</span>}
                       </span>
@@ -127,9 +127,9 @@ export default function ProjectOverview({ project, user, showToast, onUpdate }) 
                       className="d-flex align-items-center gap-2 p-3 rounded-3"
                       style={{ backgroundColor: '#f8fafc' }}
                     >
-                      <i className="bi bi-cash-stack" style={{ color: '#054653', fontSize: '1.5rem' }}></i>
+                      <i className="bi bi-cash-stack" style={{ color: '#357C9D', fontSize: '1.5rem' }}></i>
                       <div>
-                        <div className="fw-bold" style={{ color: '#054653', fontSize: '1.75rem' }}>
+                        <div className="fw-bold" style={{ color: '#357C9D', fontSize: '1.75rem' }}>
                           {getCurrencySymbol(project.budgetCurrency || 'USD')}{project.budgetAmount?.toLocaleString() || '0'}
                         </div>
                         <small className="text-muted">
@@ -156,7 +156,7 @@ export default function ProjectOverview({ project, user, showToast, onUpdate }) 
                       backgroundColor: '#f0fdf4'
                     }}
                   >
-                    <i className="bi bi-file-text-fill" style={{ color: '#14B8A6', fontSize: '1rem' }}></i>
+                    <i className="bi bi-file-text-fill" style={{ color: '#2E9ECC', fontSize: '1rem' }}></i>
                   </div>
                   <h5 className="mb-0 fw-bold" style={{ color: '#1e293b' }}>Description</h5>
                 </div>
@@ -263,8 +263,8 @@ export default function ProjectOverview({ project, user, showToast, onUpdate }) 
                         textAlign: 'left'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#054653';
-                        e.currentTarget.style.color = '#054653';
+                        e.currentTarget.style.borderColor = '#357C9D';
+                        e.currentTarget.style.color = '#357C9D';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.borderColor = '#cbd5e1';
@@ -291,8 +291,8 @@ export default function ProjectOverview({ project, user, showToast, onUpdate }) 
                         textAlign: 'left'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#14B8A6';
-                        e.currentTarget.style.color = '#14B8A6';
+                        e.currentTarget.style.borderColor = '#2E9ECC';
+                        e.currentTarget.style.color = '#2E9ECC';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.borderColor = '#cbd5e1';

@@ -74,7 +74,7 @@ export default function ProjectComponents({ project, user, showToast, canModify,
                             size="sm"
                             onClick={() => router.push(`/projects/${project.$id}/components/new`)}
                             style={{
-                                backgroundColor: '#054653',
+                                backgroundColor: '#357C9D',
                                 color: 'white',
                                 border: 'none',
                                 padding: '0.5rem 1rem',
@@ -87,7 +87,7 @@ export default function ProjectComponents({ project, user, showToast, canModify,
                                 e.currentTarget.style.backgroundColor = '#043840';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#054653';
+                                e.currentTarget.style.backgroundColor = '#357C9D';
                             }}
                         >
                             <i className="bi bi-plus-circle me-2"></i>
@@ -114,7 +114,7 @@ export default function ProjectComponents({ project, user, showToast, canModify,
                             variant=""
                             onClick={() => router.push(`/projects/${project.$id}/components/new`)}
                             style={{
-                                backgroundColor: '#054653',
+                                backgroundColor: '#357C9D',
                                 color: 'white',
                                 border: 'none',
                                 padding: '0.75rem 1.5rem',
@@ -227,8 +227,8 @@ export default function ProjectComponents({ project, user, showToast, canModify,
                                                     transition: 'all 0.2s ease'
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.currentTarget.style.borderColor = '#054653';
-                                                    e.currentTarget.style.color = '#054653';
+                                                    e.currentTarget.style.borderColor = '#357C9D';
+                                                    e.currentTarget.style.color = '#357C9D';
                                                 }}
                                                 onMouseLeave={(e) => {
                                                     e.currentTarget.style.borderColor = '#cbd5e1';

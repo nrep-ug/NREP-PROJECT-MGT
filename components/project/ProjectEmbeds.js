@@ -173,7 +173,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
   const getProviderColor = (provider) => {
     const lowerProvider = provider?.toLowerCase() || '';
     if (lowerProvider.includes('figma')) return '#a855f7';
-    if (lowerProvider.includes('google')) return '#054653';
+    if (lowerProvider.includes('google')) return '#357C9D';
     if (lowerProvider.includes('youtube')) return '#dc3545';
     if (lowerProvider.includes('miro')) return '#f59e0b';
     return '#64748b';
@@ -226,7 +226,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
               size="sm"
               onClick={openCreateModal}
               style={{
-                backgroundColor: '#054653',
+                backgroundColor: '#357C9D',
                 color: 'white',
                 border: 'none',
                 padding: '0.5rem 1rem',
@@ -239,7 +239,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                 e.currentTarget.style.backgroundColor = '#043840';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#054653';
+                e.currentTarget.style.backgroundColor = '#357C9D';
               }}
             >
               <i className="bi bi-plus-circle me-2"></i>
@@ -266,7 +266,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
               variant=""
               onClick={openCreateModal}
               style={{
-                backgroundColor: '#054653',
+                backgroundColor: '#357C9D',
                 color: 'white',
                 border: 'none',
                 padding: '0.75rem 1.5rem',
@@ -395,8 +395,8 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                         transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#054653';
-                        e.currentTarget.style.color = '#054653';
+                        e.currentTarget.style.borderColor = '#357C9D';
+                        e.currentTarget.style.color = '#357C9D';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.borderColor = '#cbd5e1';
@@ -422,8 +422,8 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                         transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#054653';
-                        e.currentTarget.style.color = '#054653';
+                        e.currentTarget.style.borderColor = '#357C9D';
+                        e.currentTarget.style.color = '#357C9D';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.borderColor = '#cbd5e1';
@@ -450,8 +450,8 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                           transition: 'all 0.2s ease'
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = '#14B8A6';
-                          e.currentTarget.style.color = '#14B8A6';
+                          e.currentTarget.style.borderColor = '#2E9ECC';
+                          e.currentTarget.style.color = '#2E9ECC';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.borderColor = '#cbd5e1';
@@ -478,8 +478,8 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                         transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#14B8A6';
-                        e.currentTarget.style.color = '#14B8A6';
+                        e.currentTarget.style.borderColor = '#2E9ECC';
+                        e.currentTarget.style.color = '#2E9ECC';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.borderColor = '#cbd5e1';
@@ -502,7 +502,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
           <Modal.Title>
             <i
               className={`bi ${isViewMode ? 'bi-info-circle' : isEditMode ? 'bi-pencil-square' : 'bi-plus-circle'} me-2`}
-              style={{ color: '#054653' }}
+              style={{ color: '#357C9D' }}
             ></i>
             {isViewMode ? 'Embed Details' : isEditMode ? 'Edit Embed' : 'Add Embed'}
           </Modal.Title>
@@ -666,7 +666,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                   onClick={() => activeEmbed && openEditModal(activeEmbed)}
                   disabled={deleting}
                   style={{
-                    backgroundColor: '#054653',
+                    backgroundColor: '#357C9D',
                     color: 'white',
                     border: 'none',
                     padding: '0.5rem 1.5rem',
@@ -685,7 +685,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
                   type="submit"
                   disabled={saving}
                   style={{
-                    backgroundColor: '#054653',
+                    backgroundColor: '#357C9D',
                     color: 'white',
                     border: 'none',
                     padding: '0.5rem 1.5rem',
@@ -765,7 +765,7 @@ export default function ProjectEmbeds({ project, user, showToast, canModify }) {
             variant=""
             onClick={() => setShowPreviewModal(false)}
             style={{
-              backgroundColor: '#054653',
+              backgroundColor: '#357C9D',
               color: 'white',
               border: 'none',
               padding: '0.5rem 1.5rem',
