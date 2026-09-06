@@ -1,377 +1,111 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Nav, Badge } from 'react-bootstrap';
+import styles from './AppLayout.module.css';
 
+const CLIENT_NAV = [
+  { href: '/client/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
+  { href: '/client/projects', label: 'Projects', icon: 'bi-folder' },
+  { href: '/client/profile', label: 'My Profile', icon: 'bi-person-circle' },
+];
+
+const STAFF_NAV = [
+  { href: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
+  { href: '/projects', label: 'Projects', icon: 'bi-folder' },
+  { href: '/clients', label: 'Clients', icon: 'bi-people' },
+  { href: '/timesheets', label: 'Timesheets', icon: 'bi-clock-history' },
+  { href: '/timesheets/reports', label: 'Timesheet Analytics', icon: 'bi-bar-chart-line' },
+  { href: '/finance', label: 'Finance', icon: 'bi-cash-coin', financeViewOnly: true },
+  { href: '/profile', label: 'My Profile', icon: 'bi-person-circle' },
+  { href: '/admin', label: 'Admin', icon: 'bi-gear', adminOnly: true },
+];
+
+function userRoleLabel(user) {
+  if (user?.isAdmin) return 'Administrator';
+  if (user?.financeRole === 'reviewer') return 'Finance Reviewer';
+  if (user?.financeRole === 'officer') return 'Finance Officer';
+  if (user?.financeRole === 'budget_approver') return 'Budget Approver';
+  if (user?.financeRole === 'administrator') return 'Finance Administrator';
+  if (user?.hasProjectFinanceAccess) return 'Project Head';
+  if (user?.isManager) return 'Management';
+  if (user?.isSupervisor) return 'Supervisor';
+  if (user?.isClient) return 'Client';
+  return 'Staff';
+}
 export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onToggle }) {
   const pathname = usePathname();
-
-  // Define navigation items based on user role
-  const clientNavItems = [
-    { href: '/client/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
-    { href: '/client/projects', label: 'Projects', icon: 'bi-folder' },
-    { href: '/client/profile', label: 'My Profile', icon: 'bi-person-circle' },
-  ];
-
-  const staffNavItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
-    { href: '/projects', label: 'Projects', icon: 'bi-folder' },
-    { href: '/clients', label: 'Clients', icon: 'bi-people' },
-    { href: '/timesheets', label: 'Timesheets', icon: 'bi-clock-history' },
-    { href: '/profile', label: 'My Profile', icon: 'bi-person-circle' },
-    { href: '/admin', label: 'Admin', icon: 'bi-gear', adminOnly: true },
-  ];
-
-  // Select appropriate navigation items based on user role
-  const navItems = user?.isClient ? clientNavItems : staffNavItems;
-
-  const sidebarWidth = isCollapsed ? '80px' : '260px';
+  const navItems = user?.isClient ? CLIENT_NAV : STAFF_NAV;
   const showLabels = !isCollapsed || isMobileOpen;
-
-  const currentYear = new Date().getFullYear();
+  const sidebarWidth = isCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)';
+  const name = `${user?.firstName || user?.profile?.firstName || ''} ${user?.lastName || user?.profile?.lastName || ''}`.trim() || user?.email || 'NREP user';
+  const initial = name.charAt(0) || 'N';
+  const canSeeFinance = user?.isFinance || user?.isManager || user?.isAdmin || user?.hasProjectFinanceAccess;
 
   return (
     <>
-      {/* Mobile Overlay */}
-      {isMobile && isMobileOpen && (
-        <div
-          className="sidebar-overlay"
-          onClick={onToggle}
-        />
-      )}
-
-      {/* Toggle Button */}
+      {isMobile && isMobileOpen && <button type="button" className={styles.sidebarOverlay} onClick={onToggle} aria-label="Close navigation" />}
       <button
-        className="sidebar-toggle"
+        type="button"
+        className={`${styles.sidebarToggle} ${isMobileOpen ? styles.sidebarToggleMobileOpen : ''}`}
+        style={{ '--sidebar-current-width': sidebarWidth }}
         onClick={onToggle}
-        aria-label="Toggle Sidebar"
-        style={{
-          backgroundColor: 'white',
-          border: '2px solid #e2e8f0',
-          color: '#357C9D',
-          width: '40px',
-          height: '40px',
-          borderRadius: '10px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-          position: 'fixed',
-          top: '1rem',
-          left: '1rem',
-          zIndex: 1050
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#357C9D';
-          e.currentTarget.style.color = 'white';
-          e.currentTarget.style.borderColor = '#357C9D';
-          e.currentTarget.style.transform = 'scale(1.05)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'white';
-          e.currentTarget.style.color = '#357C9D';
-          e.currentTarget.style.borderColor = '#e2e8f0';
-          e.currentTarget.style.transform = 'scale(1)';
-        }}
+        aria-label={isMobileOpen || (!isMobile && !isCollapsed) ? 'Collapse navigation' : 'Open navigation'}
+        aria-expanded={isMobile ? isMobileOpen : !isCollapsed}
       >
-        <i className={`bi ${isCollapsed || !isMobileOpen ? 'bi-list' : 'bi-x'}`} style={{ fontSize: '1.25rem' }}></i>
+        <i className={`bi ${isMobileOpen ? 'bi-x-lg' : isCollapsed ? 'bi-list' : 'bi-chevron-left'}`} />
       </button>
 
-      {/* Sidebar */}
-      <div
-        className={`modern-sidebar ${isMobile && isMobileOpen ? 'mobile-open' : ''}`}
-        style={{
-          width: isMobile ? '260px' : sidebarWidth,
-          background: 'linear-gradient(180deg, #357C9D 0%, #043840 100%)',
-          boxShadow: '4px 0 20px rgba(53, 124, 157, 0.15)'
-        }}
+      <aside
+        className={`${styles.sidebar} ${isMobileOpen ? styles.sidebarMobileOpen : ''}`}
+        style={{ '--sidebar-current-width': sidebarWidth }}
+        aria-label="Primary navigation"
       >
-        {/* Logo/Brand */}
-        <div className="sidebar-header" style={{ padding: '1.5rem 1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <div className="sidebar-brand" style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: showLabels ? 'flex-start' : 'center',
-            color: 'white',
-            fontSize: '1.5rem',
-            fontWeight: '700'
-          }}>
-            {showLabels ? (
-              <>
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #2E9ECC 0%, #0d9488 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: '0.75rem',
-                    boxShadow: '0 4px 12px rgba(46, 158, 204, 0.3)'
-                  }}
-                >
-                  <i className="bi bi-lightning-charge-fill" style={{ fontSize: '1.25rem', color: 'white' }}></i>
-                </div>
-                <span className="brand-text" style={{ letterSpacing: '-0.5px', color: 'white' }}>NREP PMS</span>
-              </>
-            ) : (
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #2E9ECC 0%, #0d9488 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 12px rgba(46, 158, 204, 0.3)'
-                }}
-              >
-                <i className="bi bi-lightning-charge-fill" style={{ fontSize: '1.25rem', color: 'white' }}></i>
-              </div>
-            )}
+        <div className={styles.sidebarHeader}>
+          <div className={`${styles.sidebarBrand} ${!showLabels ? styles.sidebarBrandCollapsed : ''}`}>
+            <span className={styles.brandMark}><Image className={styles.brandImage} src="/images/logo.png" alt="NREP" width={40} height={40} priority /></span>
+            {showLabels && <span className={styles.brandCopy}><span className={styles.brandName}>NREP</span><span className={styles.brandProduct}>Project Management System</span></span>}
           </div>
-          {user?.isClient && showLabels && (
-            <Badge
-              bg=""
-              className="mt-2 w-100"
-              style={{
-                backgroundColor: 'rgba(46, 158, 204, 0.2)',
-                color: '#2E9ECC',
-                border: '1px solid rgba(46, 158, 204, 0.3)',
-                padding: '0.5rem',
-                borderRadius: '8px',
-                fontWeight: '600',
-                fontSize: '0.75rem'
-              }}
-            >
-              <i className="bi bi-person-circle me-1"></i>
-              Client Portal
-            </Badge>
-          )}
+          {user?.isClient && showLabels && <span className={styles.portalBadge}><i className="bi bi-person-badge" />Client portal</span>}
         </div>
 
-        {/* User Info */}
-        {user && showLabels && (
-          <div style={{
-            padding: '1.25rem 1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)'
-          }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #2E9ECC 0%, #0d9488 100%)',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: '700',
-              fontSize: '1.25rem',
-              flexShrink: 0,
-              boxShadow: '0 4px 12px rgba(46, 158, 204, 0.25)',
-              textTransform: 'uppercase'
-            }}>
-              {user.profile?.firstName?.[0] || user.email?.[0] || 'U'}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontWeight: '700',
-                fontSize: '0.95rem',
-                color: 'white',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                marginBottom: '0.25rem'
-              }}>
-                {user.profile?.firstName || user.name || 'User'}
-                {user.profile?.lastName && ` ${user.profile.lastName}`}
-              </div>
-              <div style={{
-                fontSize: '0.75rem',
-                color: 'rgba(255, 255, 255, 0.7)',
-                fontWeight: '500'
-              }}>
-                {user.isAdmin ? (
-                  <><i className="bi bi-shield-check me-1"></i>Administrator</>
-                ) : user.isClient ? (
-                  <><i className="bi bi-person me-1"></i>Client</>
-                ) : (
-                  <><i className="bi bi-briefcase me-1"></i>Staff</>
-                )}
-              </div>
-            </div>
+        {showLabels ? (
+          <div className={styles.userPanel}>
+            <span className={styles.userAvatar}>{initial}</span>
+            <span className={styles.userDetails}><span className={styles.userName}>{name}</span><span className={styles.userRole}><i className="bi bi-shield-check" />{userRoleLabel(user)}</span></span>
           </div>
+        ) : (
+          <div className={styles.collapsedUser}><span className={`${styles.userAvatar} ${styles.userAvatarCollapsed}`} title={name}>{initial}</span></div>
         )}
 
-        {!showLabels && user && (
-          <div style={{
-            padding: '1rem',
-            display: 'flex',
-            justifyContent: 'center',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
-          }}>
-            <div style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #2E9ECC 0%, #0d9488 100%)',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: '700',
-              fontSize: '1.1rem',
-              boxShadow: '0 4px 12px rgba(46, 158, 204, 0.25)',
-              textTransform: 'uppercase'
-            }}>
-              {user.profile?.firstName?.[0] || user.email?.[0] || 'U'}
-            </div>
-          </div>
-        )}
-
-        {/* Navigation */}
-        <Nav className="sidebar-nav flex-column flex-nowrap" style={{
-          flex: 1,
-          padding: '1rem 0.75rem',
-          overflowY: 'auto',
-          overflowX: 'hidden'
-        }}>
+        <nav className={styles.sidebarNav}>
           {navItems.map((item) => {
-            // Only show admin menu to users with admin role
-            if (item.adminOnly && !user?.isAdmin) {
-              return null;
-            }
-
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-
+            if (item.adminOnly && !user?.isAdmin) return null;
+            if (item.financeViewOnly && !canSeeFinance) return null;
+            if (item.approverOnly && !user?.isSupervisor && !user?.isAdmin) return null;
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
-              <Nav.Link
+              <Link
                 key={item.href}
-                as={Link}
                 href={item.href}
-                className="sidebar-link"
-                title={!showLabels ? item.label : ''}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0.875rem 1rem',
-                  marginBottom: '0.5rem',
-                  borderRadius: '10px',
-                  color: isActive ? 'white' : 'rgba(255, 255, 255, 0.7)',
-                  backgroundColor: isActive ? 'rgba(46, 158, 204, 0.2)' : 'transparent',
-                  textDecoration: 'none',
-                  transition: 'all 0.2s ease',
-                  position: 'relative',
-                  fontWeight: isActive ? '600' : '500',
-                  fontSize: '0.95rem',
-                  border: isActive ? '1px solid rgba(46, 158, 204, 0.3)' : '1px solid transparent',
-                  justifyContent: showLabels ? 'flex-start' : 'center'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
-                    e.currentTarget.style.color = 'white';
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
-                    e.currentTarget.style.transform = 'translateX(0)';
-                  }
-                }}
+                className={`${styles.sidebarLink} ${active ? styles.sidebarLinkActive : ''}`}
+                title={showLabels ? undefined : item.label}
+                aria-current={active ? 'page' : undefined}
               >
-                <i
-                  className={`${item.icon}`}
-                  style={{
-                    fontSize: '1.25rem',
-                    minWidth: '1.25rem',
-                    color: isActive ? '#2E9ECC' : 'inherit'
-                  }}
-                ></i>
-                {showLabels && (
-                  <span style={{ marginLeft: '0.875rem', whiteSpace: 'nowrap' }}>{item.label}</span>
-                )}
-                {isActive && (
-                  <div style={{
-                    position: 'absolute',
-                    left: '0',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: '4px',
-                    height: '60%',
-                    backgroundColor: '#2E9ECC',
-                    borderRadius: '0 4px 4px 0',
-                    boxShadow: '0 0 12px rgba(46, 158, 204, 0.5)'
-                  }} />
-                )}
-              </Nav.Link>
+                <i className={`${styles.sidebarLinkIcon} bi ${item.icon}`} />
+                {showLabels && <span className={styles.sidebarLinkLabel}>{item.label}</span>}
+              </Link>
             );
           })}
-
-          <div style={{
-            height: '1px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            margin: '0.75rem 0.5rem'
-          }}></div>
-
-          {/* Logout */}
-          <Nav.Link
-            as={Link}
-            href="/logout"
-            className="sidebar-link logout-link"
-            title={!showLabels ? 'Logout' : ''}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '0.875rem 1rem',
-              marginBottom: '0.5rem',
-              borderRadius: '10px',
-              color: 'rgba(255, 255, 255, 0.7)',
-              backgroundColor: 'transparent',
-              textDecoration: 'none',
-              transition: 'all 0.2s ease',
-              fontWeight: '500',
-              fontSize: '0.95rem',
-              justifyContent: showLabels ? 'flex-start' : 'center'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(220, 53, 69, 0.15)';
-              e.currentTarget.style.color = '#ff6b6b';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
-            }}
-          >
-            <i className="bi bi-box-arrow-right" style={{ fontSize: '1.25rem', minWidth: '1.25rem' }}></i>
-            {showLabels && <span style={{ marginLeft: '0.875rem', whiteSpace: 'nowrap' }}>Logout</span>}
-          </Nav.Link>
-        </Nav>
-
-        {/* Footer */}
-        {showLabels && (
-          <div style={{
-            padding: '1rem',
-            textAlign: 'center',
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-            color: 'rgba(255, 255, 255, 0.5)',
-            fontSize: '0.75rem'
-          }}>
-            <small>© {currentYear} NREP</small>
-          </div>
-        )}
-      </div>
+          <div className={styles.sidebarDivider} />
+          <Link href="/logout" className={`${styles.sidebarLink} ${styles.logoutLink}`} title={showLabels ? undefined : 'Log out'}>
+            <i className={`${styles.sidebarLinkIcon} bi bi-box-arrow-right`} />
+            {showLabels && <span className={styles.sidebarLinkLabel}>Log out</span>}
+          </Link>
+        </nav>
+        {showLabels && <footer className={styles.sidebarFooter}>© {new Date().getFullYear()} NREP</footer>}
+      </aside>
     </>
   );
 }
