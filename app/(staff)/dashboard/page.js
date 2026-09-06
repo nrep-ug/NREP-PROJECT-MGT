@@ -10,6 +10,7 @@ import { formatDate, formatHours, getWeekStart, getWeekEnd } from '@/lib/date';
 import AppLayout from '@/components/AppLayout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import styles from './dashboard.module.css';
+import ManagerFinanceSnapshot from '@/components/finance/ManagerFinanceSnapshot';
 
 const STAT_CARD_TONES = {
   blue: styles.statCardBlue,
@@ -304,6 +305,8 @@ export default function DashboardPage() {
           </>
         )}
       </Row>
+
+      <ManagerFinanceSnapshot user={user} />
 
       <Row className="g-4">
         {/* Main Content Area */}

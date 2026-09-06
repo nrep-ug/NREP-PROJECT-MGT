@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "test": "node --test tests/financeDomain.test.cjs",
+    "schema:finance": "node scripts/deploy-finance-schema.js",
+    "security:profile-permissions": "node scripts/harden-user-profile-permissions.js",
     "start": "next start",
     "lint": "next lint",
     "setup:collections": "node scripts/collections-setup.js",
