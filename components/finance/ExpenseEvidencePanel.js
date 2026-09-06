@@ -116,4 +116,3 @@ export default function ExpenseEvidencePanel({ expense, canEdit, onChanged, noti
     </div>
   );
 }
-

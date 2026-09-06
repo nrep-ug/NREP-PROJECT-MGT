@@ -17,4 +17,3 @@ export async function POST(request) {
     reallocation: await createReallocation(context, await readJson(request)),
   }), { status: 201 });
 }
-

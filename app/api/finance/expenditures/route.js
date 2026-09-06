@@ -22,4 +22,3 @@ export async function POST(request) {
     expenditure: await createExpenditure(context, await readJson(request)),
   }), { status: 201 });
 }
-

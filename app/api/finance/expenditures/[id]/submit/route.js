@@ -8,4 +8,3 @@ export async function POST(request, { params }) {
     return { expenditure: await submitExpenditure(context, id, body.evidenceMissingReason) };
   });
 }
-

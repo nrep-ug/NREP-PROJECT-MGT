@@ -12,4 +12,3 @@ export default function MetricCard({ label, value, hint, icon = 'bi-graph-up' })
     </div>
   );
 }
-

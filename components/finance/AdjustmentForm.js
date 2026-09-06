@@ -52,4 +52,3 @@ export default function AdjustmentForm({ expense, onSubmit, onCancel, submitting
     </Form>
   );
 }
-

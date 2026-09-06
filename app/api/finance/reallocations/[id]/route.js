@@ -7,4 +7,3 @@ export async function PATCH(request, { params }) {
     return { reallocation: await updateReallocation(context, id, await readJson(request)) };
   });
 }
-

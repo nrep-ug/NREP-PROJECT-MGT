@@ -16,4 +16,3 @@ export async function POST(request) {
     budgetLine: await createBudgetLine(context, await readJson(request)),
   }), { status: 201 });
 }
-

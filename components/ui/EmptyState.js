@@ -12,4 +12,3 @@ export default function EmptyState({ icon = 'bi-inbox', title, text, action }) {
     </div>
   );
 }
-

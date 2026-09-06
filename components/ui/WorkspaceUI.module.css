@@ -166,4 +166,3 @@
   .actions { width: 100%; justify-content: flex-start; }
   .sectionHeader, .sectionBody { padding-left: var(--space-4); padding-right: var(--space-4); }
 }
-

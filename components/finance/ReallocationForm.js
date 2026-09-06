@@ -63,4 +63,3 @@ export default function ReallocationForm({ project, budgetLines = [], initialVal
     </Form>
   );
 }
-

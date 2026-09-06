@@ -8,4 +8,3 @@ export async function POST(request, { params }) {
     return { adjustment: await reviewFinanceRecord(context, 'adjustment', id, action, comment || comments) };
   });
 }
-

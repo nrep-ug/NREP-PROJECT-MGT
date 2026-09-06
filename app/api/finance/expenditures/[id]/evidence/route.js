@@ -8,4 +8,3 @@ export async function POST(request, { params }) {
     return { expenditure: await addExpenditureEvidence(context, id, formData.get('file')) };
   });
 }
-

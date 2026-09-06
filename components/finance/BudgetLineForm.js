@@ -90,4 +90,3 @@ export default function BudgetLineForm({ project, activities = [], initialValue 
     </Form>
   );
 }
-

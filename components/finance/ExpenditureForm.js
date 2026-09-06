@@ -107,4 +107,3 @@ export default function ExpenditureForm({ project, budgetLines = [], staff = [],
     </Form>
   );
 }
-

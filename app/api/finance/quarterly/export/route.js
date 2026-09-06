@@ -26,4 +26,3 @@ export async function GET(request) {
     return NextResponse.json(response.body, { status: response.status });
   }
 }
-

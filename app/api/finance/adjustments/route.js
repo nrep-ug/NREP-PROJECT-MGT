@@ -17,4 +17,3 @@ export async function POST(request) {
     adjustment: await createAdjustment(context, await readJson(request)),
   }), { status: 201 });
 }
-

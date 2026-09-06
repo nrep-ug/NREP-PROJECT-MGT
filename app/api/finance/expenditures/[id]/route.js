@@ -14,4 +14,3 @@ export async function PATCH(request, { params }) {
     return { expenditure: await updateExpenditure(context, id, await readJson(request)) };
   });
 }
-

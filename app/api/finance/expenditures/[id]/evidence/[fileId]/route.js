@@ -22,4 +22,3 @@ export async function GET(request, { params }) {
     return NextResponse.json(response.body, { status: response.status });
   }
 }
-

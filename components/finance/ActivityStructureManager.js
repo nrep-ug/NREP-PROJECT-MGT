@@ -52,4 +52,3 @@ export default function ActivityStructureManager({ activities, onChanged, notify
     </div>
   );
 }
-

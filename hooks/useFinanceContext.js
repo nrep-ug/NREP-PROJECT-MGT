@@ -34,4 +34,3 @@ export function useFinanceContext() {
 
   return { user, finance, loading: authLoading || loading, error, refresh };
 }
-

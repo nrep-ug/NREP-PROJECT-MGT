@@ -7,4 +7,3 @@ export async function PATCH(request, { params }) {
     return { budgetLine: await updateBudgetLine(context, id, await readJson(request)) };
   });
 }
-
