@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Alert, Button, Form, Spinner } from 'react-bootstrap';
+import ApproverPicker from './ApproverPicker';
 import { formatCurrency } from '@/lib/financeFormat';
 
 function dateInputValue(value, fallback = '') {
@@ -21,6 +22,7 @@ export default function CommitmentForm({
   onSubmit,
   onCancel,
   submitting = false,
+  approvers = [],
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
@@ -33,6 +35,7 @@ export default function CommitmentForm({
     description: initialValue?.description || '',
   });
   const [error, setError] = useState('');
+  const [assignedReviewerId, setAssignedReviewerId] = useState(initialValue?.assignedReviewerId || '');
 
   const approvedLines = useMemo(
     () => budgetLines.filter((line) => line.status === 'approved'),
@@ -66,6 +69,7 @@ export default function CommitmentForm({
       referenceNumber: form.referenceNumber.trim() || null,
       description: form.description.trim(),
       submit,
+      assignedReviewerId: submit ? assignedReviewerId : undefined,
     });
   };
 
@@ -146,6 +150,7 @@ export default function CommitmentForm({
         <Form.Control as="textarea" rows={4} maxLength={2000} value={form.description} onChange={(event) => update('description', event.target.value)} required />
       </Form.Group>
 
+      <ApproverPicker approvers={approvers} kind="commitment" value={assignedReviewerId} onChange={setAssignedReviewerId} />
       <div className="d-flex flex-wrap justify-content-end gap-2">
         {onCancel && <Button type="button" variant="secondary" onClick={onCancel} disabled={submitting}>Cancel</Button>}
         <Button type="button" variant="secondary" onClick={() => save(false)} disabled={submitting}>

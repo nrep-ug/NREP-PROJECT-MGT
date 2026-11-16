@@ -2,14 +2,16 @@
 
 import { useState } from 'react';
 import { Alert, Button, Form, Spinner } from 'react-bootstrap';
+import ApproverPicker from './ApproverPicker';
 
-export default function BudgetLineForm({ project, activities = [], initialValue = null, onSubmit, submitting, onCancel }) {
+export default function BudgetLineForm({ project, activities = [], initialValue = null, onSubmit, submitting, onCancel, approvers = [] }) {
   const [form, setForm] = useState({
     activityId: initialValue?.activityId || '',
     originalAmount: initialValue?.originalAmount || '',
     notes: initialValue?.notes || '',
   });
   const [error, setError] = useState('');
+  const [assignedReviewerId, setAssignedReviewerId] = useState(initialValue?.assignedReviewerId || '');
 
   const submit = (event) => {
     event.preventDefault();
@@ -24,6 +26,7 @@ export default function BudgetLineForm({ project, activities = [], initialValue 
       originalAmount: form.originalAmount,
       notes: form.notes,
       submit: true,
+      assignedReviewerId,
     });
   };
 
@@ -81,6 +84,7 @@ export default function BudgetLineForm({ project, activities = [], initialValue 
           placeholder="Approval reference, funding restriction, or context"
         />
       </Form.Group>
+      <ApproverPicker approvers={approvers} kind="budgetLine" value={assignedReviewerId} onChange={setAssignedReviewerId} />
       <div className="d-flex justify-content-end gap-2">
         <Button variant="secondary" onClick={onCancel} disabled={submitting}>Cancel</Button>
         <Button type="submit" variant="primary" disabled={submitting}>

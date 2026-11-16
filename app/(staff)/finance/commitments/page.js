@@ -11,6 +11,7 @@ import financeStyles from '@/components/finance/FinanceWorkspace.module.css';
 import EmptyState from '@/components/ui/EmptyState';
 import SectionCard from '@/components/ui/SectionCard';
 import StatusBadge from '@/components/ui/StatusBadge';
+import ClearanceStatus from '@/components/finance/ClearanceStatus';
 import Toast, { useToast } from '@/components/Toast';
 import { useFinanceContext } from '@/hooks/useFinanceContext';
 import { authenticatedFetch } from '@/lib/apiClient';
@@ -157,6 +158,7 @@ function FinanceCommitmentsContent() {
     <FinanceWorkspace
       user={user}
       finance={finance}
+      project={project}
       active="commitments"
       title="Commitments"
       description="Track approved obligations separately from Actual Spend until they are converted into expenses."
@@ -221,7 +223,7 @@ function FinanceCommitmentsContent() {
                     <td>{item.referenceNumber || '-'}</td>
                     <td className="text-end">{formatCurrency(item.amount, item.currency)}</td>
                     <td className="text-end fw-semibold">{formatCurrency(item.outstandingAmount ?? item.amount, item.currency)}</td>
-                    <td><StatusBadge status={item.status} /></td>
+                    <td><StatusBadge status={item.status} /><ClearanceStatus record={item} kind="commitment" finance={finance} onChanged={load} notify={showToast} /></td>
                     <td className="text-end">
                       <div className="d-flex justify-content-end gap-1">
                         <Button size="sm" variant="secondary" onClick={() => { setSelected(item); setReviewComment(''); }}>View</Button>
@@ -240,6 +242,7 @@ function FinanceCommitmentsContent() {
         <Modal.Header closeButton><Modal.Title>{formCommitment ? 'Edit commitment' : 'New commitment'}</Modal.Title></Modal.Header>
         <Modal.Body>{project && (
           <CommitmentForm
+            approvers={finance.approvers}
             key={formCommitment?.$id || `new-${project.$id}`}
             project={project}
             budgetLines={budgetLines}

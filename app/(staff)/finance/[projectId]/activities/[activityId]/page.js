@@ -73,10 +73,8 @@ function ActivityFinanceDetailContent({ params }) {
       active="budgets"
       title={detail?.activity ? `${detail.activity.activityCode ? `${detail.activity.activityCode} · ` : ''}${detail.activity.name}` : 'Activity Finance'}
       description={detail?.project?.name}
-      actions={<>
-        <Link href={`/finance/${projectId}`} className="btn btn-secondary me-2"><i className="bi bi-arrow-left me-1" />Back to project Finance</Link>
-        <Link href={`/projects/${projectId}?tab=milestones`} className="btn btn-outline-secondary"><i className="bi bi-flag me-1" />Activity Schedule</Link>
-      </>}
+      project={{ $id: projectId, name: detail?.project?.name || 'Project', code: detail?.project?.code }}
+      actions={<Link href={`/projects/${projectId}?tab=milestones`} className="btn btn-outline-secondary"><i className="bi bi-flag me-1" />Activity Schedule</Link>}
     >
       {error && <Alert variant="danger">{error}</Alert>}
       {loading || !detail ? <div className="text-center py-5"><Spinner animation="border" /></div> : !line ? (

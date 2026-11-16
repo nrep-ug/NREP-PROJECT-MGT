@@ -14,6 +14,7 @@ import VarianceExplanationForm from '@/components/finance/VarianceExplanationFor
 import EmptyState from '@/components/ui/EmptyState';
 import SectionCard from '@/components/ui/SectionCard';
 import StatusBadge from '@/components/ui/StatusBadge';
+import ClearanceStatus from '@/components/finance/ClearanceStatus';
 import Toast, { useToast } from '@/components/Toast';
 import { useFinanceContext } from '@/hooks/useFinanceContext';
 import { authenticatedFetch } from '@/lib/apiClient';
@@ -154,6 +155,7 @@ function ActivityBudgetsContent() {
     <FinanceWorkspace
       user={user}
       finance={finance}
+      project={project}
       active="budgets"
       title="Activity Budgets"
       description="Preserve original approved allocations and derive transfers, revised budget, approved spend, balance, and utilisation."
@@ -191,7 +193,7 @@ function ActivityBudgetsContent() {
               <tbody>{rows.map((line) => (
                 <tr key={line.$id}>
                   <td><div className="fw-semibold">{line.activityName}</div><small className="text-muted">{line.activityCode || 'Uncoded activity'} · {line.currency}</small></td>
-                  <td><StatusBadge status={line.status} /></td>
+                  <td><StatusBadge status={line.status} /><ClearanceStatus record={line} kind="budgetLine" finance={finance} onChanged={load} notify={showToast} /></td>
                   <td className="text-end">{formatCurrency(line.originalAmount, line.currency)}</td>
                   <td className="text-end">{line.status === 'approved' ? formatCurrency(line.transfersIn, line.currency) : '—'}</td>
                   <td className="text-end">{line.status === 'approved' ? formatCurrency(line.transfersOut, line.currency) : '—'}</td>
@@ -215,7 +217,7 @@ function ActivityBudgetsContent() {
 
       <Modal show={showForm} onHide={() => { setShowForm(false); setEditing(null); }} size="lg" centered>
         <Modal.Header closeButton><Modal.Title>{editing ? 'Revise returned budget' : 'New activity budget'}</Modal.Title></Modal.Header>
-        <Modal.Body>{project && <BudgetLineForm project={project} activities={activities} initialValue={editing} submitting={submitting} onCancel={() => { setShowForm(false); setEditing(null); }} onSubmit={save} />}</Modal.Body>
+        <Modal.Body>{project && <BudgetLineForm approvers={finance.approvers} project={project} activities={activities} initialValue={editing} submitting={submitting} onCancel={() => { setShowForm(false); setEditing(null); }} onSubmit={save} />}</Modal.Body>
       </Modal>
       <Modal show={showStructure} onHide={() => setShowStructure(false)} size="xl" centered scrollable>
         <Modal.Header closeButton><Modal.Title>Activity codes and hierarchy</Modal.Title></Modal.Header>
@@ -237,6 +239,7 @@ function ActivityBudgetsContent() {
         <Modal.Header closeButton><Modal.Title>Variance explanation</Modal.Title></Modal.Header>
         <Modal.Body>{project && varianceLine && (
           <VarianceExplanationForm
+            approvers={finance.approvers}
             project={project}
             budgetLine={varianceLine}
             onSubmit={saveVarianceExplanation}

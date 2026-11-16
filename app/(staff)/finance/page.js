@@ -104,29 +104,29 @@ export default function FinanceOverviewPage() {
               <EmptyState icon="bi-wallet2" title="No approved budgets yet" text="Finance Officers can create the first activity budget from Activity Budgets." />
             </SectionCard>
           ) : summary.currencyGroups.map((group) => (
-            <SectionCard key={group.currency} title={`Financial position — ${group.currency}`} className="mb-3">
+            <section key={group.currency} className="mb-4" aria-label={`Financial position in ${group.currency}`}>
+              <div className="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-3">
+                <h2 className="h5 fw-bold mb-0">Financial position — {group.currency}</h2>
+                <span className="small text-muted">This quarter&apos;s spend so far: <strong className="text-body">{formatCurrency(group.quarterSpend || 0, group.currency)}</strong></span>
+              </div>
               <div className="row g-3">
                 <div className="col-sm-6 col-xl-3"><MetricCard label="Total budget" value={formatCurrency(group.revisedBudget, group.currency)} icon="bi-bank" /></div>
                 <div className="col-sm-6 col-xl-3"><MetricCard label="Actual spend" value={formatCurrency(group.actualSpend ?? group.approvedSpend, group.currency)} icon="bi-receipt" /></div>
                 <div className="col-sm-6 col-xl-3"><MetricCard label="Committed" value={formatCurrency(group.committedAmount || 0, group.currency)} icon="bi-journal-check" /></div>
                 <div className="col-sm-6 col-xl-3"><MetricCard label="Available" value={formatCurrency(group.availableBalance, group.currency)} hint={`${formatPercent(group.utilisation)} utilised`} icon="bi-pie-chart" /></div>
               </div>
-              <div className="mt-3 pt-3 border-top d-flex align-items-center justify-content-between">
-                <span className="text-muted small">This quarter&apos;s spend so far</span>
-                <strong>{formatCurrency(group.quarterSpend || 0, group.currency)}</strong>
-              </div>
-            </SectionCard>
+            </section>
           ))}
 
           <div className="row g-3 mb-4">
-            <div className="col-sm-6 col-xl-3">
-              <Link href="/finance/review-queue" className="text-reset text-decoration-none">
-                <MetricCard label="Pending review" value={String(summary.pendingReview)} icon="bi-hourglass-split" />
+            <div className="col-md-6">
+              <Link href="/finance/review-queue" className="text-reset text-decoration-none d-block h-100">
+                <MetricCard layout="row" tone="blue" label="Pending review" hint="Records waiting for approval" value={String(summary.pendingReview)} icon="bi-hourglass-split" />
               </Link>
             </div>
-            <div className="col-sm-6 col-xl-3">
-              <Link href="/finance/needs-attention" className="text-reset text-decoration-none">
-                <MetricCard label="Needs attention" value={String(summary.exceptions)} icon="bi-exclamation-triangle" />
+            <div className="col-md-6">
+              <Link href="/finance/needs-attention" className="text-reset text-decoration-none d-block h-100">
+                <MetricCard layout="row" tone="amber" label="Needs attention" hint="Activities near or over budget" value={String(summary.exceptions)} icon="bi-exclamation-triangle" />
               </Link>
             </div>
           </div>

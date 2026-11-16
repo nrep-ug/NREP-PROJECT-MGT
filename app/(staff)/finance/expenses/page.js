@@ -12,6 +12,7 @@ import financeStyles from '@/components/finance/FinanceWorkspace.module.css';
 import EmptyState from '@/components/ui/EmptyState';
 import SectionCard from '@/components/ui/SectionCard';
 import StatusBadge from '@/components/ui/StatusBadge';
+import ClearanceStatus from '@/components/finance/ClearanceStatus';
 import Toast, { useToast } from '@/components/Toast';
 import { useFinanceContext } from '@/hooks/useFinanceContext';
 import { authenticatedFetch } from '@/lib/apiClient';
@@ -146,6 +147,7 @@ function FinanceExpensesContent() {
     <FinanceWorkspace
       user={user}
       finance={finance}
+      project={project}
       active="expenses"
       title="Expenses"
       description="Transaction-level control with explicit responsibility, protected evidence, independent review, and immutable approved history."
@@ -175,7 +177,7 @@ function FinanceExpensesContent() {
                     <td><div className="fw-semibold">{expense.activityCode || '—'}</div><small className="text-muted">{expense.activityName}</small></td>
                     <td style={{ maxWidth: 240 }}><div className="text-truncate">{expense.description}</div><small className="text-muted">{expense.referenceNumber || 'No reference'}</small></td>
                     <td>{titleCase(expense.category)}</td><td>{expense.payee}</td><td>{expense.responsibleStaffName}</td>
-                    <td className="text-end fw-semibold">{formatCurrency(expense.amount, expense.currency)}</td><td><StatusBadge status={expense.status} /></td>
+                    <td className="text-end fw-semibold">{formatCurrency(expense.amount, expense.currency)}</td><td><StatusBadge status={expense.status} /><ClearanceStatus record={expense} kind="expenditure" finance={finance} onChanged={load} notify={showToast} /></td>
                     <td>{expense.evidenceMetadata?.length ? <span className="text-success"><i className="bi bi-paperclip me-1" />{expense.evidenceMetadata.length}</span> : <span className="text-muted">None</span>}</td>
                     <td className="text-end"><div className="d-flex justify-content-end gap-1"><Button size="sm" variant="secondary" onClick={() => setDetailExpense(expense)}>View</Button>{canEdit && <Button size="sm" variant="secondary" onClick={() => setFormExpense(expense)}>Edit</Button>}{finance.actor.canEdit && expense.status === 'approved' && <Button size="sm" variant="secondary" onClick={() => setAdjustExpense(expense)}>Adjust</Button>}</div></td>
                   </tr>
@@ -199,13 +201,13 @@ function FinanceExpensesContent() {
             {[['Amount', formatCurrency(detailExpense.amount, detailExpense.currency)],['Date', formatFinanceDate(detailExpense.expenseDate)],['Payee', detailExpense.payee],['Responsible staff', detailExpense.responsibleStaffName],['Category', titleCase(detailExpense.category)],['Payment method', titleCase(detailExpense.paymentMethod)],['Reference', detailExpense.referenceNumber || '—'],['Entered by', detailExpense.createdByName]].map(([label, value]) => <div className="col-sm-6" key={label}><small className="text-muted d-block">{label}</small><strong>{value}</strong></div>)}
           </div>
           {detailExpense.reviewerComment && <Alert variant={detailExpense.status === 'rejected' ? 'danger' : 'info'}><strong>Reviewer comment:</strong> {detailExpense.reviewerComment}</Alert>}
-          <ExpenseEvidencePanel expense={detailExpense} canEdit={finance.actor.canEdit && detailExpense.createdBy === finance.actor.accountId && ['draft','returned'].includes(detailExpense.status)} notify={showToast} onChanged={(updated) => { setDetailExpense(updated); load(); }} />
+          <ExpenseEvidencePanel approvers={finance.approvers} expense={detailExpense} canEdit={finance.actor.canEdit && detailExpense.createdBy === finance.actor.accountId && ['draft','returned'].includes(detailExpense.status)} notify={showToast} onChanged={(updated) => { setDetailExpense(updated); load(); }} />
         </>}</Modal.Body>
       </Modal>
 
       <Modal show={Boolean(adjustExpense)} onHide={() => setAdjustExpense(null)} size="lg" centered>
         <Modal.Header closeButton><Modal.Title>Adjust approved expense</Modal.Title></Modal.Header>
-        <Modal.Body>{adjustExpense && <AdjustmentForm expense={adjustExpense} onSubmit={submitAdjustment} onCancel={() => setAdjustExpense(null)} submitting={submitting} />}</Modal.Body>
+        <Modal.Body>{adjustExpense && <AdjustmentForm approvers={finance.approvers} expense={adjustExpense} onSubmit={submitAdjustment} onCancel={() => setAdjustExpense(null)} submitting={submitting} />}</Modal.Body>
       </Modal>
     </FinanceWorkspace>
   );

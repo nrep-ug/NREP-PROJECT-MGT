@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Alert, Button, Form, Spinner } from 'react-bootstrap';
+import ApproverPicker from './ApproverPicker';
 
 const PERIODS = Object.freeze({
   financial_year: {
@@ -39,6 +40,7 @@ export default function VarianceExplanationForm({
   onSubmit,
   onCancel,
   submitting = false,
+  approvers = [],
 }) {
   const initialPeriodType = initialValue?.periodType && PERIODS[initialValue.periodType]
     ? initialValue.periodType
@@ -49,6 +51,7 @@ export default function VarianceExplanationForm({
     explanation: initialValue?.explanation || '',
   });
   const [error, setError] = useState('');
+  const [assignedReviewerId, setAssignedReviewerId] = useState(initialValue?.assignedReviewerId || '');
 
   const scopedActivity = activity || (budgetLine ? {
     $id: budgetLine.activityId,
@@ -84,6 +87,7 @@ export default function VarianceExplanationForm({
       periodType: form.periodType,
       periodKey,
       explanation: form.explanation.trim(),
+      assignedReviewerId,
     });
   };
 
@@ -151,6 +155,7 @@ export default function VarianceExplanationForm({
         />
       </Form.Group>
 
+      <ApproverPicker approvers={approvers} kind="varianceExplanation" value={assignedReviewerId} onChange={setAssignedReviewerId} />
       <div className="d-flex justify-content-end gap-2">
         {onCancel && <Button type="button" variant="secondary" onClick={onCancel} disabled={submitting}>Cancel</Button>}
         <Button type="submit" variant="primary" disabled={submitting}>

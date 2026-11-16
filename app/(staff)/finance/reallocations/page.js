@@ -10,6 +10,7 @@ import ReallocationForm from '@/components/finance/ReallocationForm';
 import EmptyState from '@/components/ui/EmptyState';
 import SectionCard from '@/components/ui/SectionCard';
 import StatusBadge from '@/components/ui/StatusBadge';
+import ClearanceStatus from '@/components/finance/ClearanceStatus';
 import Toast, { useToast } from '@/components/Toast';
 import { useFinanceContext } from '@/hooks/useFinanceContext';
 import { authenticatedFetch } from '@/lib/apiClient';
@@ -91,6 +92,7 @@ function BudgetReallocationsContent() {
     <FinanceWorkspace
       user={user}
       finance={finance}
+      project={project}
       active="reallocations"
       title="Budget Reallocations"
       description="Move available allocation between approved activities without rewriting the original approved budget."
@@ -116,7 +118,7 @@ function BudgetReallocationsContent() {
                   <td><div className="fw-semibold">{record.toActivityCode || '—'}</div><small className="text-muted">{record.toActivityName}</small></td>
                   <td className="text-end fw-semibold">{formatCurrency(record.amount, record.currency)}</td>
                   <td style={{ maxWidth: 260 }}><div className="text-truncate" title={record.reason}>{record.reason}</div>{record.reviewerComment && <small className="text-muted">Reviewer: {record.reviewerComment}</small>}</td>
-                  <td>{record.createdByName}</td><td><StatusBadge status={record.status} /></td><td>{formatFinanceDate(record.reviewedAt)}</td>
+                  <td>{record.createdByName}</td><td><StatusBadge status={record.status} /><ClearanceStatus record={record} kind="reallocation" finance={finance} onChanged={load} notify={showToast} /></td><td>{formatFinanceDate(record.reviewedAt)}</td>
                   <td className="text-end">{canEdit && <Button size="sm" variant="secondary" onClick={() => setEditing(record)}>Edit</Button>}</td>
                 </tr>;
               })}</tbody>
@@ -127,7 +129,7 @@ function BudgetReallocationsContent() {
 
       <Modal show={editing !== undefined} onHide={() => setEditing(undefined)} size="lg" centered>
         <Modal.Header closeButton><Modal.Title>{editing ? 'Revise returned reallocation' : 'New budget reallocation'}</Modal.Title></Modal.Header>
-        <Modal.Body>{project && <ReallocationForm project={project} budgetLines={budgetLines} initialValue={editing || null} onSubmit={save} onCancel={() => setEditing(undefined)} submitting={submitting} />}</Modal.Body>
+        <Modal.Body>{project && <ReallocationForm approvers={finance.approvers} project={project} budgetLines={budgetLines} initialValue={editing || null} onSubmit={save} onCancel={() => setEditing(undefined)} submitting={submitting} />}</Modal.Body>
       </Modal>
     </FinanceWorkspace>
   );

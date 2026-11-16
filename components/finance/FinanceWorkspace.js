@@ -18,7 +18,23 @@ const NAV_ITEMS = [
   { key: 'quarterly', href: '/finance/quarterly', label: 'Quarterly Reports', icon: 'bi-calendar3' },
 ];
 
-export default function FinanceWorkspace({ user, finance, active, title, description, actions, children }) {
+/**
+ * project: optional { $id, name, code } the page is scoped to. Adds a
+ *   "Finance › CODE" breadcrumb and, unless `back` is given, a back link to
+ *   that project's Finance page.
+ * back: optional { href, label } shown top-left; pass null to hide.
+ */
+export default function FinanceWorkspace({ user, finance, active, title, description, actions, back, project, children }) {
+  const backLink = back !== undefined
+    ? back
+    : project ? { href: `/finance/${project.$id}`, label: `Back to ${project.code || project.name} Finance` } : null;
+  const eyebrow = project ? (
+    <>
+      <Link href="/finance" className={styles.crumb}>Finance</Link>
+      <i className="bi bi-chevron-right mx-1" aria-hidden="true" />
+      <Link href={`/finance/${project.$id}`} className={styles.crumb}>{project.code || project.name}</Link>
+    </>
+  ) : 'Financial control';
   const role = finance?.actor?.financeRole
     ? `Finance ${titleCase(finance.actor.financeRole)}`
     : finance?.actor?.isManager
@@ -28,8 +44,15 @@ export default function FinanceWorkspace({ user, finance, active, title, descrip
   return (
     <AppLayout user={user}>
       <div className={styles.workspace}>
+        {backLink && (
+          <div className={`mb-3 ${styles.noPrint}`}>
+            <Link href={backLink.href} className="btn btn-secondary btn-sm">
+              <i className="bi bi-arrow-left me-2" />{backLink.label}
+            </Link>
+          </div>
+        )}
         <PageHeader
-          eyebrow="Financial control"
+          eyebrow={eyebrow}
           title={title}
           description={description}
           actions={(

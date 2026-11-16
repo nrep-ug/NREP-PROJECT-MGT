@@ -83,6 +83,7 @@ function FinanceNeedsAttentionContent() {
     <FinanceWorkspace
       user={user}
       finance={finance}
+      project={finance?.projects?.find((item) => item.$id === filters.projectId)}
       active="attention"
       title="Needs Attention"
       description="Review genuine financial exceptions and follow each item to its underlying project, activity, transaction, or evidence."

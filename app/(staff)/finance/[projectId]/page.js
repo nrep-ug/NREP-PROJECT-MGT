@@ -62,7 +62,9 @@ function ProjectFinanceContent({ params }) {
     <FinanceWorkspace
       user={user}
       finance={finance}
-      active="overview"
+      active="project"
+      project={summary?.project ? { $id: projectId, name: summary.project.name, code: summary.project.code } : undefined}
+      back={{ href: '/finance', label: 'Back to Finance overview (all projects)' }}
       title={summary?.project?.name || 'Project Finance'}
       description={summary?.project?.code}
       actions={<Link href={`/projects/${projectId}`} className="btn btn-secondary"><i className="bi bi-folder2-open me-1" />Project detail</Link>}

@@ -4,10 +4,13 @@ import { useState } from 'react';
 import { Alert, Button, Form, Spinner } from 'react-bootstrap';
 import { authenticatedFetch } from '@/lib/apiClient';
 import { formatFinanceDate } from '@/lib/financeFormat';
+import ApproverPicker, { eligibleApprovers } from './ApproverPicker';
 
-export default function ExpenseEvidencePanel({ expense, canEdit, onChanged, notify }) {
+export default function ExpenseEvidencePanel({ expense, canEdit, onChanged, notify, approvers = [] }) {
   const [file, setFile] = useState(null);
   const [missingReason, setMissingReason] = useState('');
+  const [assignedReviewerId, setAssignedReviewerId] = useState(expense.assignedReviewerId || '');
+  const needsApprover = eligibleApprovers(approvers, 'expenditure').length > 0;
   const [busy, setBusy] = useState(false);
 
   const upload = async () => {
@@ -35,7 +38,7 @@ export default function ExpenseEvidencePanel({ expense, canEdit, onChanged, noti
       const response = await authenticatedFetch(`/api/finance/expenditures/${expense.$id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ evidenceMissingReason: missingReason }),
+        body: JSON.stringify({ evidenceMissingReason: missingReason, assignedReviewerId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Expense submission failed.');
@@ -108,7 +111,8 @@ export default function ExpenseEvidencePanel({ expense, canEdit, onChanged, noti
               <Form.Control as="textarea" rows={2} maxLength={500} value={missingReason} onChange={(event) => setMissingReason(event.target.value)} placeholder="Document the exception for the reviewer" />
             </Form.Group>
           )}
-          <Button variant="primary" onClick={submitExpense} disabled={busy || (evidence.length === 0 && !missingReason.trim())}>
+          <ApproverPicker approvers={approvers} kind="expenditure" value={assignedReviewerId} onChange={setAssignedReviewerId} id={`approver-${expense.$id}`} />
+          <Button variant="primary" onClick={submitExpense} disabled={busy || (evidence.length === 0 && !missingReason.trim()) || (needsApprover && !assignedReviewerId)}>
             {busy ? <Spinner size="sm" animation="border" /> : 'Submit expense for review'}
           </Button>
         </>

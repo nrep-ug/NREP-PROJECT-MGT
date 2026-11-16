@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { Alert, Button, Form, Spinner } from 'react-bootstrap';
+import ApproverPicker from './ApproverPicker';
 
-export default function AdjustmentForm({ expense, onSubmit, onCancel, submitting }) {
+export default function AdjustmentForm({ expense, onSubmit, onCancel, submitting, approvers = [] }) {
   const [form, setForm] = useState({ adjustmentType: 'decrease', amount: '', reason: '', effectiveDate: new Date().toISOString().slice(0, 10) });
   const [error, setError] = useState('');
+  const [assignedReviewerId, setAssignedReviewerId] = useState('');
   const submit = (event) => {
     event.preventDefault();
     if (form.adjustmentType !== 'reversal' && (!form.amount || Number(form.amount) <= 0)) return setError('Enter an adjustment amount greater than zero.');
@@ -17,6 +19,7 @@ export default function AdjustmentForm({ expense, onSubmit, onCancel, submitting
       amount: form.adjustmentType === 'reversal' ? expense.amount : form.amount,
       effectiveDate: new Date(`${form.effectiveDate}T12:00:00.000Z`).toISOString(),
       submit: true,
+      assignedReviewerId,
     });
   };
   return (
@@ -45,6 +48,7 @@ export default function AdjustmentForm({ expense, onSubmit, onCancel, submitting
         <Form.Label>Reason *</Form.Label>
         <Form.Control as="textarea" rows={4} maxLength={2000} value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} required />
       </Form.Group>
+      <ApproverPicker approvers={approvers} kind="adjustment" value={assignedReviewerId} onChange={setAssignedReviewerId} />
       <div className="d-flex justify-content-end gap-2">
         <Button variant="secondary" onClick={onCancel}>Cancel</Button>
         <Button type="submit" variant="primary" disabled={submitting}>{submitting ? <Spinner size="sm" animation="border" /> : 'Submit adjustment'}</Button>
