@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, Form, Button, Row, Col, Alert } from 'react-bootstrap';
@@ -72,7 +73,7 @@ export default function EditComponentPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch(`/api/components/${params.componentId}`, {
+      const response = await authenticatedFetch(`/api/components/${params.componentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

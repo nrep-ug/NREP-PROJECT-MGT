@@ -7,14 +7,18 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, Query, DB_ID, ID } from '@/lib/appwriteAdmin';
-import { verifyStaffAccess, verifyAdminAccess, verifyProjectAccess, verifyProjectMembership } from '@/lib/authHelpers';
+import { verifyProjectAccess, verifyProjectMembership } from '@/lib/authHelpers';
 import { getProjectDocPermissions } from '@/lib/rbac';
+import { authenticateRequest, forbidOtherOrganization, isStaffContext } from '@/lib/routeAuth';
 
 const COL_TASKS = COLLECTIONS.TASKS;
 const COL_PROJECTS = COLLECTIONS.PROJECTS;
 
 export async function POST(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id: projectId } = await params;
     const body = await request.json();
     const {
@@ -27,29 +31,29 @@ export async function POST(request, { params }) {
       startDate,
       dueDate,
       assignedTo,
-      createdBy
     } = body;
+    // The creator is always the authenticated caller.
+    const createdBy = context.accountId;
 
     if (!projectId) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
     }
 
-    if (!title || !createdBy) {
-      return NextResponse.json({ error: 'Title and createdBy are required' }, { status: 400 });
+    if (!title) {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
-    // Verify user has access
-    const isStaff = await verifyStaffAccess(createdBy);
-    if (!isStaff) {
+    if (!isStaffContext(context)) {
       return NextResponse.json({ error: 'Forbidden: Only staff members can create tasks' }, { status: 403 });
     }
 
     // Get project details to set correct permissions
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     // Verify user is a member of this project team (or an admin)
-    const isAdmin = await verifyAdminAccess(createdBy);
-    if (!isAdmin) {
+    if (!context.isAdmin) {
       const isMember = await verifyProjectMembership(createdBy, project.projectTeamId);
       if (!isMember) {
         return NextResponse.json({ error: 'Forbidden: You must be assigned to this project to create tasks' }, { status: 403 });
@@ -96,23 +100,24 @@ export async function POST(request, { params }) {
  */
 export async function GET(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id: projectId } = await params;
     const { searchParams } = new URL(request.url);
     const includeCompleted = searchParams.get('includeCompleted') === 'true';
-    const requesterId = searchParams.get('requesterId');
 
     if (!projectId) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
     }
 
-    if (!requesterId) {
-      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
-    }
-
-    const isStaff = await verifyStaffAccess(requesterId);
-    if (!isStaff) {
+    if (!isStaffContext(context)) {
       return NextResponse.json({ error: 'Forbidden: Only staff members can view tasks' }, { status: 403 });
     }
+
+    const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     // Build queries
     const queries = [Query.equal('projectId', projectId)];
@@ -150,6 +155,9 @@ export async function GET(request, { params }) {
  */
 export async function PUT(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id: projectId } = await params;
     const body = await request.json();
     const {
@@ -163,12 +171,13 @@ export async function PUT(request, { params }) {
       startDate,
       dueDate,
       assignedTo,
-      updatedBy
     } = body;
+    // The editor is always the authenticated caller.
+    const updatedBy = context.accountId;
 
-    if (!projectId || !taskId || !updatedBy) {
+    if (!projectId || !taskId) {
       return NextResponse.json(
-        { error: 'projectId, taskId, and updatedBy are required' },
+        { error: 'projectId and taskId are required' },
         { status: 400 }
       );
     }
@@ -181,8 +190,10 @@ export async function PUT(request, { params }) {
     }
 
     // Authorization: admin, project manager, creator, or assignee
-    const isAdmin = await verifyAdminAccess(updatedBy);
+    const isAdmin = context.isAdmin;
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
     const isProjectManager = await verifyProjectAccess(updatedBy, project.projectTeamId, ['owner', 'manager']);
     const isCreator = task.createdBy === updatedBy;
     const isAssignee = task.assignedTo && task.assignedTo.includes(updatedBy);
@@ -229,14 +240,17 @@ export async function PUT(request, { params }) {
  */
 export async function DELETE(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id: projectId } = await params;
     const { searchParams } = new URL(request.url);
     const taskId = searchParams.get('taskId');
-    const requesterId = searchParams.get('requesterId');
+    const requesterId = context.accountId;
 
-    if (!projectId || !taskId || !requesterId) {
+    if (!projectId || !taskId) {
       return NextResponse.json(
-        { error: 'projectId, taskId, and requesterId are required' },
+        { error: 'projectId and taskId are required' },
         { status: 400 }
       );
     }
@@ -249,9 +263,12 @@ export async function DELETE(request, { params }) {
     }
 
     // Authorization: admin, project manager, or creator
-    const isAdmin = await verifyAdminAccess(requesterId);
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
-    const isProjectManager = await verifyProjectAccess(requesterId, project.projectTeamId, ['owner', 'manager']);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
+    const isAdmin = context.isAdmin;
+    const isProjectManager = isAdmin
+      || await verifyProjectAccess(requesterId, project.projectTeamId, ['owner', 'manager']);
     const isCreator = task.createdBy === requesterId;
 
     if (!isAdmin && !isProjectManager && !isCreator) {

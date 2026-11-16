@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, Button, Row, Col, Badge, Alert, Table, Form, Modal } from 'react-bootstrap';
@@ -51,7 +52,7 @@ export default function TeamMemberDetailPage() {
       setProject(projectDoc);
 
       // Load member from project team
-      const membersResponse = await fetch(`/api/projects/${params.id}/members?requesterId=${requesterId}`);
+      const membersResponse = await authenticatedFetch(`/api/projects/${params.id}/members?requesterId=${requesterId}`);
       const membersData = await membersResponse.json();
 
       if (membersResponse.ok) {
@@ -103,7 +104,7 @@ export default function TeamMemberDetailPage() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/projects/${params.id}/members/update-roles`, {
+      const response = await authenticatedFetch(`/api/projects/${params.id}/members/update-roles`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

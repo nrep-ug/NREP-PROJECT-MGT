@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { Button, Card, Row, Col, Dropdown, Modal, Form, Badge, Breadcrumb, InputGroup, Spinner } from 'react-bootstrap';
 import { databases, storage, Query, COLLECTIONS, DB_ID, BUCKET_DOCS, ID } from '@/lib/appwriteClient';
@@ -84,7 +85,7 @@ export default function ProjectDocumentsNew({ project, user, showToast, canManag
   const loadStaffAndClients = async () => {
     try {
       // Load staff members from project team
-      const teamResponse = await fetch(`/api/projects/${project.$id}/members?requesterId=${requesterId}`);
+      const teamResponse = await authenticatedFetch(`/api/projects/${project.$id}/members?requesterId=${requesterId}`);
       if (teamResponse.ok) {
         const teamData = await teamResponse.json();
         // Filter out clients from staff members list

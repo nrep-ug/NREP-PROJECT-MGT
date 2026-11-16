@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { Container, Row, Col, Card, Button, Form, Table, Badge, Alert, Spinner } from 'react-bootstrap';
@@ -94,7 +95,7 @@ export default function TimesheetReportsPage() {
   const loadProjects = async () => {
     try {
       const requesterId = user?.accountId || user?.authUser?.$id;
-      const response = await fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
+      const response = await authenticatedFetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
       const data = await response.json();
       if (response.ok) {
         setProjects(data.projects || []);

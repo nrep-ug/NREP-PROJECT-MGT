@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
@@ -92,7 +93,7 @@ export default function StaffTimesheetsPage() {
     const loadProjects = async () => {
         try {
             const requesterId = user?.accountId || user?.authUser?.$id;
-            const response = await fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
+            const response = await authenticatedFetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
             const data = await response.json();
             if (response.ok) {
                 const projectList = data.projects || [];

@@ -39,7 +39,7 @@ export default function ClientDetailsPage() {
             setClient(clientData.client);
 
             // Fetch Projects linked to this client
-            const projectsRes = await fetch(`/api/projects?organizationId=${user.organizationId}&clientId=${params.id}&requesterId=${requesterId}`);
+            const projectsRes = await authenticatedFetch(`/api/projects?organizationId=${user.organizationId}&clientId=${params.id}&requesterId=${requesterId}`);
             if (projectsRes.ok) {
                 const projectsData = await projectsRes.json();
                 setProjects(projectsData.projects || []);

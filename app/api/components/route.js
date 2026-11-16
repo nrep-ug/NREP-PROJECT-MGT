@@ -6,42 +6,38 @@
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, ID, DB_ID } from '@/lib/appwriteAdmin';
 import { getProjectDocPermissions } from '@/lib/rbac';
-import { verifyStaffAccess, verifyAdminAccess, verifyProjectMembership } from '@/lib/authHelpers';
+import { verifyProjectMembership } from '@/lib/authHelpers';
+import { authenticateRequest, forbidOtherOrganization, isStaffContext } from '@/lib/routeAuth';
 
 const COL_COMPONENTS = COLLECTIONS.PROJECT_COMPONENTS;
+const COL_PROJECTS = COLLECTIONS.PROJECTS;
 
 export async function POST(request) {
     try {
-        const body = await request.json();
-        const {
-            projectId,
-            organizationId,
-            projectTeamId,
-            name,
-            description,
-            leaderId,
-            requesterId
-        } = body;
+        const { context, response: authError } = await authenticateRequest(request);
+        if (authError) return authError;
 
-        console.log(body);
-
-        if (!requesterId) {
-            return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
-        }
-
-        const isStaff = await verifyStaffAccess(requesterId);
-        if (!isStaff) {
+        if (!isStaffContext(context)) {
             return NextResponse.json({ error: 'Forbidden: Only staff members can create components' }, { status: 403 });
         }
+
+        const body = await request.json();
+        const { projectId, name, description, leaderId } = body;
 
         if (!projectId || !name || !name.trim()) {
             return NextResponse.json({ error: 'projectId and name are required' }, { status: 400 });
         }
 
+        // Team and organization come from the stored project, never from the request body,
+        // so membership of one project cannot be used to write into another.
+        const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+        const orgError = forbidOtherOrganization(context, project.organizationId);
+        if (orgError) return orgError;
+        const { organizationId, projectTeamId } = project;
+
         // Verify user is a member of this project team (or an admin)
-        const isAdmin = await verifyAdminAccess(requesterId);
-        if (!isAdmin) {
-            const isMember = await verifyProjectMembership(requesterId, projectTeamId);
+        if (!context.isAdmin) {
+            const isMember = await verifyProjectMembership(context.accountId, projectTeamId);
             if (!isMember) {
                 return NextResponse.json({ error: 'Forbidden: You must be assigned to this project to create components' }, { status: 403 });
             }

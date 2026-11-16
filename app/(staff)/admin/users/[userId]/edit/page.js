@@ -132,7 +132,7 @@ export default function EditUserPage() {
       // Fetching all projects for now might be heavy if there are many, 
       // but for filtering purposes we need them available.
       // Better approach: Fetch projects where organizationId == admin's org (already doing this for scoped access)
-      const projectsResponse = await fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
+      const projectsResponse = await authenticatedFetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
       if (projectsResponse.ok) {
         const data = await projectsResponse.json();
         setProjects(data.projects || []);

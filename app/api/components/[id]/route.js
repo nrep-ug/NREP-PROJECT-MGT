@@ -6,24 +6,26 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, adminUsers, adminTeams, DB_ID } from '@/lib/appwriteAdmin';
-import { verifyAdminAccess } from '@/lib/authHelpers';
+import { authenticateRequest } from '@/lib/routeAuth';
 
 const COL_COMPONENTS = COLLECTIONS.PROJECT_COMPONENTS;
 const COL_PROJECTS = COLLECTIONS.PROJECTS;
 
 /**
- * Check if requester can manage a component (admin OR project manager/owner)
+ * Check if the authenticated caller can manage a component
+ * (admin of the component's organization OR project manager/owner/lead)
  */
-async function canManageComponent(componentId, requesterId) {
+async function canManageComponent(componentId, context) {
+  const requesterId = context?.accountId;
   if (!requesterId) return false;
   try {
-    // Admins can always manage
-    const isAdmin = await verifyAdminAccess(requesterId);
-    if (isAdmin) return true;
-
     // Get the component's project
     const component = await adminDatabases.getDocument(DB_ID, COL_COMPONENTS, componentId);
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, component.projectId);
+    if (project.organizationId && project.organizationId !== context.organizationId) return false;
+
+    // Admins can always manage within their organization
+    if (context.isAdmin) return true;
     if (!project.projectTeamId) return false;
 
     // Check if user is a manager, owner, or lead in the project team
@@ -40,19 +42,18 @@ async function canManageComponent(componentId, requesterId) {
 
 export async function PATCH(request, { params }) {
     try {
+        const { context, response: authError } = await authenticateRequest(request);
+        if (authError) return authError;
+
         const { id } = await params;
         const body = await request.json();
-        const { name, description, leaderId, requesterId } = body;
+        const { name, description, leaderId } = body;
 
         if (!id) {
             return NextResponse.json({ error: 'Component ID is required' }, { status: 400 });
         }
 
-        if (!requesterId) {
-            return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
-        }
-
-        const allowed = await canManageComponent(id, requesterId);
+        const allowed = await canManageComponent(id, context);
         if (!allowed) {
             return NextResponse.json({ error: 'Forbidden: Insufficient permissions to update this component' }, { status: 403 });
         }
@@ -78,19 +79,16 @@ export async function PATCH(request, { params }) {
 
 export async function DELETE(request, { params }) {
     try {
+        const { context, response: authError } = await authenticateRequest(request);
+        if (authError) return authError;
+
         const { id } = await params;
-        const { searchParams } = new URL(request.url);
-        const requesterId = searchParams.get('requesterId');
 
         if (!id) {
             return NextResponse.json({ error: 'Component ID is required' }, { status: 400 });
         }
 
-        if (!requesterId) {
-            return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
-        }
-
-        const allowed = await canManageComponent(id, requesterId);
+        const allowed = await canManageComponent(id, context);
         if (!allowed) {
             return NextResponse.json({ error: 'Forbidden: Insufficient permissions to delete this component' }, { status: 403 });
         }

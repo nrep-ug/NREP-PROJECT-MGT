@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, Button, Modal, Form, Alert } from 'react-bootstrap';
@@ -82,7 +83,7 @@ export default function ProjectSettingsPage() {
         setSubmitting(true);
 
         try {
-            const response = await fetch(`/api/projects/${project.$id}?requesterId=${user.authUser.$id}`, {
+            const response = await authenticatedFetch(`/api/projects/${project.$id}?requesterId=${user.authUser.$id}`, {
                 method: 'DELETE',
             });
 

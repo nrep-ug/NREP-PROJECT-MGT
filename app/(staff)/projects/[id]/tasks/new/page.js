@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Card, Form, Button, Row, Col, Alert, Badge, Dropdown } from 'react-bootstrap';
@@ -81,7 +82,7 @@ function NewTaskContent() {
       setMilestones(milestonesResponse.documents);
 
       // Load project members
-      const membersResponse = await fetch(`/api/projects/${params.id}/members?requesterId=${requesterId}`);
+      const membersResponse = await authenticatedFetch(`/api/projects/${params.id}/members?requesterId=${requesterId}`);
       const membersData = await membersResponse.json();
       if (membersResponse.ok) {
         setProjectMembers(membersData.members || []);
@@ -206,7 +207,7 @@ function NewTaskContent() {
     setSubmitting(true);
 
     try {
-      const response = await fetch(`/api/projects/${project.$id}/tasks`, {
+      const response = await authenticatedFetch(`/api/projects/${project.$id}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

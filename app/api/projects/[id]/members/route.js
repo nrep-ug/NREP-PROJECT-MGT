@@ -8,7 +8,8 @@
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
 const COL_ROLES = COLLECTIONS.PROJECT_ROLES;
-import { verifyManagerAccess, verifyProjectAccess, verifyStaffAccess } from '@/lib/authHelpers';
+import { verifyProjectAccess } from '@/lib/authHelpers';
+import { authenticateRequest, forbidOtherOrganization, isStaffContext } from '@/lib/routeAuth';
 
 const COL_PROJECTS = COLLECTIONS.PROJECTS;
 const COL_USERS = COLLECTIONS.USERS;
@@ -19,17 +20,13 @@ const COL_USERS = COLLECTIONS.USERS;
  */
 export async function GET(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id } = await params;
     const projectId = id;
-    const { searchParams } = new URL(request.url);
-    const requesterId = searchParams.get('requesterId');
 
-    if (!requesterId) {
-      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
-    }
-
-    const isStaff = await verifyStaffAccess(requesterId);
-    if (!isStaff) {
+    if (!isStaffContext(context)) {
       return NextResponse.json({ error: 'Forbidden: Only staff members can view project members' }, { status: 403 });
     }
 
@@ -39,6 +36,8 @@ export async function GET(request, { params }) {
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     // Get team memberships
     const memberships = await adminTeams.listMemberships(project.projectTeamId);
@@ -93,20 +92,22 @@ export async function GET(request, { params }) {
  */
 export async function POST(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id } = await params;
     const projectId = id;
     const body = await request.json();
     const {
       userId, // Account ID of the user to add
       roles, // Project roles to assign (e.g., ['contributor', 'viewer'])
-      requesterId, // ID of the user making the request
-      organizationId
     } = body;
+    const requesterId = context.accountId;
 
     // Validate required fields
-    if (!userId || !roles || !requesterId || !organizationId) {
+    if (!userId || !Array.isArray(roles) || roles.length === 0) {
       return NextResponse.json(
-        { error: 'Missing required fields: userId, roles, requesterId, organizationId' },
+        { error: 'Missing required fields: userId, roles' },
         { status: 400 }
       );
     }
@@ -132,10 +133,13 @@ export async function POST(request, { params }) {
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     // Verify requester has manager access in org OR owner/manager role in project
-    const isOrgManager = await verifyManagerAccess(requesterId);
-    const isProjectManager = await verifyProjectAccess(requesterId, project.projectTeamId, ['owner', 'manager']);
+    const isOrgManager = context.isManager;
+    const isProjectManager = isOrgManager
+      || await verifyProjectAccess(requesterId, project.projectTeamId, ['owner', 'manager']);
 
     if (!isOrgManager && !isProjectManager) {
       return NextResponse.json(
@@ -162,6 +166,12 @@ export async function POST(request, { params }) {
     }
 
     const userProfile = userProfiles.documents[0];
+    if (userProfile.organizationId !== context.organizationId) {
+      return NextResponse.json(
+        { error: 'Forbidden: user belongs to another organization' },
+        { status: 403 }
+      );
+    }
 
     // Add user to project team
     try {
@@ -204,16 +214,18 @@ export async function POST(request, { params }) {
  */
 export async function DELETE(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id } = await params;
     const projectId = id;
     const { searchParams } = new URL(request.url);
     const membershipId = searchParams.get('membershipId');
-    const requesterId = searchParams.get('requesterId');
-    const organizationId = searchParams.get('organizationId');
+    const requesterId = context.accountId;
 
-    if (!membershipId || !requesterId || !organizationId) {
+    if (!membershipId) {
       return NextResponse.json(
-        { error: 'Missing required parameters: membershipId, requesterId, organizationId' },
+        { error: 'Missing required parameter: membershipId' },
         { status: 400 }
       );
     }
@@ -224,10 +236,13 @@ export async function DELETE(request, { params }) {
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     // Verify requester has manager access
-    const isOrgManager = await verifyManagerAccess(requesterId);
-    const isProjectManager = await verifyProjectAccess(requesterId, project.projectTeamId, ['owner', 'manager']);
+    const isOrgManager = context.isManager;
+    const isProjectManager = isOrgManager
+      || await verifyProjectAccess(requesterId, project.projectTeamId, ['owner', 'manager']);
 
     if (!isOrgManager && !isProjectManager) {
       return NextResponse.json(

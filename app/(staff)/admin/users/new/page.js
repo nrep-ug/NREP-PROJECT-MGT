@@ -57,7 +57,7 @@ export default function NewUserPage() {
       // Parallel data fetching
       const [orgsRes, projectsRes, supervisorsRes] = await Promise.all([
         authenticatedFetch('/api/admin/organizations?type=client'),
-        fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`),
+        authenticatedFetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`),
         databases.listDocuments(
           DB_ID,
           COLLECTIONS.USERS,

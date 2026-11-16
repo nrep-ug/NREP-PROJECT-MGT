@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, Form, Button, Row, Col, Alert } from 'react-bootstrap';
@@ -40,7 +41,7 @@ export default function NewComponentPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch('/api/components', {
+      const response = await authenticatedFetch('/api/components', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

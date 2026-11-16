@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, Badge, Row, Col, InputGroup, Form } from 'react-bootstrap';
@@ -14,7 +15,7 @@ export default function ProjectComponents({ project, user, showToast, canModify,
         if (!confirm('Are you sure you want to delete this component?')) return;
 
         try {
-            const response = await fetch(`/api/components/${componentId}?requesterId=${user.authUser.$id}`, {
+            const response = await authenticatedFetch(`/api/components/${componentId}?requesterId=${user.authUser.$id}`, {
                 method: 'DELETE',
             });
 

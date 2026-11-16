@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Form, Button, Row, Col, Alert } from 'react-bootstrap';
@@ -96,7 +97,7 @@ export default function NewProjectPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch('/api/projects', {
+      const response = await authenticatedFetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

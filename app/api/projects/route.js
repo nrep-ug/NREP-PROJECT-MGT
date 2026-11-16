@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, adminTeams, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
-import { verifyAdminAccess, verifyStaffAccess } from '@/lib/authHelpers';
+import { authenticateRequest, isStaffContext } from '@/lib/routeAuth';
 import { getProjectDocPermissions } from '@/lib/rbac';
 import { getDefaultRoleDocuments } from '@/lib/projectRoles';
 
@@ -16,22 +16,16 @@ const COL_ROLES = COLLECTIONS.PROJECT_ROLES;
 
 export async function GET(request) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
+    // Always scope to the caller's own organization; a client-supplied value is ignored.
+    const organizationId = context.organizationId;
     const status = searchParams.get('status');
     const clientId = searchParams.get('clientId');
-    const requesterId = searchParams.get('requesterId');
 
-    if (!organizationId) {
-      return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
-    }
-
-    if (!requesterId) {
-      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
-    }
-
-    const isStaff = await verifyStaffAccess(requesterId);
-    if (!isStaff) {
+    if (!isStaffContext(context)) {
       return NextResponse.json({ error: 'Forbidden: Only staff members can list projects' }, { status: 403 });
     }
 
@@ -54,9 +48,18 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
+    if (!context.isAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only administrators can create projects' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
-      organizationId,
       clientId,
       code,
       name,
@@ -66,29 +69,14 @@ export async function POST(request) {
       status,
       budgetAmount,
       budgetCurrency,
-      createdBy,
-      requesterId, // ID of the user making the request (for authorization)
       components // Array of components to create
     } = body;
+    // Organization and creator come from the verified session, never the body.
+    const organizationId = context.organizationId;
+    const createdBy = context.accountId;
 
-    if (!organizationId || !code || !name || !createdBy) {
+    if (!code || !name) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    // Verify requester has admin access
-    if (!requesterId) {
-      return NextResponse.json(
-        { error: 'Unauthorized: requesterId is required' },
-        { status: 401 }
-      );
-    }
-
-    const isAdmin = await verifyAdminAccess(requesterId);
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Forbidden: Only administrators can create projects' },
-        { status: 403 }
-      );
     }
 
     // 1. Create project team

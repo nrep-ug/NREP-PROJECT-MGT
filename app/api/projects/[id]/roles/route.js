@@ -6,25 +6,26 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, ID, Query, DB_ID } from '@/lib/appwriteAdmin';
-import { verifyStaffAccess, verifyAdminAccess, verifyProjectMembership } from '@/lib/authHelpers';
+import { verifyProjectMembership } from '@/lib/authHelpers';
+import { authenticateRequest, forbidOtherOrganization, isStaffContext } from '@/lib/routeAuth';
 
 const COL_ROLES = COLLECTIONS.PROJECT_ROLES;
 const COL_PROJECTS = COLLECTIONS.PROJECTS;
 
 export async function GET(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id: projectId } = await params;
-    const { searchParams } = new URL(request.url);
-    const requesterId = searchParams.get('requesterId');
 
-    if (!requesterId) {
-      return NextResponse.json({ error: 'requesterId is required' }, { status: 401 });
-    }
-
-    const isStaff = await verifyStaffAccess(requesterId);
-    if (!isStaff) {
+    if (!isStaffContext(context)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+
+    const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     const roles = await adminDatabases.listDocuments(DB_ID, COL_ROLES, [
       Query.equal('projectId', projectId),
@@ -41,21 +42,24 @@ export async function GET(request, { params }) {
 
 export async function POST(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id: projectId } = await params;
     const body = await request.json();
-    const { slug, name, description, color, permissions, priority, isStaffRole, requesterId } = body;
+    const { slug, name, description, color, permissions, priority, isStaffRole } = body;
+    const requesterId = context.accountId;
 
-    if (!requesterId) {
-      return NextResponse.json({ error: 'requesterId is required' }, { status: 401 });
-    }
     if (!slug || !name) {
       return NextResponse.json({ error: 'slug and name are required' }, { status: 400 });
     }
 
+    const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
+
     // Verify requester is org admin OR project manager/owner
-    const isAdmin = await verifyAdminAccess(requesterId);
-    if (!isAdmin) {
-      const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+    if (!context.isAdmin) {
       const isManager = await verifyProjectMembership(requesterId, project.projectTeamId, ['manager', 'owner']);
       if (!isManager) {
         return NextResponse.json({ error: 'Only admins or project managers can create roles' }, { status: 403 });

@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -95,7 +96,7 @@ export default function EditProjectPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch(`/api/projects/${params.id}`, {
+      const response = await authenticatedFetch(`/api/projects/${params.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
