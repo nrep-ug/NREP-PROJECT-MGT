@@ -4,8 +4,9 @@
   min-height: 100dvh;
   margin-inline-start: var(--sidebar-current-width, var(--sidebar-width));
   background:
-    radial-gradient(circle at 100% 0%, rgba(var(--nrep-blue-rgb), 0.07), transparent 28rem),
-    var(--nrep-page-bg);
+    radial-gradient(circle at 100% 0%, rgba(20, 184, 166, 0.10), transparent 32rem),
+    radial-gradient(circle at 0% 100%, rgba(5, 70, 83, 0.06), transparent 30rem),
+    #EAF1F2;
   transition: margin-inline-start var(--transition-slow) var(--ease-standard);
 }
 
@@ -28,8 +29,8 @@
   overflow: hidden;
   color: var(--nrep-white);
   background:
-    radial-gradient(circle at 15% 0%, rgba(var(--nrep-blue-rgb), 0.3), transparent 17rem),
-    linear-gradient(165deg, #245d75 0%, #124b5d 48%, #07343e 100%);
+    radial-gradient(circle at 15% 0%, rgba(20, 184, 166, 0.22), transparent 17rem),
+    linear-gradient(170deg, #075E6F 0%, #054653 52%, #03333D 100%);
   border-inline-end: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 6px 0 28px rgba(7, 52, 62, 0.16);
   transition:
@@ -51,7 +52,7 @@
   min-width: 0;
   align-items: center;
   gap: var(--space-3);
-  padding-inline-end: var(--space-6);
+  padding-inline-end: 2.75rem; /* room for the collapse button */
 }
 
 .sidebarBrandCollapsed {
@@ -125,31 +126,40 @@
   border-radius: var(--radius-pill);
 }
 
+.accountBlock {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.1);
+}
+
 .userPanel {
   display: flex;
+  min-height: 46px;
   flex: 0 0 auto;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4);
-  background: rgba(0, 0, 0, 0.08);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.68rem 0.78rem; /* same as a menu row (Log out) */
 }
 
 .userAvatar {
   display: inline-flex;
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 1.45rem;
+  height: 1.45rem;
+  flex: 0 0 1.45rem;
   align-items: center;
   justify-content: center;
-  color: #163b49;
-  font-size: 1.05rem;
+  color: #ffffff;
+  font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
-  background: linear-gradient(135deg, #ffffff 0%, #dff3fb 100%);
-  border: 2px solid rgba(var(--nrep-orange-rgb), 0.72);
-  border-radius: var(--radius-md);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  background: #14B8A6;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: none;
 }
 
 .userDetails {
@@ -162,8 +172,8 @@
 .userName {
   overflow: hidden;
   color: var(--nrep-white);
-  font-size: 0.91rem;
-  font-weight: 700;
+  font-size: 0.88rem;
+  font-weight: 600;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -183,16 +193,14 @@
   display: flex;
   flex: 0 0 auto;
   justify-content: center;
-  padding: var(--space-3) var(--space-2);
-  background: rgba(0, 0, 0, 0.08);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: var(--space-1) 0;
 }
 
 .userAvatarCollapsed {
-  width: 40px;
-  height: 40px;
-  flex-basis: 40px;
-  font-size: 0.95rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex-basis: 1.6rem;
+  font-size: 0.75rem;
 }
 
 .sidebarNav {
@@ -265,7 +273,7 @@
   color: var(--nrep-white);
   background: rgba(255, 255, 255, 0.14);
   border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: inset 3px 0 0 var(--nrep-orange);
+  box-shadow: none;
   transform: none;
 }
 
@@ -318,19 +326,20 @@
 .sidebarToggle {
   position: fixed;
   z-index: 1050;
-  top: var(--space-5);
-  left: calc(var(--sidebar-current-width, var(--sidebar-width)) - var(--space-4));
+  /* Vertically centred on the 46px logo: header padding + 23px - half of 30px. */
+  top: calc(var(--space-4) + 8px);
+  left: calc(var(--sidebar-current-width, var(--sidebar-width)) - 15px);
   display: inline-flex;
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   align-items: center;
   justify-content: center;
   padding: 0;
-  color: var(--nrep-deep-blue);
-  font-size: 1.1rem;
+  color: #054653;
+  font-size: 0.85rem;
   background: var(--nrep-white);
   border: 1px solid var(--nrep-border);
-  border-radius: var(--radius-md);
+  border-radius: 999px;
   box-shadow: 0 5px 16px rgba(23, 38, 45, 0.16);
   transition:
     left var(--transition-slow) var(--ease-standard),
@@ -340,9 +349,18 @@
     transform var(--transition-base) var(--ease-standard);
 }
 
+/* Expanded desktop sidebar: the button sits inside the header, right-aligned. */
+.sidebarToggleInside {
+  left: calc(var(--sidebar-width) - 30px - var(--space-3));
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+}
+
 .sidebarToggle:hover {
   color: var(--nrep-white);
-  background: var(--nrep-deep-blue);
+  background: #054653;
   border-color: rgba(255, 255, 255, 0.56);
   transform: translateY(-1px);
 }
@@ -398,6 +416,10 @@
   .sidebarToggle {
     top: var(--space-4);
     left: var(--space-4);
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
+    border-radius: var(--radius-md);
   }
 
   .sidebarToggleMobileOpen {

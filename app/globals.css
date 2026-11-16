@@ -18,6 +18,10 @@
   --nrep-page-bg: #F5F8FA;
   --nrep-card-bg: #FFFFFF;
   --nrep-border: #DBE7EC;
+  /* Cards app-wide (home-screen look): teal-tinted border + soft shadow. */
+  --nrep-card-border: #B7D3D8;
+  --nrep-card-border-width: 1.5px;
+  --nrep-card-shadow: 0 1px 2px rgba(5, 70, 83, 0.06), 0 8px 24px rgba(5, 70, 83, 0.07);
   --nrep-text: #17262D;
   --nrep-muted: #667982;
   --nrep-soft-blue: #EAF6FB;
@@ -547,4 +551,11 @@ code {
   .sidebar-overlay {
     animation-duration: 0.01ms !important;
   }
+}
+
+/* Bootstrap cards on older pages get the same card look (border-0 still wins). */
+.card {
+  border: var(--nrep-card-border-width) solid var(--nrep-card-border);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: var(--nrep-card-shadow);
 }

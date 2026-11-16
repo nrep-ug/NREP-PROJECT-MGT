@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { Card, Row, Col, Badge, ListGroup } from 'react-bootstrap';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,7 +45,7 @@ export default function UserProfileView({ user, showAdminControls = false }) {
 
             // Fetch Projects
             const projectsPromiseFixed = user.projectIds?.length > 0
-                ? Promise.all(user.projectIds.map(id => fetch(`/api/projects/${id}?requesterId=${requesterId}`).then(r => r.json()).then(d => d.project).catch(() => null)))
+                ? Promise.all(user.projectIds.map(id => authenticatedFetch(`/api/projects/${id}?requesterId=${requesterId}`).then(r => r.json()).then(d => d.project).catch(() => null)))
                 : Promise.resolve([]);
 
             const [orgsResults, projectsResults] = await Promise.all([orgsPromise, projectsPromiseFixed]);
@@ -119,7 +120,7 @@ export default function UserProfileView({ user, showAdminControls = false }) {
             <Row className="g-4">
                 {/* Left Column: Contact & Personal Info */}
                 <Col md={4}>
-                    <Card className="border-0 shadow-sm mb-4 h-100">
+                    <Card className="h-100">
                         <Card.Header className="bg-white py-3 border-bottom">
                             <h5 className="mb-0 fw-bold">Contact Info</h5>
                         </Card.Header>
@@ -150,16 +151,16 @@ export default function UserProfileView({ user, showAdminControls = false }) {
                 {/* Right Column: Role Specific Details */}
                 <Col md={8}>
                     {user.userType === 'staff' ? (
-                        <Card className="border-0 shadow-sm mb-4">
+                        <Card className="h-100">
                             <Card.Header className="bg-white py-3 border-bottom">
                                 <h5 className="mb-0 fw-bold">System Privileges</h5>
                             </Card.Header>
                             <Card.Body>
                                 <Row className="g-3">
                                     <Col md={6}>
-                                        <div className="p-3 bg-light rounded border">
+                                        <div className="p-3 rounded h-100" style={{ background: 'linear-gradient(160deg, #E6F0F2 0%, #fff 70%)', border: '2px solid rgba(5, 70, 83, 0.45)' }}>
                                             <div className="d-flex align-items-center mb-2">
-                                                <i className="bi bi-shield-check text-primary fs-4 me-2"></i>
+                                                <i className="bi bi-shield-check fs-4 me-2" style={{ color: '#054653' }}></i>
                                                 <span className="fw-bold">Role Access</span>
                                             </div>
                                             <div>
@@ -170,9 +171,9 @@ export default function UserProfileView({ user, showAdminControls = false }) {
                                         </div>
                                     </Col>
                                     <Col md={6}>
-                                        <div className="p-3 bg-light rounded border">
+                                        <div className="p-3 rounded h-100" style={{ background: 'linear-gradient(160deg, #E6F7F5 0%, #fff 70%)', border: '2px solid rgba(20, 184, 166, 0.55)' }}>
                                             <div className="d-flex align-items-center mb-2">
-                                                <i className="bi bi-person-check text-success fs-4 me-2"></i>
+                                                <i className="bi bi-person-check fs-4 me-2" style={{ color: '#14B8A6' }}></i>
                                                 <span className="fw-bold">Supervisor Status</span>
                                             </div>
                                             <div>
@@ -195,8 +196,7 @@ export default function UserProfileView({ user, showAdminControls = false }) {
                                             </div>
                                             <div>
                                                 <div className="fw-bold">{user.supervisorName || 'Supervisor Assigned'}</div>
-                                                {user.supervisorName && <div className="text-muted small">ID: {user.supervisorId}</div>}
-                                                {!user.supervisorName && <div className="text-muted small">ID: {user.supervisorId}</div>}
+                                                <div className="text-muted small">Supervisor</div>
                                             </div>
                                         </div>
                                     </div>

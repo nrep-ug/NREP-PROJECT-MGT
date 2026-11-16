@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Row, Col, Card, Alert, Button } from 'react-bootstrap';
+import { Row, Col, Card, Button } from 'react-bootstrap';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { databases, Query, COLLECTIONS, DB_ID } from '@/lib/appwriteClient';
+import { useDashboardStats, useMyWork, useRecentProjects, useUpcomingActivities } from '@/hooks/useDashboard';
 import { formatDate, formatHours, getWeekStart, getWeekEnd } from '@/lib/date';
 import AppLayout from '@/components/AppLayout';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -31,6 +30,21 @@ const TASK_STATUS_ICONS = {
   blocked: 'exclamation-octagon',
 };
 
+/** Small, calm "couldn't load" line with a retry — used inside each card. */
+function InlineError({ label = 'Couldn’t load this right now.', onRetry, retrying }) {
+  return (
+    <div className={styles.inlineError} role="status">
+      <i className="bi bi-wifi-off" aria-hidden="true"></i>
+      <span>{label}</span>
+      {onRetry && (
+        <button type="button" className={styles.retryButton} onClick={onRetry} disabled={retrying}>
+          {retrying ? 'Retrying…' : 'Retry'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 const getDateTimestamp = (value) => {
   if (!value) return Number.POSITIVE_INFINITY;
   const timestamp = new Date(value).getTime();
@@ -52,144 +66,21 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
-  // Dashboard State
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  // Each section loads (and retries) independently.
+  const statsQuery = useDashboardStats(user);
+  const projectsQuery = useRecentProjects(user);
+  const activitiesQuery = useUpcomingActivities(user);
+  const myWorkQuery = useMyWork(user);
 
-  // Data State
-  const [stats, setStats] = useState({});
-  const [recentProjects, setRecentProjects] = useState([]);
-  const [upcomingMilestones, setUpcomingMilestones] = useState([]);
-  const [myTasks, setMyTasks] = useState([]);
-
-  useEffect(() => {
-    if (user) {
-      loadRoleBasedData();
-    }
-  }, [user]);
-
-  const loadRoleBasedData = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      // 1. Determine Role Scope
-      const isAdmin = user.isAdmin;
-      const isSupervisor = user.isSupervisor;
-      const userId = user.accountId || user.authUser?.$id;
-      const projectScope = user.organizationId
-        ? [Query.equal('organizationId', user.organizationId)]
-        : [];
-
-      const [projectsRes, activeProjectsRes, completedProjectsRes, milestonesRes] = await Promise.all([
-        databases.listDocuments(DB_ID, COLLECTIONS.PROJECTS, [
-          ...projectScope,
-          Query.orderDesc('$createdAt'),
-          Query.limit(5),
-        ]),
-        databases.listDocuments(DB_ID, COLLECTIONS.PROJECTS, [
-          ...projectScope,
-          Query.equal('status', 'active'),
-          Query.limit(1),
-        ]),
-        databases.listDocuments(DB_ID, COLLECTIONS.PROJECTS, [
-          ...projectScope,
-          Query.equal('status', 'completed'),
-          Query.limit(1),
-        ]),
-        databases.listDocuments(DB_ID, COLLECTIONS.MILESTONES, [
-          Query.equal('status', 'open'),
-          Query.limit(5),
-          Query.orderAsc('dueDate'),
-        ]),
-      ]);
-
-      const newStats = {
-        totalProjects: projectsRes.total,
-        activeProjects: activeProjectsRes.total,
-        completedProjects: completedProjectsRes.total,
-        openActivities: milestonesRes.total,
-      };
-
-      if (isAdmin) {
-        const userScope = user.organizationId
-          ? [Query.equal('organizationId', user.organizationId)]
-          : [];
-        const usersRes = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
-          ...userScope,
-          Query.limit(1),
-        ]);
-        newStats.totalUsers = usersRes.total;
-      }
-
-      if (isSupervisor) {
-        const teamRes = await databases.listDocuments(DB_ID, COLLECTIONS.USERS, [
-          Query.equal('supervisorId', userId),
-          Query.limit(1),
-        ]);
-        newStats.teamSize = teamRes.total;
-      }
-
-      if (!isAdmin && !isSupervisor) {
-        const myTasksRes = await databases.listDocuments(DB_ID, COLLECTIONS.TASKS, [
-          Query.contains('assignedTo', userId),
-          Query.notEqual('status', 'done'),
-          Query.limit(100),
-        ]);
-
-        const orderedTasks = [...myTasksRes.documents].sort((firstTask, secondTask) => {
-          const firstDueDate = getDateTimestamp(firstTask.dueDate);
-          const secondDueDate = getDateTimestamp(secondTask.dueDate);
-          if (firstDueDate === secondDueDate) return 0;
-          return firstDueDate - secondDueDate;
-        });
-
-        newStats.myOpenTasks = myTasksRes.total;
-        setMyTasks(orderedTasks.slice(0, 5));
-
-        try {
-          const currentWeekTimesheets = await databases.listDocuments(
-            DB_ID,
-            COLLECTIONS.TIMESHEETS,
-            [
-              Query.equal('accountId', userId),
-              Query.equal('weekStart', getWeekStart(new Date())),
-              Query.limit(1),
-            ]
-          );
-
-          const currentTimesheet = currentWeekTimesheets.documents[0];
-          if (!currentTimesheet) {
-            newStats.weeklyHours = 0;
-          } else {
-            const entriesRes = await databases.listDocuments(
-              DB_ID,
-              COLLECTIONS.TIMESHEET_ENTRIES,
-              [Query.equal('timesheetId', currentTimesheet.$id), Query.limit(500)]
-            );
-
-            newStats.weeklyHours = entriesRes.documents.reduce((total, entry) => {
-              const hours = Number(entry.hours);
-              return Number.isFinite(hours) ? total + hours : total;
-            }, 0);
-          }
-        } catch (timesheetError) {
-          console.error('Dashboard weekly hours load error:', timesheetError);
-          newStats.weeklyHours = null;
-        }
-      }
-
-      setStats(newStats);
-      setRecentProjects(projectsRes.documents);
-      setUpcomingMilestones(milestonesRes.documents);
-
-    } catch (err) {
-      console.error('Dashboard load error:', err);
-      setError('Some dashboard information could not be loaded. Please refresh and try again.');
-    } finally {
-      setLoading(false);
-    }
+  const myWork = myWorkQuery.data || {};
+  const stats = {
+    ...(statsQuery.data || {}),
+    myOpenTasks: myWork.openTaskCount,
+    weeklyHours: myWork.weeklyHours,
   };
+  const recentProjects = projectsQuery.data || [];
+  const upcomingMilestones = activitiesQuery.data || [];
+  const myTasks = myWork.tasks || [];
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -204,7 +95,7 @@ export default function DashboardPage() {
     return 'Staff Member';
   };
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
       <AppLayout user={user}>
         <LoadingSpinner message="Loading dashboard..." />
@@ -217,18 +108,31 @@ export default function DashboardPage() {
 
   // --- RENDER HELPERS ---
 
-  const renderStatsCard = (title, value, icon, tone = 'blue', subtext = null) => (
-    <Card className={`h-100 ${styles.statCard} ${STAT_CARD_TONES[tone] || styles.statCardBlue}`}>
-      <Card.Body className={styles.statCardBody}>
-        <div className={`mb-0 text-uppercase small fw-bold ${styles.statLabel}`}>{title}</div>
-        <div className={styles.statIcon} aria-hidden="true">
-          <i className={`bi bi-${icon}`}></i>
-        </div>
-        <div className={`mb-0 fw-bold ${styles.statValue}`}>{value}</div>
-        {subtext && <small className={styles.statSubtext}>{subtext}</small>}
-      </Card.Body>
-    </Card>
-  );
+  /** query = the TanStack query feeding this card (drives skeleton / retry state). */
+  const renderStatsCard = (title, value, icon, tone = 'blue', subtext = null, query = statsQuery) => {
+    const isLoading = query.isLoading;
+    const isError = query.isError && !query.isFetching;
+    return (
+      <Card className={`h-100 ${styles.statCard} ${STAT_CARD_TONES[tone] || styles.statCardBlue}`}>
+        <Card.Body className={styles.statCardBody}>
+          <div className={`mb-0 text-uppercase small fw-bold ${styles.statLabel}`}>{title}</div>
+          <div className={styles.statIcon} aria-hidden="true">
+            <i className={`bi bi-${icon}`}></i>
+          </div>
+          <div className={`mb-0 fw-bold ${styles.statValue}`}>
+            {isLoading ? <span className={styles.skeleton} aria-label="Loading" /> : (value ?? '—')}
+          </div>
+          {isError ? (
+            <button type="button" className={`${styles.statSubtext} ${styles.retryLink}`} onClick={() => query.refetch()}>
+              <i className="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Couldn’t load — retry
+            </button>
+          ) : (
+            subtext && <small className={styles.statSubtext}>{subtext}</small>
+          )}
+        </Card.Body>
+      </Card>
+    );
+  };
 
   return (
     <AppLayout user={user}>
@@ -265,16 +169,6 @@ export default function DashboardPage() {
         </Row>
       </div>
 
-      {error && (
-        <Alert variant="danger" className={styles.errorState} role="alert">
-          <i className="bi bi-exclamation-triangle" aria-hidden="true"></i>
-          <div>
-            <strong>Dashboard data unavailable</strong>
-            <span>{error}</span>
-          </div>
-        </Alert>
-      )}
-
       {/* Role-Based Stats Row */}
       <Row className="g-4 mb-4">
         {/* Admin Stats */}
@@ -299,8 +193,8 @@ export default function DashboardPage() {
         {/* Staff Stats */}
         {!user?.isAdmin && !user?.isSupervisor && (
           <>
-            <Col md={4}>{renderStatsCard('Weekly Hours', hasWeeklyHours ? formatHours(stats.weeklyHours) : '—', 'clock', 'blue', hasWeeklyHours ? 'Current Week' : 'Unavailable')}</Col>
-            <Col md={4}>{renderStatsCard('Open Tasks', stats.myOpenTasks ?? '—', 'list-check', 'orange')}</Col>
+            <Col md={4}>{renderStatsCard('Weekly Hours', hasWeeklyHours ? formatHours(stats.weeklyHours) : '—', 'clock', 'blue', hasWeeklyHours ? 'Current Week' : 'Unavailable', myWorkQuery)}</Col>
+            <Col md={4}>{renderStatsCard('Open Tasks', stats.myOpenTasks, 'list-check', 'orange', null, myWorkQuery)}</Col>
             <Col md={4}>{renderStatsCard('Projects', stats.totalProjects ?? '—', 'folder', 'green', 'Available to You')}</Col>
           </>
         )}
@@ -308,11 +202,30 @@ export default function DashboardPage() {
 
       <ManagerFinanceSnapshot user={user} />
 
-      <Row className="g-4">
+      <section className={styles.quickStrip} aria-labelledby="quick-actions-title">
+        <h2 id="quick-actions-title" className={styles.quickStripTitle}>Quick actions</h2>
+        <div className={styles.quickStripButtons}>
+          <button type="button" className={styles.quickPill} onClick={() => router.push('/projects')}>
+            <span className={styles.quickPillIcon} aria-hidden="true"><i className="bi bi-folder" /></span>Browse projects
+          </button>
+          {(user?.isAdmin || user?.isSupervisor) && (
+            <button type="button" className={styles.quickPill} onClick={() => router.push('/timesheets/team')}>
+              <span className={styles.quickPillIcon} aria-hidden="true"><i className="bi bi-people" /></span>Review timesheets
+            </button>
+          )}
+          {user?.isAdmin && (
+            <button type="button" className={styles.quickPill} onClick={() => router.push('/admin/users')}>
+              <span className={styles.quickPillIcon} aria-hidden="true"><i className="bi bi-gear" /></span>Manage users
+            </button>
+          )}
+        </div>
+      </section>
+
+      <Row className="g-4 align-items-stretch">
         {/* Main Content Area */}
-        <Col xl={8}>
+        <Col xl={8} className={styles.stackCol}>
           {/* Recent/My Projects */}
-          <Card className={`mb-4 ${styles.surfaceCard}`}>
+          <Card className={`${styles.surfaceCard} ${styles.fillCard}`}>
             <Card.Header className={`d-flex justify-content-between align-items-center ${styles.cardHeader}`}>
               <h5 className={`mb-0 fw-bold ${styles.sectionHeading}`}>
                 Recent Projects
@@ -321,6 +234,11 @@ export default function DashboardPage() {
             </Card.Header>
             <Card.Body className="p-0">
               <div className={styles.projectList}>
+                {recentProjects.length > 0 && (
+                  <div className={styles.projectHead} aria-hidden="true">
+                    <span>Project</span><span>Start</span><span>Deadline</span><span>Status</span>
+                  </div>
+                )}
                 {recentProjects.map(p => {
                   const statusClass = p.status === 'active' ? styles.projectStatusActive :
                     p.status === 'completed' ? styles.projectStatusCompleted :
@@ -335,49 +253,46 @@ export default function DashboardPage() {
                       className={styles.projectRow}
                       onClick={() => router.push(`/projects/${p.$id}`)}
                     >
-                      <span className={styles.projectRowTop}>
-                        <span className={styles.projectIdentity}>
-                          <span className={styles.projectIcon} aria-hidden="true">
-                            <i className="bi bi-folder"></i>
-                          </span>
-                          <span className={styles.projectCopy}>
-                            <span className={styles.projectName} title={p.name}>{p.name}</span>
-                            {p.code && <span className={styles.projectCode}>{p.code}</span>}
-                          </span>
+                      <span className={styles.projectIdentity}>
+                        <span className={styles.projectIcon} aria-hidden="true">
+                          <i className="bi bi-folder"></i>
                         </span>
+                        <span className={styles.projectCopy}>
+                          <span className={styles.projectName} title={p.name}>{p.name}</span>
+                          {p.code && <span className={styles.projectCode}>{p.code}</span>}
+                        </span>
+                      </span>
+                      <span className={styles.projectDateCell}>
+                        <span className={styles.projectDateLabel}>Start</span>
+                        {p.startDate ? formatDate(p.startDate) : '—'}
+                      </span>
+                      <span className={styles.projectDateCell}>
+                        <span className={styles.projectDateLabel}>Deadline</span>
+                        {p.endDate ? formatDate(p.endDate) : '—'}
+                      </span>
+                      <span className={styles.projectStatusCell}>
                         {p.status && (
                           <span className={`${styles.projectStatus} ${statusClass}`}>
                             {p.status.replaceAll('_', ' ')}
                           </span>
                         )}
                       </span>
-                      {(p.startDate || p.endDate) && (
-                        <span className={styles.projectDates}>
-                          {p.startDate && (
-                            <span className={styles.projectDateItem}>
-                              <span className={styles.projectDateLabel}>Start</span>
-                              <span>{formatDate(p.startDate)}</span>
-                            </span>
-                          )}
-                          {p.endDate && (
-                            <span className={styles.projectDateItem}>
-                              <span className={styles.projectDateLabel}>Deadline</span>
-                              <span>{formatDate(p.endDate)}</span>
-                            </span>
-                          )}
-                        </span>
-                      )}
                     </button>
                   );
                 })}
-                {recentProjects.length === 0 && (
+                {projectsQuery.isLoading && <div className={styles.listSkeleton}><span className={styles.skeleton} /><span className={styles.skeleton} /><span className={styles.skeleton} /></div>}
+                {recentProjects.length === 0 && !projectsQuery.isLoading && (
                   <div className={styles.projectEmpty}>
                     <span className={styles.projectEmptyIcon} aria-hidden="true">
-                      <i className={`bi ${error ? 'bi-cloud-slash' : 'bi-folder2-open'}`}></i>
+                      <i className={`bi ${projectsQuery.isError ? 'bi-cloud-slash' : 'bi-folder2-open'}`}></i>
                     </span>
-                    <h6 className="fw-bold mb-1">{error ? 'Projects unavailable' : 'No recent projects'}</h6>
-                    <p className="mb-0">{error ? 'Refresh the page to try loading projects again.' : 'Projects available to you will appear here.'}</p>
-                    {!error && user?.isAdmin && (
+                    <h6 className="fw-bold mb-1">{projectsQuery.isError ? 'Projects unavailable' : 'No recent projects'}</h6>
+                    {projectsQuery.isError ? (
+                      <InlineError label="The server was slow to answer." onRetry={() => projectsQuery.refetch()} retrying={projectsQuery.isFetching} />
+                    ) : (
+                      <p className="mb-0">Projects available to you will appear here.</p>
+                    )}
+                    {!projectsQuery.isError && user?.isAdmin && (
                       <Button size="sm" className={styles.projectEmptyAction} onClick={() => router.push('/projects/new')}>
                         <i className="bi bi-plus-lg me-1" aria-hidden="true"></i> New Project
                       </Button>
@@ -395,7 +310,9 @@ export default function DashboardPage() {
                 <h5 className={`mb-0 fw-bold ${styles.sectionHeading}`}>Upcoming Tasks</h5>
               </Card.Header>
               <Card.Body className="p-0">
-                {myTasks.length > 0 ? (
+                {myWorkQuery.isLoading ? (
+                  <div className={styles.listSkeleton}><span className={styles.skeleton} /><span className={styles.skeleton} /></div>
+                ) : myTasks.length > 0 ? (
                   <div className={styles.taskList}>
                     {myTasks.map(task => {
                       const isOverdue = isDateOverdue(task.dueDate);
@@ -433,8 +350,14 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className={`text-center ${styles.emptyState}`}>
-                    <i className={`bi ${error ? 'bi-cloud-slash' : 'bi-check2-circle'} d-block mb-2 ${styles.emptyStateIcon}`} aria-hidden="true"></i>
-                    <span>{error ? 'Tasks are unavailable right now.' : 'All caught up! No open tasks.'}</span>
+                    {myWorkQuery.isError ? (
+                      <InlineError label="Tasks couldn’t load." onRetry={() => myWorkQuery.refetch()} retrying={myWorkQuery.isFetching} />
+                    ) : (
+                      <>
+                        <i className={`bi bi-check2-circle d-block mb-2 ${styles.emptyStateIcon}`} aria-hidden="true"></i>
+                        <span>All caught up! No open tasks.</span>
+                      </>
+                    )}
                   </div>
                 )}
               </Card.Body>
@@ -443,9 +366,9 @@ export default function DashboardPage() {
         </Col>
 
         {/* Sidebar Area */}
-        <Col xl={4}>
+        <Col xl={4} className={styles.stackCol}>
           {/* Upcoming Milestones */}
-          <Card className={`mb-4 ${styles.surfaceCard}`}>
+          <Card className={`${styles.surfaceCard} ${styles.fillCard}`}>
             <Card.Header className={styles.cardHeader}>
               <h5 className={`mb-0 fw-bold ${styles.sectionHeading}`}>Activity Schedule</h5>
             </Card.Header>
@@ -474,41 +397,17 @@ export default function DashboardPage() {
                   );
                 })}
               </div>
-              {upcomingMilestones.length === 0 && (
+              {activitiesQuery.isLoading && <div className={styles.listSkeleton}><span className={styles.skeleton} /><span className={styles.skeleton} /></div>}
+              {upcomingMilestones.length === 0 && !activitiesQuery.isLoading && (
                 <div className={styles.activityEmpty}>
-                  {error ? 'Activity schedule is unavailable right now.' : 'No upcoming milestones.'}
+                  {activitiesQuery.isError ? (
+                    <InlineError label="Activity schedule couldn’t load." onRetry={() => activitiesQuery.refetch()} retrying={activitiesQuery.isFetching} />
+                  ) : 'No upcoming activities.'}
                 </div>
               )}
             </Card.Body>
           </Card>
 
-          {/* Quick Links Card - Customized by Role */}
-          <Card className={`${styles.surfaceCard} ${styles.quickActionsCard}`}>
-            <Card.Body className={styles.quickActionsBody}>
-              <h5 className={`fw-bold mb-3 ${styles.sectionHeading}`}>Quick Actions</h5>
-              <div className={styles.quickActionList}>
-                <Button variant="light" className={`text-start fw-medium ${styles.quickActionButton}`} onClick={() => router.push('/projects')}>
-                  <span className={styles.quickActionIcon} aria-hidden="true"><i className="bi bi-folder"></i></span>
-                  <span>Browse Projects</span>
-                  <i className={`bi bi-chevron-right ${styles.quickActionArrow}`} aria-hidden="true"></i>
-                </Button>
-                {(user?.isAdmin || user?.isSupervisor) && (
-                  <Button variant="light" className={`text-start fw-medium ${styles.quickActionButton}`} onClick={() => router.push('/timesheets/team')}>
-                    <span className={styles.quickActionIcon} aria-hidden="true"><i className="bi bi-people"></i></span>
-                    <span>Review Timesheets</span>
-                    <i className={`bi bi-chevron-right ${styles.quickActionArrow}`} aria-hidden="true"></i>
-                  </Button>
-                )}
-                {(user?.isAdmin) && (
-                  <Button variant="light" className={`text-start fw-medium ${styles.quickActionButton}`} onClick={() => router.push('/admin/users')}>
-                    <span className={styles.quickActionIcon} aria-hidden="true"><i className="bi bi-gear"></i></span>
-                    <span>Manage Users</span>
-                    <i className={`bi bi-chevron-right ${styles.quickActionArrow}`} aria-hidden="true"></i>
-                  </Button>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
         </Col>
       </Row>
     </AppLayout>

@@ -36,33 +36,44 @@
   .statGrid { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* Colour tones shared by the stat cards and project cards (dashboard look). */
+.toneTeal  { --tone: #054653; --tone-soft: #E6F0F2; }
+.toneGreen { --tone: #14B8A6; --tone-soft: #E6F7F5; }
+.toneAmber { --tone: #D97706; --tone-soft: #FEF3E2; }
+.toneBlue  { --tone: #0E7490; --tone-soft: #E3F2F6; }
+.toneBrown { --tone: #7B4404; --tone-soft: #F5EEE7; }
+.toneGrey  { --tone: #667982; --tone-soft: #EEF3F5; }
+
 .statCard {
+  --tone: #054653;
+  --tone-soft: #E6F0F2;
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--nrep-card-bg);
-  border: 1px solid var(--nrep-border);
+  background-color: var(--nrep-card-bg);
+  background-image: linear-gradient(160deg, var(--tone-soft) 0%, transparent 60%);
+  border: 2px solid color-mix(in srgb, var(--tone) 70%, transparent);
   border-radius: var(--radius-lg);
+  box-shadow: var(--nrep-card-shadow);
 }
 
 .statIcon {
   display: inline-flex;
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
   align-items: center;
   justify-content: center;
+  color: #fff;
   font-size: 1.15rem;
-  border-radius: var(--radius-md);
+  background: var(--tone);
+  border-radius: 12px;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--tone) 30%, transparent);
 }
-.statIcon.blue { color: var(--nrep-deep-blue); background: var(--nrep-soft-blue); }
-.statIcon.green { color: var(--nrep-green); background: var(--nrep-soft-green); }
-.statIcon.orange { color: var(--nrep-brown); background: var(--nrep-soft-orange); }
-.statIcon.neutral { color: var(--nrep-muted); background: var(--nrep-disabled-bg); }
 
 .statValue {
-  color: var(--nrep-text);
+  color: var(--tone);
   font-size: 1.7rem;
   font-weight: 700;
   line-height: 1.1;
@@ -137,19 +148,23 @@
 }
 
 .projectCard {
+  --tone: #054653;
+  --tone-soft: #E6F0F2;
   display: flex;
   flex-direction: column;
   height: 100%;
   padding: var(--space-4);
-  background: var(--nrep-card-bg);
-  border: 1px solid var(--nrep-border);
+  background-color: var(--nrep-card-bg);
+  background-image: linear-gradient(170deg, var(--tone-soft) 0%, transparent 45%);
+  border: 2px solid color-mix(in srgb, var(--tone) 45%, transparent);
   border-radius: var(--radius-lg);
   text-decoration: none;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  box-shadow: var(--nrep-card-shadow);
 }
 .projectCard:hover {
   color: inherit;
-  border-color: var(--nrep-deep-blue);
+  border-color: var(--tone);
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
@@ -217,15 +232,17 @@
   border-top: 1px solid var(--nrep-border);
 }
 .cardFooterLabel { color: var(--nrep-muted); font-size: 0.78rem; }
-.cardFooterValue { color: var(--nrep-deep-blue); font-size: 1rem; font-weight: 700; }
+.projectCard .cardFooter { border-top-color: color-mix(in srgb, var(--tone) 25%, transparent); }
+.cardFooterValue { color: var(--tone); font-size: 1rem; font-weight: 700; }
 
 /* ------------------------- Compact detail header -------------------------- */
 .detailHeader {
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-5) var(--space-6);
   margin-bottom: var(--space-4);
   background: var(--nrep-card-bg);
-  border: 1px solid var(--nrep-border);
+  border: var(--nrep-card-border-width) solid var(--nrep-card-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--nrep-card-shadow);
 }
 .detailEyebrow { display: flex; align-items: center; gap: var(--space-2); margin-bottom: 0.4rem; }
 .detailTitleRow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
@@ -235,40 +252,177 @@
 .detailMetaItem strong { color: var(--nrep-text); font-weight: 600; }
 .detailBudget { color: var(--nrep-deep-blue); font-weight: 700; }
 
-/* ------------------------------- Tab bar ---------------------------------- */
-.tabBar {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: var(--space-1);
-  overflow-x: auto;
-  padding-bottom: 1px;
-  margin-bottom: var(--space-5);
-  border-bottom: 1px solid var(--nrep-border);
-  scrollbar-width: thin;
+/* Long descriptions show two lines until the reader asks for more. */
+.detailDescriptionWrap { margin-top: var(--space-2); max-width: 80ch; }
+.detailDescription { margin: 0; color: var(--nrep-muted); font-size: 0.92rem; line-height: 1.6; }
+.detailDescriptionClamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-.tabBar::-webkit-scrollbar { height: 4px; }
-.tabBar::-webkit-scrollbar-thumb { background: var(--nrep-border); border-radius: var(--radius-pill); }
+.readMore {
+  margin-top: 0.25rem;
+  padding: 0;
+  color: #054653;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.readMore:hover { text-decoration: underline; text-underline-offset: 2px; }
+.readMore:focus-visible { outline: 2px solid #054653; outline-offset: 2px; border-radius: 4px; }
+
+/* Key facts as cards (timeline, budget, team). */
+.factGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.factCard {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  background: var(--nrep-card-bg);
+  border: var(--nrep-card-border-width) solid var(--nrep-card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--nrep-card-shadow);
+}
+.factIcon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: #fff;
+  font-size: 1.1rem;
+  background: #054653;
+  border-radius: 12px;
+}
+.factCard:nth-child(2) .factIcon { background: #14B8A6; }
+.factCard:nth-child(3) .factIcon { background: #0E7490; }
+.factBody { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 0.15rem; }
+.factLabel { color: var(--nrep-muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.factValue { color: var(--nrep-text); font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.factHint { color: var(--nrep-muted); font-size: 0.78rem; }
+.factProgress { height: 6px; margin: 0.35rem 0 0.15rem; overflow: hidden; background: #E6F7F5; border-radius: 999px; }
+.factProgress > span { display: block; height: 100%; background: #14B8A6; border-radius: 999px; }
+
+.factValueLarge { font-size: 1.35rem; letter-spacing: -0.01em; }
+.factCurrency { margin-left: 0.35rem; color: var(--nrep-muted); font-size: 0.75rem; font-weight: 600; }
+.factLink {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #054653;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.factLink:hover { text-decoration: underline; text-underline-offset: 2px; }
+.factLink:focus-visible { outline: 2px solid #054653; outline-offset: 2px; border-radius: 4px; }
+.factLink i { margin-left: 0.2rem; font-size: 0.75rem; }
+
+/* ----------------------------- Overview tab ------------------------------- */
+.overviewStack { display: flex; flex-direction: column; gap: var(--space-3); }
+.overviewTop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: stretch; /* both cards the same height — no empty gap */
+}
+/* No quick actions for this viewer → description uses the full width. */
+.overviewTop > :only-child { grid-column: 1 / -1; }
+@media (max-width: 991.98px) { .overviewTop { grid-template-columns: 1fr; } }
+.overviewDescription,
+.quickActions {
+  padding: var(--space-4);
+  background: var(--nrep-card-bg);
+  border: var(--nrep-card-border-width) solid var(--nrep-card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--nrep-card-shadow);
+}
+.overviewHeading { margin: 0 0 var(--space-2); color: var(--nrep-text); font-size: 1rem; font-weight: 700; }
+.quickActions { display: flex; flex-direction: column; }
+.quickActionRow { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.quickAction {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.9rem 0.55rem 0.6rem;
+  white-space: nowrap;
+  border: 1px solid var(--nrep-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--nrep-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.quickAction:hover { border-color: #14B8A6; background: #F0FDFA; }
+.quickAction:focus-visible { outline: 2px solid #054653; outline-offset: 2px; }
+.quickActionIcon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #E6F7F5;
+  color: #054653;
+}
+.quickActionHint { display: block; color: var(--nrep-muted); font-size: 0.75rem; font-weight: 400; }
+
+/* ------------------------------- Tab bar ---------------------------------- */
+/* A wrapping pill bar: every section stays visible, no horizontal scrollbar. */
+.tabBar {
+  /* Tabs are individual pills (no outer bar) — same style in Finance, projects and Clean Cooking. */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: var(--space-5);
+}
 
 .tabLink {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.72rem 0.95rem;
-  color: var(--nrep-muted);
+  padding: 0.5rem 1rem;
+  color: #054653;
   font-size: 0.86rem;
   font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
-  border-bottom: 3px solid transparent;
-  transition: color var(--transition-fast), border-color var(--transition-fast);
+  /* Tabs are <button>s: reset the browser's default button chrome. */
+  appearance: none;
+  background: #fff;
+  border: 1.5px solid var(--nrep-card-border);
+  box-shadow: 0 1px 2px rgba(5, 70, 83, 0.06);
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
-.tabLink:hover { color: var(--nrep-deep-blue); border-bottom-color: rgba(53, 124, 157, 0.3); }
+.tabLink:focus-visible { outline: 2px solid #054653; outline-offset: 2px; }
+.tabLink:hover { color: #054653; background: #E6F7F5; border-color: #14B8A6; }
 .tabLinkActive,
 .tabLinkActive:hover {
-  color: var(--nrep-deep-blue);
+  color: #fff;
   font-weight: 700;
-  border-bottom-color: var(--nrep-orange);
+  background: #054653;
+}
+
+@media (max-width: 575.98px) {
+  .detailHeader { padding: var(--space-4); }
+  .tabLink { flex: 1 1 calc(50% - 0.35rem); justify-content: center; }
 }
 
 /* --------------------------- Activity hierarchy --------------------------- */
@@ -318,3 +472,28 @@
 .activityName { margin: 0.35rem 0 0; color: var(--nrep-text); font-size: 0.98rem; font-weight: 650; }
 .activityMetaRow { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-2); color: var(--nrep-muted); font-size: 0.8rem; }
 .activityMetaItem { display: flex; align-items: center; gap: 0.35rem; }
+
+/* Project cards: filled, alternating shades of green/teal (status stays on
+   the badge). Shades are dark enough for white text. */
+.cardGrid > .projectCard { --tone: #054653; }
+.cardGrid > .projectCard:nth-child(4n + 2) { --tone: #0F766E; }
+.cardGrid > .projectCard:nth-child(4n + 3) { --tone: #0E7490; }
+.cardGrid > .projectCard:nth-child(4n + 4) { --tone: #115E59; }
+.cardGrid > .projectCard {
+  color: #fff;
+  background-color: var(--tone);
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(20, 184, 166, 0.3), transparent 14rem),
+    linear-gradient(150deg, color-mix(in srgb, var(--tone) 82%, #fff) 0%, var(--tone) 55%, color-mix(in srgb, var(--tone) 72%, #000) 100%);
+  border: 0;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--tone) 28%, transparent);
+}
+.cardGrid > .projectCard:hover { color: #fff; box-shadow: 0 16px 32px color-mix(in srgb, var(--tone) 38%, transparent); }
+.cardGrid > .projectCard:focus-visible { outline: 3px solid #14B8A6; outline-offset: 3px; }
+.cardGrid > .projectCard .cardTitle { color: #fff; }
+.cardGrid > .projectCard .cardDescription,
+.cardGrid > .projectCard .cardMetaRow { color: rgba(255, 255, 255, 0.82); }
+.cardGrid > .projectCard .codeChip { color: #fff; background: rgba(255, 255, 255, 0.16); }
+.cardGrid > .projectCard .cardFooter { border-top-color: rgba(255, 255, 255, 0.2); }
+.cardGrid > .projectCard .cardFooterLabel { color: rgba(255, 255, 255, 0.75); }
+.cardGrid > .projectCard .cardFooterValue { color: #fff; font-size: 1.1rem; }

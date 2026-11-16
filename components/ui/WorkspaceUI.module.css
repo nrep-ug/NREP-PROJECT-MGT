@@ -41,14 +41,44 @@
 .sectionCard {
   height: 100%;
   background: var(--nrep-card-bg);
-  border: 1px solid var(--nrep-border);
+  border: var(--nrep-card-border-width) solid var(--nrep-card-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--nrep-card-shadow);
 }
 
+/* Number cards: the home-screen look (wash + coloured border + solid tile). */
 .metricCard {
+  --tone: #054653;
+  --tone-soft: #E6F0F2;
+  position: relative;
   padding: var(--space-5);
+  background-color: var(--nrep-card-bg);
+  background-image: linear-gradient(160deg, var(--tone-soft) 0%, transparent 60%);
+  border: 2px solid color-mix(in srgb, var(--tone) 65%, transparent);
+  transition: border-color 160ms ease, transform 160ms ease;
 }
+/* Neighbours alternate like the dashboard: teal, green, blue, green. */
+:global(.row) > :nth-child(4n + 2) .metricCard { --tone: #0F766E; }
+:global(.row) > :nth-child(4n + 3) .metricCard { --tone: #0E7490; }
+:global(.row) > :nth-child(4n + 4) .metricCard { --tone: #115E59; }
+/* An explicit tone always wins. */
+.metricCard[data-tone='teal'] { --tone: #054653; --tone-soft: #E6F0F2; }
+.metricCard[data-tone='green'] { --tone: #0F766E; }
+.metricCard[data-tone='blue'] { --tone: #0E7490; --tone-soft: #E3F2F6; }
+.metricCard[data-tone='amber'] { --tone: #B45309; }
+.metricCard[data-tone='red'] { --tone: #B91C1C; }
+
+/* Wide variant: icon · label · value on one line. */
+.metricRow { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4) var(--space-5); }
+.metricRowText { flex: 1 1 auto; min-width: 0; }
+.metricRowValue {
+  color: var(--tone);
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.metricRow .metricIcon { width: 46px; height: 46px; font-size: 1.2rem; }
 
 .metricTopline {
   display: flex;
@@ -67,17 +97,19 @@
 
 .metricIcon {
   display: inline-grid;
-  width: 36px;
-  height: 36px;
+  flex: none;
+  width: 40px;
+  height: 40px;
   place-items: center;
-  color: var(--nrep-deep-blue);
-  background: var(--nrep-soft-blue);
-  border-radius: var(--radius-md);
+  color: #fff;
+  background: var(--tone, #054653);
+  border-radius: 12px;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--tone, #054653) 28%, transparent);
 }
 
 .metricValue {
   margin-top: var(--space-3);
-  color: var(--nrep-text);
+  color: var(--tone, var(--nrep-text));
   font-size: clamp(1.35rem, 2vw, 1.85rem);
   font-weight: 760;
   letter-spacing: -0.03em;
@@ -166,3 +198,20 @@
   .actions { width: 100%; justify-content: flex-start; }
   .sectionHeader, .sectionBody { padding-left: var(--space-4); padding-right: var(--space-4); }
 }
+
+/* Filled number cards (home-screen "Available to spend" look): a deep
+   gradient of the card's tone, white text, translucent icon tile. */
+.metricCard {
+  color: #fff;
+  background-color: var(--tone);
+  background-image:
+    radial-gradient(circle at 100% 0%, rgba(20, 184, 166, 0.32), transparent 12rem),
+    linear-gradient(150deg, color-mix(in srgb, var(--tone) 82%, #fff) 0%, var(--tone) 55%, color-mix(in srgb, var(--tone) 72%, #000) 100%);
+  border: 0;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--tone) 28%, transparent);
+}
+.metricCard .metricLabel { color: rgba(255, 255, 255, 0.8); }
+.metricCard .metricValue,
+.metricCard .metricRowValue { color: #fff; }
+.metricCard .metricHint { color: rgba(255, 255, 255, 0.78); }
+.metricCard .metricIcon { color: #fff; background: rgba(255, 255, 255, 0.16); box-shadow: none; }

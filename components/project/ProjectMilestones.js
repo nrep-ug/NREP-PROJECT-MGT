@@ -124,10 +124,10 @@ export default function ProjectMilestones({ project, user, showToast, canModify 
       </div>
 
       <div className={styles.statGrid}>
-        <div className={styles.statCard}><span className={`${styles.statIcon} neutral`}><i className="bi bi-flag" /></span><div><div className={styles.statValue}>{stats.total}</div><div className={styles.statLabel}>Total</div></div></div>
-        <div className={styles.statCard}><span className={`${styles.statIcon} blue`}><i className="bi bi-flag" /></span><div><div className={styles.statValue}>{stats.open}</div><div className={styles.statLabel}>Open</div></div></div>
-        <div className={styles.statCard}><span className={`${styles.statIcon} green`}><i className="bi bi-flag-fill" /></span><div><div className={styles.statValue}>{stats.reached}</div><div className={styles.statLabel}>Reached</div></div></div>
-        <div className={styles.statCard}><span className={`${styles.statIcon} neutral`}><i className="bi bi-archive" /></span><div><div className={styles.statValue}>{stats.closed}</div><div className={styles.statLabel}>Closed</div></div></div>
+        <div className={`${styles.statCard} ${styles.toneTeal}`}><span className={styles.statIcon}><i className="bi bi-flag" /></span><div><div className={styles.statValue}>{stats.total}</div><div className={styles.statLabel}>Total</div></div></div>
+        <div className={`${styles.statCard} ${styles.toneBlue}`}><span className={styles.statIcon}><i className="bi bi-flag" /></span><div><div className={styles.statValue}>{stats.open}</div><div className={styles.statLabel}>Open</div></div></div>
+        <div className={`${styles.statCard} ${styles.toneGreen}`}><span className={styles.statIcon}><i className="bi bi-flag-fill" /></span><div><div className={styles.statValue}>{stats.reached}</div><div className={styles.statLabel}>Reached</div></div></div>
+        <div className={`${styles.statCard} ${styles.toneGrey}`}><span className={styles.statIcon}><i className="bi bi-archive" /></span><div><div className={styles.statValue}>{stats.closed}</div><div className={styles.statLabel}>Closed</div></div></div>
       </div>
 
       {filtered.length === 0 ? (

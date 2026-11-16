@@ -14,6 +14,7 @@ const CLIENT_NAV = [
 const STAFF_NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
   { href: '/projects', label: 'Projects', icon: 'bi-folder' },
+  { href: '/clean-cooking', label: 'Clean Cooking', icon: 'bi-fire' },
   { href: '/clients', label: 'Clients', icon: 'bi-people' },
   { href: '/timesheets', label: 'Timesheets', icon: 'bi-clock-history' },
   { href: '/timesheets/reports', label: 'Timesheet Analytics', icon: 'bi-bar-chart-line' },
@@ -48,7 +49,7 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
       {isMobile && isMobileOpen && <button type="button" className={styles.sidebarOverlay} onClick={onToggle} aria-label="Close navigation" />}
       <button
         type="button"
-        className={`${styles.sidebarToggle} ${isMobileOpen ? styles.sidebarToggleMobileOpen : ''}`}
+        className={`${styles.sidebarToggle} ${isMobileOpen ? styles.sidebarToggleMobileOpen : ''} ${!isMobile && !isCollapsed ? styles.sidebarToggleInside : ''}`}
         style={{ '--sidebar-current-width': sidebarWidth }}
         onClick={onToggle}
         aria-label={isMobileOpen || (!isMobile && !isCollapsed) ? 'Collapse navigation' : 'Open navigation'}
@@ -70,15 +71,6 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
           {user?.isClient && showLabels && <span className={styles.portalBadge}><i className="bi bi-person-badge" />Client portal</span>}
         </div>
 
-        {showLabels ? (
-          <div className={styles.userPanel}>
-            <span className={styles.userAvatar}>{initial}</span>
-            <span className={styles.userDetails}><span className={styles.userName}>{name}</span><span className={styles.userRole}><i className="bi bi-shield-check" />{userRoleLabel(user)}</span></span>
-          </div>
-        ) : (
-          <div className={styles.collapsedUser}><span className={`${styles.userAvatar} ${styles.userAvatarCollapsed}`} title={name}>{initial}</span></div>
-        )}
-
         <nav className={styles.sidebarNav}>
           {navItems.map((item) => {
             if (item.adminOnly && !user?.isAdmin) return null;
@@ -98,12 +90,22 @@ export default function Sidebar({ user, isCollapsed, isMobile, isMobileOpen, onT
               </Link>
             );
           })}
-          <div className={styles.sidebarDivider} />
+        </nav>
+        {/* Account sits at the bottom, next to Log out. */}
+        <div className={styles.accountBlock}>
+          {showLabels ? (
+            <div className={styles.userPanel} title={`${name} · ${userRoleLabel(user)}`}>
+              <span className={styles.userAvatar} aria-hidden="true">{initial}</span>
+              <span className={styles.userDetails}><span className={styles.userName}>{name}</span><span className="visually-hidden">{userRoleLabel(user)}</span></span>
+            </div>
+          ) : (
+            <div className={styles.collapsedUser}><span className={`${styles.userAvatar} ${styles.userAvatarCollapsed}`} title={name}>{initial}</span></div>
+          )}
           <Link href="/logout" className={`${styles.sidebarLink} ${styles.logoutLink}`} title={showLabels ? undefined : 'Log out'}>
             <i className={`${styles.sidebarLinkIcon} bi bi-box-arrow-right`} />
             {showLabels && <span className={styles.sidebarLinkLabel}>Log out</span>}
           </Link>
-        </nav>
+        </div>
         {showLabels && <footer className={styles.sidebarFooter}>© {new Date().getFullYear()} NREP</footer>}
       </aside>
     </>

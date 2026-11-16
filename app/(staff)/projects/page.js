@@ -14,6 +14,7 @@ import Toast, { useToast } from '@/components/Toast';
 import StatusBadge from '@/components/ui/StatusBadge';
 import styles from '@/components/project/ProjectViews.module.css';
 
+
 const STATUS_FILTERS = ['all', 'active', 'planned', 'on_hold', 'completed'];
 
 function getCurrencySymbol(currency) {
@@ -76,20 +77,20 @@ export default function ProjectsPage() {
       </div>
 
       <div className={styles.statGrid}>
-        <div className={styles.statCard}>
-          <span className={`${styles.statIcon} blue`}><i className="bi bi-folder-fill" /></span>
+        <div className={`${styles.statCard} ${styles.toneTeal}`}>
+          <span className={styles.statIcon}><i className="bi bi-folder-fill" /></span>
           <div><div className={styles.statValue}>{stats.total}</div><div className={styles.statLabel}>Total Projects</div></div>
         </div>
-        <div className={styles.statCard}>
-          <span className={`${styles.statIcon} green`}><i className="bi bi-play-circle-fill" /></span>
+        <div className={`${styles.statCard} ${styles.toneGreen}`}>
+          <span className={styles.statIcon}><i className="bi bi-play-circle-fill" /></span>
           <div><div className={styles.statValue}>{stats.active}</div><div className={styles.statLabel}>Active</div></div>
         </div>
-        <div className={styles.statCard}>
-          <span className={`${styles.statIcon} neutral`}><i className="bi bi-hourglass-split" /></span>
+        <div className={`${styles.statCard} ${styles.toneAmber}`}>
+          <span className={styles.statIcon}><i className="bi bi-hourglass-split" /></span>
           <div><div className={styles.statValue}>{stats.planned}</div><div className={styles.statLabel}>Planned</div></div>
         </div>
-        <div className={styles.statCard}>
-          <span className={`${styles.statIcon} orange`}><i className="bi bi-check-circle-fill" /></span>
+        <div className={`${styles.statCard} ${styles.toneBlue}`}>
+          <span className={styles.statIcon}><i className="bi bi-check-circle-fill" /></span>
           <div><div className={styles.statValue}>{stats.completed}</div><div className={styles.statLabel}>Completed</div></div>
         </div>
       </div>
