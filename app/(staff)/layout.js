@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { getCurrentUser, isFieldOnlyAccount } from '@/lib/auth';
 import { Spinner } from 'react-bootstrap';
 
 /**
@@ -22,9 +23,11 @@ export default function StaffLayout({ children }) {
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        // Not authenticated - redirect to login
-        console.log('[StaffLayout] No user, redirecting to login');
-        router.push('/login');
+        // No staff session. A Clean Cooking champion is signed in but has no
+        // staff session by design — send them to their portal, everyone else to login.
+        getCurrentUser().then((authUser) => {
+          router.push(isFieldOnlyAccount(authUser) ? '/field' : '/login');
+        });
       } else if (user.isClient) {
         // Client trying to access staff page - redirect to client dashboard
         console.log('[StaffLayout] Client detected, redirecting to client dashboard');

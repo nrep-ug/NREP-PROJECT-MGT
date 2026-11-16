@@ -6,14 +6,15 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "test": "node --test tests/financeDomain.test.cjs",
+    "test": "node --test tests/financeDomain.test.cjs tests/cleanCookingDomain.test.cjs tests/cleanCookingFieldDomain.test.cjs tests/cleanCookingHubDomain.test.cjs",
     "schema:finance": "node scripts/deploy-finance-schema.js",
     "security:profile-permissions": "node scripts/harden-user-profile-permissions.js",
     "start": "next start",
     "lint": "next lint",
     "setup:collections": "node scripts/collections-setup.js",
     "setup:teams": "node scripts/teams-bootstrap.js",
-    "setup": "node scripts/setup-server.js"
+    "setup": "node scripts/setup-server.js",
+    "schema:clean-cooking": "node scripts/deploy-finance-schema.js --schema=clean-cooking"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",

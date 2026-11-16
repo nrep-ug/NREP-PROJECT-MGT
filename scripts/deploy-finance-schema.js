@@ -17,7 +17,29 @@ const {
   FINANCE_COLLECTION_DEFINITIONS,
 } = require('../lib/financeSchema.cjs');
 
+const {
+  CLEAN_COOKING_COLLECTION_DEFINITIONS,
+} = require('../lib/cleanCooking/schema.cjs');
+
 const APPLY = process.argv.includes('--apply');
+// --schema=finance (default) | --schema=clean-cooking
+const SCHEMA = (process.argv.find((arg) => arg.startsWith('--schema=')) || '--schema=finance')
+  .split('=')[1];
+const SCHEMAS = {
+  finance: {
+    label: 'Finance',
+    targets: () => [...CORE_FINANCE_ATTRIBUTE_TARGETS, ...FINANCE_COLLECTION_DEFINITIONS],
+  },
+  'clean-cooking': {
+    label: 'Clean Cooking',
+    targets: () => [...CLEAN_COOKING_COLLECTION_DEFINITIONS],
+  },
+};
+if (!SCHEMAS[SCHEMA]) {
+  console.error(`Unknown --schema=${SCHEMA}. Use one of: ${Object.keys(SCHEMAS).join(', ')}`);
+  process.exit(1);
+}
+const LABEL = SCHEMAS[SCHEMA].label;
 const ENV = process.env;
 const ENDPOINT = ENV.APPWRITE_ENDPOINT || ENV.NEXT_PUBLIC_APPWRITE_ENDPOINT;
 const PROJECT_ID = ENV.APPWRITE_PROJECT_ID || ENV.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
@@ -40,10 +62,7 @@ const client = new Client()
   .addHeader('X-Appwrite-Response-Format', '1.9.0');
 const databases = new Databases(client);
 
-const targets = [
-  ...CORE_FINANCE_ATTRIBUTE_TARGETS,
-  ...FINANCE_COLLECTION_DEFINITIONS,
-];
+const targets = SCHEMAS[SCHEMA].targets();
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -139,10 +158,10 @@ async function inspectTarget(target) {
 
   if (!target.mustAlreadyExist) {
     if (!collection.documentSecurity) {
-      throw new Error(`Finance collection ${target.id} must have document security enabled.`);
+      throw new Error(`${LABEL} collection ${target.id} must have document security enabled.`);
     }
     if ((collection.$permissions || []).length > 0) {
-      throw new Error(`Finance collection ${target.id} has unexpected collection-level permissions.`);
+      throw new Error(`${LABEL} collection ${target.id} has unexpected collection-level permissions.`);
     }
   }
 
@@ -177,7 +196,7 @@ async function inspectAll() {
 
 function printPlan(inspected) {
   let actionCount = 0;
-  console.log(`Finance schema ${APPLY ? 'apply' : 'read-only plan'} for database ${DATABASE_ID}`);
+  console.log(`${LABEL} schema ${APPLY ? 'apply' : 'read-only plan'} for database ${DATABASE_ID}`);
   for (const item of inspected) {
     const createCollection = !item.collection;
     const actions = [];
@@ -293,7 +312,7 @@ async function createAttribute(collectionId, spec) {
       );
       break;
     default:
-      throw new Error(`Unsupported Finance attribute type: ${spec.type}`);
+      throw new Error(`Unsupported ${LABEL} attribute type: ${spec.type}`);
   }
   await waitForAttribute(collectionId, spec.key);
   console.log(`  + attribute ${collectionId}.${spec.key}`);
@@ -332,7 +351,7 @@ async function run() {
   const actionCount = printPlan(inspected);
   if (!APPLY || actionCount === 0) return;
 
-  console.log('Applying additive Finance schema actions...');
+  console.log(`Applying additive ${LABEL} schema actions...`);
   for (const item of inspected) await applyTarget(item);
 
   const verification = await inspectAll();
@@ -344,10 +363,10 @@ async function run() {
     0
   );
   if (remaining !== 0) throw new Error(`Post-deployment verification found ${remaining} missing items.`);
-  console.log('Finance schema deployment verified: all targets are compatible and available.');
+  console.log(`${LABEL} schema deployment verified: all targets are compatible and available.`);
 }
 
 run().catch((error) => {
-  console.error(`Finance schema deployment stopped: ${error.message}`);
+  console.error(`${LABEL} schema deployment stopped: ${error.message}`);
   process.exit(1);
 });
