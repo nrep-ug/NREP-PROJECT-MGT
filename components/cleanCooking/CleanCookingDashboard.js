@@ -1,8 +1,13 @@
 'use client';
 
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Alert, Button, Spinner } from 'react-bootstrap';
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { useCleanCookingSummary } from '@/hooks/useCleanCooking';
+import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useCleanCookingMarketFigures, useCleanCookingSummary } from '@/hooks/useCleanCooking';
+import { epcSalesSeries, marketLabel } from '@/lib/cleanCooking/marketDomain';
+import { ACCESS_RADIUS_KM, MAP_SITES, overlappingSites, sitesBySettlement } from '@/lib/cleanCooking/mapSites';
+import { TRAINING_SOURCE, summarizeTraining, trainingChartRows } from '@/lib/cleanCooking/trainingFigures';
 import MetricCard from '@/components/ui/MetricCard';
 import SectionCard from '@/components/ui/SectionCard';
 import EmptyState from '@/components/ui/EmptyState';
@@ -13,19 +18,63 @@ const LEAD_STAGES = FIELD_OPTIONS.leadStage;
 
 const PRIMARY = '#054653';
 const SECONDARY = '#14B8A6';
+// Training chart: blue = trained by NREP, green = trained by champions (ToTs).
+const TRAINED_BLUE = '#1F6FB2';
+const TRAINED_GREEN = '#16A34A';
 const fmt = (n) => Number(n || 0).toLocaleString('en-UG');
 
-function QuantityTooltip({ active, payload, label }) {
+// Leaflet touches `window`, so the maps load in the browser only.
+const SitesMap = dynamic(() => import('./SitesMap'), {
+  ssr: false,
+  loading: () => <div className={styles.mapBox} style={{ display: 'grid', placeItems: 'center' }}><Spinner animation="border" size="sm" /></div>,
+});
+
+const SETTLEMENTS = sitesBySettlement(MAP_SITES);
+const OVERLAPS = overlappingSites(MAP_SITES, ACCESS_RADIUS_KM);
+const TRAINING = summarizeTraining();
+const TRAINING_ROWS = trainingChartRows();
+
+function TrainingTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
+  const row = payload[0].payload;
   return (
     <div style={{ background: '#fff', border: '1px solid #DBE7EC', borderRadius: 8, padding: '0.5rem 0.75rem', fontSize: 13 }}>
-      <div style={{ fontWeight: 700 }}>{label || payload[0].payload.label}</div>
-      <div>{fmt(payload[0].value)} EPCs</div>
+      <div style={{ fontWeight: 700 }}>{label}</div>
+      <div>Trained by NREP (ToTs): {fmt(row.trainedByNrep)}</div>
+      <div>Trained by champions: {row.trainedByTots ? fmt(row.trainedByTots) : 'none reported yet'}</div>
     </div>
   );
 }
 
-function HorizontalBars({ data, labelKey, height }) {
+function TrainingChart() {
+  return (
+    <div className={styles.chartBoxTall}>
+      <ResponsiveContainer>
+        <BarChart data={TRAINING_ROWS} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
+          <CartesianGrid horizontal={false} stroke="#E6EEF1" />
+          <XAxis type="number" tickFormatter={fmt} tick={{ fontSize: 12, fill: '#667982' }} axisLine={false} tickLine={false} />
+          <YAxis type="category" dataKey="location" width={90} tick={{ fontSize: 12, fill: '#17262D' }} axisLine={false} tickLine={false} interval={0} />
+          <Tooltip content={<TrainingTooltip />} cursor={{ fill: 'rgba(31,111,178,0.06)' }} />
+          <Legend verticalAlign="top" align="left" iconType="square" wrapperStyle={{ fontSize: 13, paddingBottom: 8 }} />
+          <Bar dataKey="trainedByNrep" name="Trained by NREP (ToTs)" stackId="t" fill={TRAINED_BLUE} stroke={TRAINED_BLUE} maxBarSize={22} />
+          <Bar dataKey="trainedByTots" name="Trained by champions, not NREP" stackId="t" fill={TRAINED_GREEN} stroke={TRAINED_GREEN} radius={[0, 4, 4, 0]} maxBarSize={22} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function QuantityTooltip({ active, payload, label, unit = 'EPCs' }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: '#fff', border: '1px solid #DBE7EC', borderRadius: 8, padding: '0.5rem 0.75rem', fontSize: 13 }}>
+      <div style={{ fontWeight: 700 }}>{label || payload[0].payload.label}</div>
+      <div>{fmt(payload[0].value)} {unit}</div>
+    </div>
+  );
+}
+
+function HorizontalBars({ data, labelKey, height, unit }) {
   return (
     <div className={height === 'tall' ? styles.chartBoxTall : styles.chartBox}>
       <ResponsiveContainer>
@@ -33,7 +82,7 @@ function HorizontalBars({ data, labelKey, height }) {
           <CartesianGrid horizontal={false} stroke="#E6EEF1" />
           <XAxis type="number" tickFormatter={fmt} tick={{ fontSize: 12, fill: '#667982' }} axisLine={false} tickLine={false} />
           <YAxis type="category" dataKey={labelKey} width={170} tick={{ fontSize: 12, fill: '#17262D' }} axisLine={false} tickLine={false} interval={0} />
-          <Tooltip content={<QuantityTooltip />} cursor={{ fill: 'rgba(20,184,166,0.08)' }} />
+          <Tooltip content={<QuantityTooltip unit={unit} />} cursor={{ fill: 'rgba(20,184,166,0.08)' }} />
           <Bar dataKey="quantity" radius={[0, 4, 4, 0]} maxBarSize={22}>
             {data.map((entry, index) => <Cell key={entry[labelKey]} fill={index === 0 ? PRIMARY : SECONDARY} />)}
           </Bar>
@@ -44,12 +93,23 @@ function HorizontalBars({ data, labelKey, height }) {
 }
 
 function ColumnBars({ data, labelKey }) {
+  // Many bars (e.g. 14 months): tilt the labels so they don't run together.
+  const crowded = data.length > 8;
   return (
     <div className={styles.chartBox}>
       <ResponsiveContainer>
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
+        <BarChart data={data} margin={{ top: 8, right: 8, bottom: crowded ? 8 : 4, left: 0 }}>
           <CartesianGrid vertical={false} stroke="#E6EEF1" />
-          <XAxis dataKey={labelKey} tick={{ fontSize: 12, fill: '#17262D' }} axisLine={false} tickLine={false} interval={0} />
+          <XAxis
+            dataKey={labelKey}
+            tick={{ fontSize: crowded ? 11 : 12, fill: '#17262D' }}
+            axisLine={false}
+            tickLine={false}
+            interval={0}
+            angle={crowded ? -40 : 0}
+            textAnchor={crowded ? 'end' : 'middle'}
+            height={crowded ? 56 : 30}
+          />
           <YAxis tickFormatter={fmt} tick={{ fontSize: 12, fill: '#667982' }} axisLine={false} tickLine={false} width={56} />
           <Tooltip content={<QuantityTooltip />} cursor={{ fill: 'rgba(20,184,166,0.08)' }} />
           <Bar dataKey="quantity" fill={SECONDARY} radius={[4, 4, 0, 0]} maxBarSize={48} />
@@ -61,31 +121,130 @@ function ColumnBars({ data, labelKey }) {
 
 export default function CleanCookingDashboard({ projectId, onNavigate }) {
   const { data, isLoading, error } = useCleanCookingSummary(projectId);
+  const market = useCleanCookingMarketFigures(projectId);
+  const [settlement, setSettlement] = useState(SETTLEMENTS[0]?.settlement);
 
   if (isLoading) return <div className="text-center py-5"><Spinner animation="border" /></div>;
   if (error) return <Alert variant="warning">{error.message}</Alert>;
 
-  const { sales, companies, champions } = data;
-  const top = sales.byCompany[0];
-  const topShare = top && sales.totalQuantity ? Math.round((top.quantity / sales.totalQuantity) * 100) : 0;
+  const { sales, champions } = data;
   const maxDistrict = Math.max(1, ...champions.byDistrict.map((d) => d.champions));
+  const figures = market.data?.figures || [];
+  const epcSales = epcSalesSeries(figures);
+  const companyCheck = market.data?.summary?.company_market_total;
+  // Other clean cooking technologies sold (same event records, products other than EPCs).
+  const otherTech = Object.entries(market.data?.summary?.event_product_count?.byProduct || {})
+    .filter(([product]) => product !== 'epc')
+    .map(([product, quantity]) => ({ product: marketLabel('product', product), quantity }))
+    .sort((a, b) => b.quantity - a.quantity);
+  const otherTechTotal = otherTech.reduce((n, t) => n + t.quantity, 0);
+  const span = epcSales.firstDate ? `${new Date(epcSales.firstDate).toLocaleDateString('en-UG', { month: 'short', year: 'numeric' })} – ${new Date(epcSales.lastDate).toLocaleDateString('en-UG', { month: 'short', year: 'numeric' })}` : '';
 
   return (
     <div>
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-xl-3">
-          <MetricCard label="EPCs sold" value={fmt(sales.totalQuantity)} hint={`${fmt(sales.recordCount)} records reported`} icon="bi-fire" />
+          <MetricCard tone="teal" label="EPCs sold" value={market.isLoading ? '…' : fmt(epcSales.total)} hint={epcSales.total ? `Phase 1 · ${span} · ${fmt(epcSales.events)} events` : 'No sales recorded yet'} icon="bi-fire" />
         </div>
         <div className="col-sm-6 col-xl-3">
-          <MetricCard label="Companies reporting" value={fmt(sales.companiesReporting)} hint={`${fmt(companies.active)} active companies listed`} icon="bi-building" />
+          <MetricCard
+            tone="green"
+            label="Company totals (cross-check)"
+            value={companyCheck ? fmt(companyCheck.epc) : '…'}
+            hint="Kiboko & Digi Wave at 25%"
+            icon="bi-check2-all"
+          />
         </div>
         <div className="col-sm-6 col-xl-3">
-          <MetricCard label="Brands" value={fmt(sales.brandCount)} hint={top ? `Top seller: ${top.company} (${topShare}%)` : 'No sales yet'} icon="bi-tags" />
+          <MetricCard tone="blue" label="Brand & size detail" value={fmt(sales.totalQuantity)} hint={`${fmt(sales.companiesReporting)} companies itemised · ${fmt(sales.brandCount)} brands`} icon="bi-tags" />
         </div>
         <div className="col-sm-6 col-xl-3">
           <MetricCard label="Active champions" value={fmt(champions.total)} hint={`${fmt(champions.byDistrict.length)} districts · ${fmt(champions.withContact)} with phone/email`} icon="bi-people" />
         </div>
       </div>
+
+      <div className={`${styles.chartGrid} mb-3`}>
+        <SectionCard
+          title="Where the sites are"
+          description={`${MAP_SITES.length} sites in ${SETTLEMENTS.map((g) => g.settlement).join(' and ')}. Click a point for its details.`}
+        >
+          <SitesMap sites={MAP_SITES} mode="points" />
+        </SectionCard>
+        <SectionCard
+          title={`Who can reach each site (${ACCESS_RADIUS_KM} km)`}
+          description={`Each circle is a ${ACCESS_RADIUS_KM} km radius: the host and refugee communities within reach of the site and its services.`}
+        >
+          <div className="d-flex flex-wrap gap-2 mb-2" role="group" aria-label="Choose settlement">
+            {SETTLEMENTS.map((g) => (
+              <button
+                key={g.settlement}
+                type="button"
+                className={`${styles.pill} ${settlement === g.settlement ? '' : styles.pillMuted} border-0`}
+                aria-pressed={settlement === g.settlement}
+                onClick={() => setSettlement(g.settlement)}
+              >
+                {g.settlement} ({g.sites.length})
+              </button>
+            ))}
+          </div>
+          <SitesMap
+            sites={MAP_SITES}
+            mode="radius"
+            radiusKm={ACCESS_RADIUS_KM}
+            focus={SETTLEMENTS.find((g) => g.settlement === settlement)?.sites.map((s) => s.id)}
+          />
+          {OVERLAPS.length > 0 && (
+            <p className="small text-muted mt-2 mb-0">
+              Overlapping areas (households in between can reach either site): {OVERLAPS.map((o) => `${MAP_SITES.find((x) => x.id === o.a).name.split(' (')[0]}–${MAP_SITES.find((x) => x.id === o.b).name.split(' (')[0]} ${o.km} km apart`).join(' · ')}.
+            </p>
+          )}
+        </SectionCard>
+      </div>
+
+      <SectionCard
+        title="Clean cooking champions trained"
+        description={`Blue: champions trained directly by NREP (ToTs). Green: people those champions went on to train, not trained by NREP. Source: ${TRAINING_SOURCE}; reported, not yet verified.`}
+        action={<Button size="sm" className={styles.secondaryButton} onClick={() => onNavigate('champions')}>Manage champions</Button>}
+        className="mb-3"
+      >
+        <div className="row g-3 mb-3">
+          <div className="col-sm-6 col-xl-3">
+            <MetricCard tone="blue" label="Trained by NREP" value={fmt(TRAINING.trainedByNrep)} hint={`ToTs in ${fmt(TRAINING.locations)} locations`} icon="bi-mortarboard" />
+          </div>
+          <div className="col-sm-6 col-xl-3">
+            <MetricCard tone="teal" label="Trained by champions" value={fmt(TRAINING.trainedByTots)} hint="Community members, not trained by NREP" icon="bi-people" />
+          </div>
+          <div className="col-sm-6 col-xl-3">
+            <MetricCard tone="green" label="Locations where ToTs are training" value={`${fmt(TRAINING.activeLocations)} of ${fmt(TRAINING.locations)}`} hint={`${Math.round((TRAINING.activeShare || 0) * 100)}% active`} icon="bi-graph-up-arrow" />
+          </div>
+          <div className="col-sm-6 col-xl-3">
+            <MetricCard label="Community trainings held" value={fmt(TRAINING.trainings)} hint="So far, November 2026" icon="bi-calendar-check" />
+          </div>
+        </div>
+        <TrainingChart />
+      </SectionCard>
+
+      {epcSales.total > 0 && (
+        <>
+          {otherTechTotal > 0 && (
+            <SectionCard
+              title={`Other clean cooking technologies sold: ${fmt(otherTechTotal)}`}
+              description="Recorded at the same events as the EPC sales (Phase 1). Counted separately from EPCs."
+              className="mb-3"
+            >
+              <HorizontalBars data={otherTech} labelKey="product" unit="units" />
+            </SectionCard>
+          )}
+          <SectionCard
+            title="EPCs sold by district"
+            description="Where the sales were recorded."
+            action={<Button size="sm" className={styles.secondaryButton} onClick={() => onNavigate('figures')}>All sales figures</Button>}
+            className="mb-3"
+          >
+            <HorizontalBars data={epcSales.byDistrict} labelKey="district" height={epcSales.byDistrict.length > 10 ? 'tall' : 'normal'} />
+          </SectionCard>
+        </>
+      )}
 
       {data.field && (
         <SectionCard
@@ -150,10 +309,10 @@ export default function CleanCookingDashboard({ projectId, onNavigate }) {
       ) : (
         <>
           <div className={`${styles.chartGrid} mb-3`}>
-            <SectionCard title="EPCs sold by company" description="Total units across all reporting periods.">
+            <SectionCard title="Brand & size detail: by company" description={`Itemised reports from ${fmt(sales.companiesReporting)} companies (${fmt(sales.totalQuantity)} EPCs). A breakdown, not the EPCs-sold total.`}>
               <HorizontalBars data={sales.byCompany} labelKey="company" height={sales.byCompany.length > 10 ? 'tall' : 'normal'} />
             </SectionCard>
-            <SectionCard title="EPCs sold by brand" description="Spelling variants of a brand are merged on entry.">
+            <SectionCard title="Brand & size detail: by brand" description="From the same itemised reports. Spelling variants of a brand are merged on entry.">
               <HorizontalBars data={sales.byBrand} labelKey="brand" height={sales.byBrand.length > 10 ? 'tall' : 'normal'} />
             </SectionCard>
           </div>

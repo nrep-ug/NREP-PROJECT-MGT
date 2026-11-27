@@ -6,6 +6,7 @@ const {
   normalizeEmail,
   normalizeUgPhone,
   parseCompanySalesSheet,
+  parseQuantity,
   parseSizeLitres,
   periodFromLabel,
   summarizeCompanySales,
@@ -35,6 +36,15 @@ test('sizes and brands are normalised', () => {
   assert.equal(canonicalBrand('Pixels', ['Pixel']), 'Pixel');
   assert.equal(canonicalBrand('SimbaLand', ['Simbaland']), 'Simbaland');
   assert.equal(canonicalBrand(' ECO QUICKPOT', []), 'ECO QUICKPOT');
+});
+
+test('quantities accept spreadsheet whole numbers like "150.0" but never round fractions', () => {
+  assert.equal(parseQuantity('150'), 150);
+  assert.equal(parseQuantity('150.0'), 150);
+  assert.equal(parseQuantity('1,057.00'), 1057);
+  assert.equal(parseQuantity('150.5'), null);
+  assert.equal(parseQuantity('-3'), null);
+  assert.equal(parseQuantity(''), null);
 });
 
 test('period labels from the sales sheet become whole-month date ranges', () => {

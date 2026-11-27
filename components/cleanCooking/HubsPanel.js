@@ -16,13 +16,16 @@ import styles from './CleanCooking.module.css';
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-UG');
 const ACTIVITY = Object.fromEntries(HUB_OPTIONS.activity.map((o) => [o.value, o]));
+const CONTEXT = Object.fromEntries(HUB_OPTIONS.context.map((o) => [o.value, o]));
 const STATUS_TONE = { operational: '', setting_up: 'pillLead', planned: 'pillLead', inactive: 'pillMuted' };
 
 const EMPTY = {
-  name: '', district: '', location: '', status: 'operational', activities: [], otherActivity: '',
+  name: '', district: '', location: '', context: '', settlementName: '', status: 'operational', activities: [], otherActivity: '',
   managerName: '', managerPhone: '', managerEmail: '', managerGender: 'unspecified',
-  peopleWorking: '', womenWorking: '', youthWorking: '', householdsServed: '', establishedOn: '', notes: '',
+  peopleWorking: '', womenWorking: '', youthWorking: '', householdsServed: '',
+  refugeeHouseholdsServed: '', hostHouseholdsServed: '', establishedOn: '', notes: '',
 };
+const COUNT_KEYS = ['peopleWorking', 'womenWorking', 'youthWorking', 'householdsServed', 'refugeeHouseholdsServed', 'hostHouseholdsServed'];
 
 function toForm(hub) {
   if (!hub) return EMPTY;
@@ -31,7 +34,7 @@ function toForm(hub) {
     if (hub[key] !== null && hub[key] !== undefined) form[key] = hub[key];
   }
   form.establishedOn = hub.establishedOn ? hub.establishedOn.slice(0, 10) : '';
-  for (const key of ['peopleWorking', 'womenWorking', 'youthWorking', 'householdsServed']) {
+  for (const key of COUNT_KEYS) {
     form[key] = hub[key] ? String(hub[key]) : '';
   }
   return form;
@@ -50,6 +53,7 @@ function HubModal({ show, onHide, projectId, hub, districts, showToast }) {
   const submit = (e) => {
     e.preventDefault();
     setError('');
+    if (!form.context) { setError('Choose whether the hub is humanitarian or development.'); return; }
     if (form.activities.length === 0) { setError('Choose at least one activity done at the hub.'); return; }
     mutation.mutate(
       hub ? { path: `/hubs/${hub.$id}`, method: 'PATCH', body: form } : { path: '/hubs', method: 'POST', body: form },
@@ -89,7 +93,28 @@ function HubModal({ show, onHide, projectId, hub, districts, showToast }) {
             </Form.Group>
           </div>
 
-          <h3 className="h6 fw-bold mb-2">What is done at the hub?</h3>
+          <h3 className="h6 fw-bold mb-2">Who does it serve?</h3>
+          <div className="d-flex flex-wrap gap-3 mb-2" role="radiogroup" aria-label="Hub type">
+            {HUB_OPTIONS.context.map((o) => (
+              <Form.Check
+                key={o.value}
+                id={`hub-context-${o.value}`}
+                type="radio"
+                name="hub-context"
+                label={<><i className={`bi ${o.icon} me-1`} />{o.label}</>}
+                checked={form.context === o.value}
+                onChange={() => setForm((f) => ({ ...f, context: o.value }))}
+              />
+            ))}
+          </div>
+          {form.context === 'humanitarian' && (
+            <Form.Group className="mb-3">
+              <Form.Label>Refugee settlement</Form.Label>
+              <Form.Control value={form.settlementName} onChange={set('settlementName')} required maxLength={120} placeholder="e.g. Nakivale, Kiryandongo, Rwamwanja" />
+            </Form.Group>
+          )}
+
+          <h3 className="h6 fw-bold mt-3 mb-2">What is done at the hub?</h3>
           <div className={`${styles.checkGrid} mb-2`}>
             {HUB_OPTIONS.activity.map((o) => (
               <Form.Check
@@ -144,6 +169,19 @@ function HubModal({ show, onHide, projectId, hub, districts, showToast }) {
                 <Form.Control type="number" inputMode="numeric" min="0" step="1" value={form[key]} onChange={set(key)} />
               </Form.Group>
             ))}
+            {form.context === 'humanitarian' && (
+              <>
+                <Form.Group className="col-6 col-md-3 mb-3">
+                  <Form.Label>of which refugee</Form.Label>
+                  <Form.Control type="number" inputMode="numeric" min="0" step="1" value={form.refugeeHouseholdsServed} onChange={set('refugeeHouseholdsServed')} />
+                </Form.Group>
+                <Form.Group className="col-6 col-md-3 mb-3">
+                  <Form.Label>of which host community</Form.Label>
+                  <Form.Control type="number" inputMode="numeric" min="0" step="1" value={form.hostHouseholdsServed} onChange={set('hostHouseholdsServed')} />
+                </Form.Group>
+                <Form.Text className="col-md-6 mb-3 d-flex align-items-center">If you split households, refugee + host must add up to households served.</Form.Text>
+              </>
+            )}
             <Form.Group className="col-sm-4 mb-3">
               <Form.Label>Date established</Form.Label>
               <Form.Control type="date" value={form.establishedOn} onChange={set('establishedOn')} />
@@ -170,9 +208,16 @@ function HubCard({ hub, access, onEdit, onDelete }) {
       <div className={styles.hubHead}>
         <div>
           <h3 className={styles.hubName}>{hub.name}</h3>
-          <div className={styles.hubPlace}><i className="bi bi-geo-alt me-1" />{[hub.location, hub.district].filter(Boolean).join(', ')}</div>
+          <div className={styles.hubPlace}><i className="bi bi-geo-alt me-1" />{[hub.location, hub.context === 'humanitarian' && hub.settlementName ? `${hub.settlementName} settlement` : null, hub.district].filter(Boolean).join(', ')}</div>
         </div>
-        <span className={`${styles.pill} ${styles[STATUS_TONE[hub.status]] || ''}`}>{hubLabel('status', hub.status)}</span>
+        <div className="d-flex flex-column align-items-end gap-1">
+          <span className={`${styles.pill} ${styles[STATUS_TONE[hub.status]] || ''}`}>{hubLabel('status', hub.status)}</span>
+          {CONTEXT[hub.context] && (
+            <span className={`${styles.pill} ${hub.context === 'humanitarian' ? styles.pillLead : styles.pillMuted}`}>
+              <i className={`bi ${CONTEXT[hub.context].icon} me-1`} />{CONTEXT[hub.context].short}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className={styles.hubManager}>
@@ -202,6 +247,11 @@ function HubCard({ hub, access, onEdit, onDelete }) {
         <div><strong>{fmt(hub.youthWorking)}</strong><span>Youth</span></div>
         <div><strong>{fmt(hub.householdsServed)}</strong><span>Households</span></div>
       </div>
+      {hub.context === 'humanitarian' && (hub.refugeeHouseholdsServed > 0 || hub.hostHouseholdsServed > 0) && (
+        <div className="small text-muted">
+          Households: {fmt(hub.refugeeHouseholdsServed)} refugee · {fmt(hub.hostHouseholdsServed)} host community
+        </div>
+      )}
 
       {access.canWrite && (
         <div className={styles.hubActions}>
@@ -223,11 +273,14 @@ export default function HubsPanel({ projectId, access, showToast }) {
   const [showAdd, setShowAdd] = useState(false);
   const [district, setDistrict] = useState('');
   const [activity, setActivity] = useState('');
+  const [hubContext, setHubContext] = useState('');
 
   const hubs = hubsQuery.data?.hubs;
   const visible = useMemo(() => (hubs || []).filter((h) =>
-    (!district || h.district === district) && (!activity || (h.activities || []).includes(activity))
-  ), [hubs, district, activity]);
+    (!district || h.district === district)
+    && (!activity || (h.activities || []).includes(activity))
+    && (!hubContext || h.context === hubContext)
+  ), [hubs, district, activity, hubContext]);
 
   if (hubsQuery.isLoading) return <div className="text-center py-5"><Spinner animation="border" /></div>;
   if (hubsQuery.error) return <Alert variant="warning">{hubsQuery.error.message}</Alert>;
@@ -255,13 +308,20 @@ export default function HubsPanel({ projectId, access, showToast }) {
     <>
       <div className="row g-3 mb-3">
         <div className="col-sm-6 col-xl-3">
-          <MetricCard label="Hubs" value={fmt(summary.total)} hint={`${fmt(summary.operational)} operational · ${fmt(summary.districts)} districts`} icon="bi-house-gear" />
+          <MetricCard label="Hubs" value={fmt(summary.total)} hint={`${fmt(summary.humanitarianHubs)} humanitarian · ${fmt(summary.developmentHubs)} development · ${fmt(summary.operational)} operational`} icon="bi-house-gear" />
         </div>
         <div className="col-sm-6 col-xl-3">
           <MetricCard label="People working" value={fmt(summary.peopleWorking)} hint={`${fmt(summary.womenWorking)} women · ${fmt(summary.youthWorking)} youth`} icon="bi-people" />
         </div>
         <div className="col-sm-6 col-xl-3">
-          <MetricCard label="Households served" value={fmt(summary.householdsServed)} hint="Across active hubs" icon="bi-house-heart" />
+          <MetricCard
+            label="Households served"
+            value={fmt(summary.householdsServed)}
+            hint={summary.humanitarianHubs > 0
+              ? `${fmt(summary.refugeeHouseholdsServed)} refugee · ${fmt(summary.hostHouseholdsServed)} host · ${fmt(summary.settlements)} settlements`
+              : 'Across active hubs'}
+            icon="bi-house-heart"
+          />
         </div>
         <div className="col-sm-6 col-xl-3">
           <MetricCard label="Women-led hubs" value={fmt(summary.womenLedHubs)} hint={summary.activities[0] ? `Most common: ${summary.activities[0].label}` : 'No activities yet'} icon="bi-person-check" />
@@ -279,6 +339,10 @@ export default function HubsPanel({ projectId, access, showToast }) {
               <Form.Select size="sm" style={{ width: 'auto' }} value={district} onChange={(e) => setDistrict(e.target.value)} aria-label="Filter by district">
                 <option value="">All districts</option>
                 {hubDistricts.map((d) => <option key={d} value={d}>{d}</option>)}
+              </Form.Select>
+              <Form.Select size="sm" style={{ width: 'auto' }} value={hubContext} onChange={(e) => setHubContext(e.target.value)} aria-label="Filter by hub type">
+                <option value="">Humanitarian &amp; development</option>
+                {HUB_OPTIONS.context.map((o) => <option key={o.value} value={o.value}>{o.short}</option>)}
               </Form.Select>
               <Form.Select size="sm" style={{ width: 'auto' }} value={activity} onChange={(e) => setActivity(e.target.value)} aria-label="Filter by activity">
                 <option value="">All activities</option>

@@ -86,6 +86,8 @@
   gap: 1rem;
 }
 .chartBox { width: 100%; height: 320px; }
+/* z-index 0 keeps Leaflet's panes (z-index 400+) under modals and the sticky header. */
+.mapBox { position: relative; z-index: 0; width: 100%; height: 380px; border-radius: 10px; overflow: hidden; background: #E6EEF1; }
 .chartBoxTall { width: 100%; height: 520px; }
 
 .tableWrap { overflow-x: auto; }

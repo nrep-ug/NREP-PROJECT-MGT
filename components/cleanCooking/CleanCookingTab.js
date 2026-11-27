@@ -10,11 +10,13 @@ import CompaniesPanel from './CompaniesPanel';
 import ChampionsPanel from './ChampionsPanel';
 import FieldReportsPanel from './FieldReportsPanel';
 import HubsPanel from './HubsPanel';
+import MarketFiguresPanel from './MarketFiguresPanel';
 import styles from './CleanCooking.module.css';
 
 const SECTIONS = [
   { key: 'dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
   { key: 'field', label: 'Field reports', icon: 'bi-clipboard-data' },
+  { key: 'figures', label: 'Sales figures', icon: 'bi-bar-chart-line' },
   { key: 'sales', label: 'Company sales', icon: 'bi-receipt' },
   { key: 'companies', label: 'Companies', icon: 'bi-building' },
   { key: 'champions', label: 'Champions', icon: 'bi-people' },
@@ -91,6 +93,7 @@ export default function CleanCookingTab({ project, user, showToast }) {
 
       {section === 'dashboard' && <CleanCookingDashboard projectId={project.$id} onNavigate={setSection} />}
       {section === 'field' && <FieldReportsPanel projectId={project.$id} access={access} showToast={showToast} />}
+      {section === 'figures' && <MarketFiguresPanel projectId={project.$id} />}
       {section === 'sales' && <CompanySalesPanel projectId={project.$id} access={access} showToast={showToast} />}
       {section === 'companies' && <CompaniesPanel projectId={project.$id} access={access} showToast={showToast} />}
       {section === 'champions' && <ChampionsPanel projectId={project.$id} access={access} showToast={showToast} />}

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "test": "node --test tests/financeDomain.test.cjs tests/cleanCookingDomain.test.cjs tests/cleanCookingFieldDomain.test.cjs tests/cleanCookingHubDomain.test.cjs",
+    "test": "node --test tests/financeDomain.test.cjs tests/cleanCookingDomain.test.cjs tests/cleanCookingFieldDomain.test.cjs tests/cleanCookingHubDomain.test.cjs tests/cleanCookingMarketDomain.test.cjs tests/cleanCookingMapSites.test.cjs tests/cleanCookingTrainingFigures.test.cjs",
     "schema:finance": "node scripts/deploy-finance-schema.js",
     "security:profile-permissions": "node scripts/harden-user-profile-permissions.js",
     "start": "next start",
@@ -26,6 +26,7 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
+    "leaflet": "1.9.4",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.45",
     "next": "^16.1.6",
@@ -36,6 +37,7 @@
     "react-bootstrap": "^2.10.5",
     "react-calendar": "^5.1.0",
     "react-dom": "^19.2.4",
+    "react-leaflet": "5.0.0",
     "react-select": "^5.8.3",
     "recharts": "^3.8.0"
   },

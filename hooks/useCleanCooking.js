@@ -14,6 +14,7 @@ export const cleanCookingKeys = {
   champions: (projectId) => ['clean-cooking', projectId, 'champions'],
   districts: (projectId) => ['clean-cooking', projectId, 'districts'],
   hubs: (projectId) => ['clean-cooking', projectId, 'hubs'],
+  marketFigures: (projectId) => ['clean-cooking', projectId, 'market-figures'],
 };
 
 async function request(url, options = {}) {
@@ -67,6 +68,9 @@ export const useCleanCookingFieldReports = (projectId) =>
 /** Hubs + headline indicators: { hubs, summary }. */
 export const useCleanCookingHubs = (projectId) =>
   useList(cleanCookingKeys.hubs(projectId), `${base(projectId)}/hubs`);
+/** Market & sales figures: { figures, summary, notes, notDeployed }. */
+export const useCleanCookingMarketFigures = (projectId) =>
+  useList(cleanCookingKeys.marketFigures(projectId), `${base(projectId)}/market-figures`);
 export const useCleanCookingDistricts = (projectId) =>
   useList(cleanCookingKeys.districts(projectId), `${base(projectId)}/districts`, (d) => d.districts);
 

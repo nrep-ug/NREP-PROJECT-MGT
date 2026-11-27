@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { summarizeHubs, validateHub, HubValidationError } = require('../lib/cleanCooking/hubDomain');
 
 const base = {
-  name: '  Kabale Energy Hub ', district: 'Kabale', activities: ['briquette_making', 'solar_milling'],
+  name: '  Kabale Energy Hub ', district: 'Kabale', context: 'development', activities: ['briquette_making', 'solar_milling'],
   managerName: 'Jane A', managerPhone: '0700 123 456', peopleWorking: '12', womenWorking: '7', youthWorking: '5',
 };
 
@@ -46,4 +46,47 @@ test('summary counts only active hubs for people and activities', () => {
   assert.equal(s.householdsServed, 100);
   assert.equal(s.womenLedHubs, 1);
   assert.deepEqual(s.activities.map((a) => [a.activity, a.hubs]), [['briquette_making', 2], ['solar_milling', 1]]);
+});
+
+const camp = {
+  ...base, name: 'Nakivale Hub', district: 'Isingiro', context: 'humanitarian', settlementName: ' Nakivale ',
+  householdsServed: '300', refugeeHouseholdsServed: '220', hostHouseholdsServed: '80',
+};
+
+test('every hub must say whether it is humanitarian or development', () => {
+  assert.throws(() => validateHub({ ...base, context: undefined }), /humanitarian or development/);
+  assert.throws(() => validateHub({ ...base, context: 'emergency' }), /humanitarian or development/);
+});
+
+test('humanitarian hubs need a settlement and a split that adds up', () => {
+  const hub = validateHub(camp);
+  assert.equal(hub.context, 'humanitarian');
+  assert.equal(hub.settlementName, 'Nakivale');
+  assert.equal(hub.refugeeHouseholdsServed, 220);
+  assert.equal(hub.hostHouseholdsServed, 80);
+  assert.throws(() => validateHub({ ...camp, settlementName: '' }), /settlement/);
+  assert.throws(() => validateHub({ ...camp, hostHouseholdsServed: '50' }), /add up/);
+  const noSplit = validateHub({ ...camp, refugeeHouseholdsServed: '', hostHouseholdsServed: '' });
+  assert.equal(noSplit.refugeeHouseholdsServed + noSplit.hostHouseholdsServed, 0);
+});
+
+test('development hubs drop any settlement or refugee split', () => {
+  const hub = validateHub({ ...camp, context: 'development' });
+  assert.equal(hub.settlementName, null);
+  assert.equal(hub.refugeeHouseholdsServed, 0);
+  assert.equal(hub.hostHouseholdsServed, 0);
+});
+
+test('summary splits hubs by type and counts settlements once', () => {
+  const s = summarizeHubs([
+    { district: 'Isingiro', status: 'operational', context: 'humanitarian', settlementName: 'Nakivale', householdsServed: 300, refugeeHouseholdsServed: 220, hostHouseholdsServed: 80 },
+    { district: 'Isingiro', status: 'operational', context: 'humanitarian', settlementName: 'nakivale ', householdsServed: 10, refugeeHouseholdsServed: 10 },
+    { district: 'Kabale', status: 'operational', context: 'development', householdsServed: 50 },
+    { district: 'Yumbe', status: 'inactive', context: 'humanitarian', settlementName: 'Bidibidi', refugeeHouseholdsServed: 999 },
+  ]);
+  assert.equal(s.humanitarianHubs, 3);
+  assert.equal(s.developmentHubs, 1);
+  assert.equal(s.settlements, 1);
+  assert.equal(s.refugeeHouseholdsServed, 230);
+  assert.equal(s.hostHouseholdsServed, 80);
 });
