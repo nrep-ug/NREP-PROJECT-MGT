@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, Button, Modal, Form, Alert } from 'react-bootstrap';
@@ -62,7 +63,7 @@ export default function ProjectSettingsPage() {
                     variant="link"
                     onClick={() => router.push(`/projects/${project.$id}`)}
                     className="p-0 text-decoration-none"
-                    style={{ color: '#054653', fontWeight: '500' }}
+                    style={{ color: '#357C9D', fontWeight: '500' }}
                 >
                     <i className="bi bi-arrow-left me-2"></i>
                     Back to Project
@@ -82,7 +83,7 @@ export default function ProjectSettingsPage() {
         setSubmitting(true);
 
         try {
-            const response = await fetch(`/api/projects/${project.$id}?requesterId=${user.authUser.$id}`, {
+            const response = await authenticatedFetch(`/api/projects/${project.$id}?requesterId=${user.authUser.$id}`, {
                 method: 'DELETE',
             });
 
@@ -116,7 +117,7 @@ export default function ProjectSettingsPage() {
                     variant="link"
                     onClick={() => router.push(`/projects/${project.$id}`)}
                     className="p-0 mb-3 text-decoration-none"
-                    style={{ color: '#054653', fontWeight: '500' }}
+                    style={{ color: '#357C9D', fontWeight: '500' }}
                 >
                     <i className="bi bi-arrow-left me-2"></i>
                     Back to Project

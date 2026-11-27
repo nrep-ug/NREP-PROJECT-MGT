@@ -5,9 +5,12 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, DB_ID } from '@/lib/appwriteAdmin';
+import { apiErrorResponse, requireAdmin, requireAuthenticatedContext } from '@/lib/serverAuth';
 
 export async function GET(request) {
   try {
+    const context = await requireAuthenticatedContext(request);
+    requireAdmin(context);
     // Try to list a few key collections to see if they exist
     const collectionsToCheck = [
       COLLECTIONS.PROJECTS,
@@ -36,9 +39,7 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error('[API /admin/check-collections]', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to check collections', exist: false },
-      { status: 500 }
-    );
+    const response = apiErrorResponse(error);
+    return NextResponse.json({ ...response.body, exist: false }, { status: response.status });
   }
 }

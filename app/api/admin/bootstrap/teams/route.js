@@ -4,40 +4,24 @@
  */
 
 import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import { adminTeams } from '@/lib/appwriteAdmin';
+import { apiErrorResponse, requireAdmin, requireAuthenticatedContext } from '@/lib/serverAuth';
 
 export async function POST(request) {
   try {
-    // In production, add authentication check here
-    // Verify the user is an org admin before allowing this
+    const context = await requireAuthenticatedContext(request);
+    requireAdmin(context);
 
-    const body = await request.json();
-    const { orgName, usersFile } = body;
-
-    let command = 'node scripts/teams-bootstrap.js';
-    if (orgName) {
-      command += ` --org "${orgName}"`;
-    }
-    if (usersFile) {
-      command += ` --users "${usersFile}"`;
-    }
-
-    const { stdout, stderr } = await execAsync(command);
+    const team = await adminTeams.get(context.organizationId);
 
     return NextResponse.json({
       success: true,
-      output: stdout,
-      errors: stderr || null,
+      message: 'Organization team is configured.',
+      team: { $id: team.$id, name: team.name },
     });
   } catch (error) {
     console.error('[API /admin/bootstrap/teams POST]', error);
-    return NextResponse.json({
-      error: error.message || 'Failed to run teams bootstrap',
-      output: error.stdout || '',
-      errors: error.stderr || '',
-    }, { status: 500 });
+    const response = apiErrorResponse(error);
+    return NextResponse.json(response.body, { status: response.status });
   }
 }

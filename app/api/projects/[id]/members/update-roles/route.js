@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminTeams as teams, adminDatabases as databases, adminUsers, DB_ID, Query } from '@/lib/appwriteAdmin';
-import { verifyAdminAccess } from '@/lib/authHelpers';
+import { authenticateRequest, forbidOtherOrganization } from '@/lib/routeAuth';
 
 /**
  * PUT /api/projects/[id]/members/update-roles
@@ -9,20 +9,17 @@ import { verifyAdminAccess } from '@/lib/authHelpers';
  */
 export async function PUT(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id } = await params;
     const body = await request.json();
-    const { membershipId, roles, requesterId, organizationId } = body;
+    const { membershipId, roles } = body;
+    const requesterId = context.accountId;
 
     if (!membershipId || !roles || !Array.isArray(roles) || roles.length === 0) {
       return NextResponse.json(
         { error: 'Missing required fields: membershipId and roles (non-empty array) are required' },
-        { status: 400 }
-      );
-    }
-
-    if (!requesterId || !organizationId) {
-      return NextResponse.json(
-        { error: 'Missing requesterId or organizationId' },
         { status: 400 }
       );
     }
@@ -36,10 +33,11 @@ export async function PUT(request, { params }) {
         { status: 404 }
       );
     }
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     // Verify requester has permission: must be org admin OR project manager/owner
-    const isAdmin = await verifyAdminAccess(requesterId);
-    if (!isAdmin) {
+    if (!context.isAdmin) {
       // Check if they are a project manager or owner
       const memberships = await teams.listMemberships(project.projectTeamId);
       const requesterMembership = memberships.memberships.find(

@@ -6,25 +6,28 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, adminTeams, Query, DB_ID } from '@/lib/appwriteAdmin';
-import { verifyAdminAccess, verifyProjectMembership } from '@/lib/authHelpers';
+import { verifyProjectMembership } from '@/lib/authHelpers';
+import { authenticateRequest, forbidOtherOrganization } from '@/lib/routeAuth';
 
 const COL_ROLES = COLLECTIONS.PROJECT_ROLES;
 const COL_PROJECTS = COLLECTIONS.PROJECTS;
 
 export async function PATCH(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id: projectId, roleId } = await params;
     const body = await request.json();
-    const { name, description, color, permissions, priority, isStaffRole, requesterId } = body;
+    const { name, description, color, permissions, priority, isStaffRole } = body;
+    const requesterId = context.accountId;
 
-    if (!requesterId) {
-      return NextResponse.json({ error: 'requesterId is required' }, { status: 401 });
-    }
+    const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     // Verify requester is org admin OR project manager/owner
-    const isAdmin = await verifyAdminAccess(requesterId);
-    if (!isAdmin) {
-      const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+    if (!context.isAdmin) {
       const isManager = await verifyProjectMembership(requesterId, project.projectTeamId, ['manager', 'owner']);
       if (!isManager) {
         return NextResponse.json({ error: 'Only admins or project managers can edit roles' }, { status: 403 });
@@ -63,18 +66,17 @@ export async function PATCH(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const { id: projectId, roleId } = await params;
-    const { searchParams } = new URL(request.url);
-    const requesterId = searchParams.get('requesterId');
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
 
-    if (!requesterId) {
-      return NextResponse.json({ error: 'requesterId is required' }, { status: 401 });
-    }
+    const { id: projectId, roleId } = await params;
+    const requesterId = context.accountId;
 
     // Verify requester is org admin OR project manager/owner
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
-    const isAdmin = await verifyAdminAccess(requesterId);
-    if (!isAdmin) {
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
+    if (!context.isAdmin) {
       const isManager = await verifyProjectMembership(requesterId, project.projectTeamId, ['manager', 'owner']);
       if (!isManager) {
         return NextResponse.json({ error: 'Only admins or project managers can delete roles' }, { status: 403 });

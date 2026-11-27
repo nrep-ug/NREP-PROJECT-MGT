@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, Button, Row, Col, Badge, Alert, Table, ProgressBar, Dropdown, Modal } from 'react-bootstrap';
@@ -120,7 +121,7 @@ export default function MilestoneDetailPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/projects/${project.$id}/milestones?milestoneId=${milestone.$id}&requesterId=${user.authUser.$id}`,
         { method: 'DELETE' }
       );
@@ -186,7 +187,7 @@ export default function MilestoneDetailPage() {
     }
 
     try {
-      const response = await fetch(`/api/projects/${project.$id}/milestones`, {
+      const response = await authenticatedFetch(`/api/projects/${project.$id}/milestones`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

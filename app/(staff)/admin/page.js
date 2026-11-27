@@ -153,7 +153,7 @@ export default function AdminPage() {
       <Toast toast={toast} onClose={hideToast} />
 
       {/* Hero Header */}
-      <Card className="border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)' }}>
+      <Card className="border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)' }}>
         <Card.Body className="text-white p-4">
           <Row className="align-items-center">
             <Col md={8}>
@@ -212,14 +212,14 @@ export default function AdminPage() {
                   style={{
                     width: '60px',
                     height: '60px',
-                    background: 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)',
+                    background: 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)',
                     boxShadow: '0 4px 15px rgba(37, 99, 235, 0.3)'
                   }}
                 >
                   <i className="bi bi-people text-white" style={{ fontSize: '1.8rem' }}></i>
                 </div>
               </div>
-              <h2 className="mb-1 fw-bold" style={{ color: '#054653' }}>{stats.totalUsers}</h2>
+              <h2 className="mb-1 fw-bold" style={{ color: '#357C9D' }}>{stats.totalUsers}</h2>
               <div className="text-muted small fw-semibold">Total Users</div>
             </Card.Body>
           </Card>
@@ -274,7 +274,7 @@ export default function AdminPage() {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-5px)';
-              e.currentTarget.style.boxShadow = '0 10px 25px rgba(20, 184, 166, 0.2)';
+              e.currentTarget.style.boxShadow = '0 10px 25px rgba(46, 158, 204, 0.2)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
@@ -294,14 +294,14 @@ export default function AdminPage() {
                   style={{
                     width: '60px',
                     height: '60px',
-                    background: 'linear-gradient(135deg, #14B8A6 0%, #0f9488 100%)',
-                    boxShadow: '0 4px 15px rgba(20, 184, 166, 0.3)'
+                    background: 'linear-gradient(135deg, #2E9ECC 0%, #0f9488 100%)',
+                    boxShadow: '0 4px 15px rgba(46, 158, 204, 0.3)'
                   }}
                 >
                   <i className="bi bi-folder text-white" style={{ fontSize: '1.8rem' }}></i>
                 </div>
               </div>
-              <h2 className="mb-1 fw-bold" style={{ color: '#14B8A6' }}>{stats.totalProjects}</h2>
+              <h2 className="mb-1 fw-bold" style={{ color: '#2E9ECC' }}>{stats.totalProjects}</h2>
               <div className="text-muted small fw-semibold">Total Projects</div>
             </Card.Body>
           </Card>
@@ -414,7 +414,7 @@ export default function AdminPage() {
             className="border-0 shadow-sm h-100 position-relative overflow-hidden"
             style={{
               transition: 'all 0.3s ease',
-              borderLeft: '4px solid #054653'
+              borderLeft: '4px solid #357C9D'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateX(5px)';
@@ -439,7 +439,7 @@ export default function AdminPage() {
                     style={{
                       width: '56px',
                       height: '56px',
-                      background: 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)',
+                      background: 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)',
                       boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
                     }}
                   >
@@ -528,14 +528,14 @@ export default function AdminPage() {
               style={{
                 width: '80px',
                 height: '80px',
-                background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
-                boxShadow: '0 4px 20px rgba(5, 70, 83, 0.3)'
+                background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)',
+                boxShadow: '0 4px 20px rgba(53, 124, 157, 0.3)'
               }}
             >
               <i className="bi bi-people-fill text-white" style={{ fontSize: '2.5rem' }}></i>
             </div>
           </div>
-          <h4 className="mb-3 fw-bold" style={{ color: '#054653' }}>
+          <h4 className="mb-3 fw-bold" style={{ color: '#357C9D' }}>
             <i className="bi bi-people-fill me-2"></i>
             User Management
           </h4>
@@ -568,6 +568,15 @@ export default function AdminPage() {
               <i className="bi bi-plus-circle me-2"></i>
               Create New User
             </Button>
+            <Button
+              variant="outline-secondary"
+              size="lg"
+              onClick={() => router.push('/admin/finance-roles')}
+              style={{ fontWeight: '500', padding: '0.75rem 2rem' }}
+            >
+              <i className="bi bi-shield-check me-2"></i>
+              Finance Roles
+            </Button>
           </div>
 
           {/* Quick Stats Summary */}
@@ -575,7 +584,7 @@ export default function AdminPage() {
             <Col md={3}>
               <div className="p-3 rounded" style={{ backgroundColor: '#f8f9fa' }}>
                 <div className="fw-semibold text-muted small mb-1">Total Users</div>
-                <h3 className="mb-0 fw-bold" style={{ color: '#054653' }}>{stats.totalUsers}</h3>
+                <h3 className="mb-0 fw-bold" style={{ color: '#357C9D' }}>{stats.totalUsers}</h3>
               </div>
             </Col>
             <Col md={3}>
@@ -587,7 +596,7 @@ export default function AdminPage() {
             <Col md={3}>
               <div className="p-3 rounded" style={{ backgroundColor: '#f8f9fa' }}>
                 <div className="fw-semibold text-muted small mb-1">Staff Members</div>
-                <h3 className="mb-0 fw-bold" style={{ color: '#054653' }}>
+                <h3 className="mb-0 fw-bold" style={{ color: '#357C9D' }}>
                   {users.filter(u => Array.isArray(u.role) ? u.role.includes('staff') : u.role === 'staff').length}
                 </h3>
               </div>

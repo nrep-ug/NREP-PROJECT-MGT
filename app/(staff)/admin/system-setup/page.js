@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import AppLayout from '@/components/AppLayout';
 import Toast, { useToast } from '@/components/Toast';
+import { authenticatedFetch } from '@/lib/apiClient';
 
 export default function SystemSetupPage() {
   const router = useRouter();
@@ -50,11 +51,11 @@ export default function SystemSetupPage() {
       setSystemState(prev => ({ ...prev, checking: true }));
 
       // Check collections status
-      const collectionsResponse = await fetch('/api/admin/check-collections');
+      const collectionsResponse = await authenticatedFetch('/api/admin/check-collections');
       const collectionsData = await collectionsResponse.json();
 
       // Check teams status
-      const teamsResponse = await fetch('/api/admin/check-teams');
+      const teamsResponse = await authenticatedFetch('/api/admin/check-teams');
       const teamsData = await teamsResponse.json();
 
       const isInitialized = collectionsData.exist && teamsData.exist;
@@ -75,7 +76,7 @@ export default function SystemSetupPage() {
   // Fetch detailed collection status
   const fetchCollectionDetails = async () => {
     try {
-      const response = await fetch('/api/admin/setup-collections');
+      const response = await authenticatedFetch('/api/admin/setup-collections');
       if (response.ok) {
         const data = await response.json();
         setCollectionDetails(data.collections || []);
@@ -101,7 +102,7 @@ export default function SystemSetupPage() {
     }));
 
     try {
-      const response = await fetch('/api/admin/setup-collections', {
+      const response = await authenticatedFetch('/api/admin/setup-collections', {
         method: 'POST',
       });
 
@@ -166,7 +167,7 @@ export default function SystemSetupPage() {
     }));
 
     try {
-      const response = await fetch('/api/admin/bootstrap-teams', {
+      const response = await authenticatedFetch('/api/admin/bootstrap-teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ organizationId: user.organizationId }),
@@ -268,7 +269,7 @@ export default function SystemSetupPage() {
           variant="link"
           onClick={() => router.push('/admin')}
           className="p-0 mb-3 text-decoration-none"
-          style={{ color: '#054653', fontWeight: '500' }}
+          style={{ color: '#357C9D', fontWeight: '500' }}
         >
           <i className="bi bi-arrow-left me-2"></i>
           Back to Admin Dashboard
@@ -315,7 +316,7 @@ export default function SystemSetupPage() {
       </div>
 
       {/* System Status Hero */}
-      <Card className="border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)' }}>
+      <Card className="border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)' }}>
         <Card.Body className="text-white p-4">
           <div className="row align-items-center">
             <div className="col-md-9">
@@ -459,7 +460,7 @@ export default function SystemSetupPage() {
                 className="border-0 shadow-sm h-100 position-relative overflow-hidden"
                 style={{
                   transition: 'all 0.3s ease',
-                  borderLeft: '4px solid #054653'
+                  borderLeft: '4px solid #357C9D'
                 }}
               >
                 <div
@@ -475,7 +476,7 @@ export default function SystemSetupPage() {
                       style={{
                         width: '60px',
                         height: '60px',
-                        background: 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)',
+                        background: 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)',
                         boxShadow: '0 4px 15px rgba(37, 99, 235, 0.3)'
                       }}
                     >
@@ -544,7 +545,7 @@ export default function SystemSetupPage() {
                 className="border-0 shadow-sm h-100 position-relative overflow-hidden"
                 style={{
                   transition: 'all 0.3s ease',
-                  borderLeft: '4px solid #14B8A6'
+                  borderLeft: '4px solid #2E9ECC'
                 }}
               >
                 <div
@@ -560,8 +561,8 @@ export default function SystemSetupPage() {
                       style={{
                         width: '60px',
                         height: '60px',
-                        background: 'linear-gradient(135deg, #14B8A6 0%, #0f9488 100%)',
-                        boxShadow: '0 4px 15px rgba(20, 184, 166, 0.3)'
+                        background: 'linear-gradient(135deg, #2E9ECC 0%, #0f9488 100%)',
+                        boxShadow: '0 4px 15px rgba(46, 158, 204, 0.3)'
                       }}
                     >
                       <i className="bi bi-people-fill text-white" style={{ fontSize: '1.75rem' }}></i>
@@ -607,7 +608,7 @@ export default function SystemSetupPage() {
                       style={{
                         fontWeight: '500',
                         borderRadius: '6px',
-                        boxShadow: !systemState.teamsExist ? '0 2px 8px rgba(20, 184, 166, 0.2)' : 'none'
+                        boxShadow: !systemState.teamsExist ? '0 2px 8px rgba(46, 158, 204, 0.2)' : 'none'
                       }}
                     >
                       {operations.bootstrapTeams.loading ? (
@@ -786,7 +787,7 @@ export default function SystemSetupPage() {
               <div className="d-flex justify-content-between align-items-center">
                 <div>
                   <h5 className="mb-1 fw-bold d-flex align-items-center">
-                    <i className="bi bi-database-fill me-2" style={{ color: '#054653' }}></i>
+                    <i className="bi bi-database-fill me-2" style={{ color: '#357C9D' }}></i>
                     Database Collections Status
                   </h5>
                   <p className="text-muted small mb-0">
@@ -836,7 +837,7 @@ export default function SystemSetupPage() {
                               style={{
                                 width: '40px',
                                 height: '40px',
-                                background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
+                                background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)',
                                 color: 'white'
                               }}
                             >
@@ -954,7 +955,7 @@ export default function SystemSetupPage() {
                       style={{
                         width: '48px',
                         height: '48px',
-                        background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
+                        background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)',
                         boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
                       }}
                     >
@@ -966,8 +967,8 @@ export default function SystemSetupPage() {
                     </div>
                   </div>
 
-                  <div className="mb-4 p-3 rounded" style={{ backgroundColor: '#f8f9fa', borderLeft: '4px solid #054653' }}>
-                    <h6 className="fw-semibold mb-2" style={{ color: '#054653' }}>
+                  <div className="mb-4 p-3 rounded" style={{ backgroundColor: '#f8f9fa', borderLeft: '4px solid #357C9D' }}>
+                    <h6 className="fw-semibold mb-2" style={{ color: '#357C9D' }}>
                       <i className="bi bi-database me-2"></i>
                       What does &quot;Setup Collections&quot; do?
                     </h6>
@@ -976,8 +977,8 @@ export default function SystemSetupPage() {
                     </p>
                   </div>
 
-                  <div className="mb-4 p-3 rounded" style={{ backgroundColor: '#f8f9fa', borderLeft: '4px solid #14B8A6' }}>
-                    <h6 className="fw-semibold mb-2" style={{ color: '#14B8A6' }}>
+                  <div className="mb-4 p-3 rounded" style={{ backgroundColor: '#f8f9fa', borderLeft: '4px solid #2E9ECC' }}>
+                    <h6 className="fw-semibold mb-2" style={{ color: '#2E9ECC' }}>
                       <i className="bi bi-people me-2"></i>
                       What does &quot;Bootstrap Teams&quot; do?
                     </h6>
@@ -1085,7 +1086,7 @@ export default function SystemSetupPage() {
 
       {/* Collections Setup Confirmation Modal */}
       <Modal show={showCollectionsModal} onHide={() => setShowCollectionsModal(false)} centered size="lg">
-        <Modal.Header closeButton style={{ background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)', border: 'none' }}>
+        <Modal.Header closeButton style={{ background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)', border: 'none' }}>
           <Modal.Title className="text-white">
             <i className="bi bi-database-fill me-2"></i>
             {systemState.collectionsExist ? 'Re-run Collections Setup' : 'Setup Database Collections'}
@@ -1110,7 +1111,7 @@ export default function SystemSetupPage() {
 
           <div className="mb-4">
             <h6 className="fw-semibold mb-3">
-              <i className="bi bi-list-check me-2" style={{ color: '#054653' }}></i>
+              <i className="bi bi-list-check me-2" style={{ color: '#357C9D' }}></i>
               What will be created:
             </h6>
             <div className="row g-2">
@@ -1177,7 +1178,7 @@ export default function SystemSetupPage() {
 
       {/* Teams Bootstrap Confirmation Modal */}
       <Modal show={showTeamsModal} onHide={() => setShowTeamsModal(false)} centered size="lg">
-        <Modal.Header closeButton style={{ background: 'linear-gradient(135deg, #14B8A6 0%, #0f9488 100%)', border: 'none' }}>
+        <Modal.Header closeButton style={{ background: 'linear-gradient(135deg, #2E9ECC 0%, #0f9488 100%)', border: 'none' }}>
           <Modal.Title className="text-white">
             <i className="bi bi-people-fill me-2"></i>
             {systemState.teamsExist ? 'Re-run Teams Bootstrap' : 'Bootstrap Team Structure'}
@@ -1202,7 +1203,7 @@ export default function SystemSetupPage() {
 
           <div className="mb-4">
             <h6 className="fw-semibold mb-3">
-              <i className="bi bi-diagram-3 me-2" style={{ color: '#14B8A6' }}></i>
+              <i className="bi bi-diagram-3 me-2" style={{ color: '#2E9ECC' }}></i>
               Teams to be created:
             </h6>
             <div className="row g-2">
@@ -1217,7 +1218,7 @@ export default function SystemSetupPage() {
               </div>
               <div className="col-md-4">
                 <div className="p-3 rounded text-center" style={{ backgroundColor: '#dbeafe', border: '2px solid #93c5fd' }}>
-                  <i className="bi bi-briefcase-fill" style={{ fontSize: '2rem', color: '#054653' }}></i>
+                  <i className="bi bi-briefcase-fill" style={{ fontSize: '2rem', color: '#357C9D' }}></i>
                   <div className="mt-2">
                     <strong className="small d-block">Staff Team</strong>
                     <small className="text-muted">Internal operations</small>
@@ -1226,7 +1227,7 @@ export default function SystemSetupPage() {
               </div>
               <div className="col-md-4">
                 <div className="p-3 rounded text-center" style={{ backgroundColor: '#ccfbf1', border: '2px solid #5eead4' }}>
-                  <i className="bi bi-person-fill" style={{ fontSize: '2rem', color: '#14B8A6' }}></i>
+                  <i className="bi bi-person-fill" style={{ fontSize: '2rem', color: '#2E9ECC' }}></i>
                   <div className="mt-2">
                     <strong className="small d-block">Client Team</strong>
                     <small className="text-muted">External access</small>
@@ -1258,7 +1259,7 @@ export default function SystemSetupPage() {
             variant="success"
             onClick={bootstrapTeams}
             disabled={operations.bootstrapTeams.loading}
-            style={{ fontWeight: '500', borderRadius: '6px', boxShadow: '0 2px 8px rgba(20, 184, 166, 0.2)' }}
+            style={{ fontWeight: '500', borderRadius: '6px', boxShadow: '0 2px 8px rgba(46, 158, 204, 0.2)' }}
           >
             <i className="bi bi-play-circle me-1"></i>
             {systemState.teamsExist ? 'Re-run Bootstrap' : 'Start Bootstrap'}

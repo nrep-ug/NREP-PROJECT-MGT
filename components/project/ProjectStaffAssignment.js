@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { Card, Button, Badge, Modal, Form, Alert, Row, Col, InputGroup } from 'react-bootstrap';
 import { useRouter } from 'next/navigation';
@@ -28,7 +29,7 @@ export default function ProjectStaffAssignment({ projectId, projectTeamId, organ
   // Fetch project members
   const fetchMembers = async () => {
     try {
-      const response = await fetch(`/api/projects/${projectId}/members?requesterId=${requesterId}`);
+      const response = await authenticatedFetch(`/api/projects/${projectId}/members?requesterId=${requesterId}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -74,7 +75,7 @@ export default function ProjectStaffAssignment({ projectId, projectTeamId, organ
 
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/members`, {
+      const response = await authenticatedFetch(`/api/projects/${projectId}/members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -110,7 +111,7 @@ export default function ProjectStaffAssignment({ projectId, projectTeamId, organ
     }
 
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/projects/${projectId}/members?membershipId=${membershipId}&requesterId=${requesterId}&organizationId=${organizationId}`,
         { method: 'DELETE' }
       );
@@ -191,7 +192,7 @@ export default function ProjectStaffAssignment({ projectId, projectTeamId, organ
               flexShrink: 0
             }}
           >
-            <i className="bi bi-person-fill" style={{ fontSize: '1.5rem', color: '#054653' }}></i>
+            <i className="bi bi-person-fill" style={{ fontSize: '1.5rem', color: '#357C9D' }}></i>
           </div>
           <div className="flex-grow-1 overflow-hidden">
             <h6 className="mb-1 text-truncate">{member.firstName} {member.lastName}</h6>
@@ -346,7 +347,7 @@ export default function ProjectStaffAssignment({ projectId, projectTeamId, organ
                     flexShrink: 0
                   }}
                 >
-                  <i className="bi bi-person-badge" style={{ fontSize: '1.5rem', color: '#054653' }}></i>
+                  <i className="bi bi-person-badge" style={{ fontSize: '1.5rem', color: '#357C9D' }}></i>
                 </div>
                 <div>
                   <div className="small text-muted" style={{ fontSize: '0.75rem', fontWeight: '500' }}>Managers</div>

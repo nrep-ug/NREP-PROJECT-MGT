@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, Form, Button, Row, Col, Alert, Badge, Modal, Dropdown } from 'react-bootstrap';
@@ -100,7 +101,7 @@ export default function TaskDetailPage() {
       setMilestones(milestonesResponse.documents);
 
       // Load project members
-      const membersResponse = await fetch(`/api/projects/${params.id}/members?requesterId=${requesterId}`);
+      const membersResponse = await authenticatedFetch(`/api/projects/${params.id}/members?requesterId=${requesterId}`);
       const membersData = await membersResponse.json();
       if (membersResponse.ok) {
         setProjectMembers(membersData.members || []);
@@ -217,7 +218,7 @@ export default function TaskDetailPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch(`/api/projects/${project.$id}/tasks`, {
+      const response = await authenticatedFetch(`/api/projects/${project.$id}/tasks`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -255,7 +256,7 @@ export default function TaskDetailPage() {
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/projects/${project.$id}/tasks?taskId=${params.taskId}&requesterId=${requesterId}`,
         { method: 'DELETE' }
       );
@@ -278,7 +279,7 @@ export default function TaskDetailPage() {
 
   const handleQuickStatusUpdate = async (newStatus) => {
     try {
-      const response = await fetch(`/api/projects/${project.$id}/tasks`, {
+      const response = await authenticatedFetch(`/api/projects/${project.$id}/tasks`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

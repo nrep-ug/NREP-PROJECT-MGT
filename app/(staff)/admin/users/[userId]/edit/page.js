@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { databases, Query, COLLECTIONS, DB_ID } from '@/lib/appwriteClient';
 import AppLayout from '@/components/AppLayout';
 import Toast, { useToast } from '@/components/Toast';
+import { authenticatedFetch } from '@/lib/apiClient';
 
 export default function EditUserPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function EditUserPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [isFinance, setIsFinance] = useState(false);
+  const [financeRole, setFinanceRole] = useState(null);
   const [supervisorId, setSupervisorId] = useState('');
   const [clientOrganizationIds, setClientOrganizationIds] = useState([]);
   const [projectIds, setProjectIds] = useState([]);
@@ -90,6 +92,7 @@ export default function EditUserPage() {
       setIsAdmin(userDoc.isAdmin || false);
       setIsSupervisor(userDoc.isSupervisor || false);
       setIsFinance(userDoc.isFinance || false);
+      setFinanceRole(userDoc.financeRole || null);
       setSupervisorId(userDoc.supervisorId || '');
       setClientOrganizationIds(userDoc.clientOrganizationIds || []);
       setProjectIds(userDoc.projectIds || []);
@@ -117,7 +120,7 @@ export default function EditUserPage() {
       const requesterId = user?.accountId || user?.authUser?.$id;
 
       // Fetch Organizations
-      const orgsResponse = await fetch(`/api/admin/organizations?requesterId=${requesterId}&type=client`);
+      const orgsResponse = await authenticatedFetch('/api/admin/organizations?type=client');
       if (orgsResponse.ok) {
         const data = await orgsResponse.json();
         setClientOrganizations(data.organizations || []);
@@ -129,7 +132,7 @@ export default function EditUserPage() {
       // Fetching all projects for now might be heavy if there are many, 
       // but for filtering purposes we need them available.
       // Better approach: Fetch projects where organizationId == admin's org (already doing this for scoped access)
-      const projectsResponse = await fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
+      const projectsResponse = await authenticatedFetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
       if (projectsResponse.ok) {
         const data = await projectsResponse.json();
         setProjects(data.projects || []);
@@ -147,11 +150,14 @@ export default function EditUserPage() {
       showToast('First name and last name are required', 'warning');
       return;
     }
+    if (isFinance && !financeRole) {
+      showToast('Choose Finance Officer or Finance Reviewer.', 'warning');
+      return;
+    }
 
     setSaving(true);
     try {
       const updateData = {
-        requesterId: user?.accountId || user?.authUser?.$id,
         role: userRole,
         firstName,
         lastName,
@@ -165,13 +171,14 @@ export default function EditUserPage() {
         updateData.isAdmin = isAdmin;
         updateData.isSupervisor = isSupervisor;
         updateData.isFinance = isFinance;
+        updateData.financeRole = isFinance ? financeRole : null;
         updateData.supervisorId = supervisorId;
       } else if (userRole === 'client') {
         updateData.clientOrganizationIds = clientOrganizationIds;
         updateData.projectIds = projectIds;
       }
 
-      const response = await fetch(`/api/admin/users/${userId}`, {
+      const response = await authenticatedFetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData)
@@ -259,7 +266,7 @@ export default function EditUserPage() {
       <Toast toast={toast} onClose={hideToast} />
 
       {/* Hero Header */}
-      <Card className="border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)' }}>
+      <Card className="border-0 shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)' }}>
         <Card.Body className="text-white p-4">
           <Row className="align-items-center">
             <Col md={8}>
@@ -308,7 +315,7 @@ export default function EditUserPage() {
                 style={{
                   width: '100px',
                   height: '100px',
-                  background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
+                  background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)',
                   color: 'white',
                   fontSize: '2rem',
                   fontWeight: '600'
@@ -343,7 +350,7 @@ export default function EditUserPage() {
           <Card className="border-0 shadow-sm">
             <Card.Header className="bg-white border-bottom" style={{ borderBottom: '2px solid #e9ecef' }}>
               <h5 className="mb-0 fw-bold">
-                <i className="bi bi-person-lines-fill me-2" style={{ color: '#054653' }}></i>
+                <i className="bi bi-person-lines-fill me-2" style={{ color: '#357C9D' }}></i>
                 User Details
               </h5>
             </Card.Header>
@@ -513,11 +520,30 @@ export default function EditUserPage() {
                                 </span>
                               }
                               checked={isFinance}
-                              onChange={(e) => setIsFinance(e.target.checked)}
+                              onChange={(e) => {
+                                setIsFinance(e.target.checked);
+                                setFinanceRole(e.target.checked ? (financeRole || 'preparer') : null);
+                              }}
                               disabled={saving}
                               className="mb-1"
                             />
-                            <small className="text-muted d-block ps-4">Can manage organization-wide finances and reports.</small>
+                            <small className="text-muted d-block ps-4">Assign a controlled Finance Officer or Reviewer role.</small>
+                            {isFinance && (
+                              <div className="ps-4 pt-2">
+                                <Form.Label className="small mb-1">Finance role</Form.Label>
+                                <Form.Select
+                                  size="sm"
+                                  value={financeRole || ''}
+                                  onChange={(e) => setFinanceRole(e.target.value || null)}
+                                  disabled={saving}
+                                >
+                                  <option value="">Choose a role</option>
+                                  <option value="preparer">Finance Officer (creates and submits)</option>
+                                  <option value="approver">Finance Reviewer (reviews and decides)</option>
+                                </Form.Select>
+                                <small className="text-muted d-block mt-1">Roles are organization-scoped and enforced by the Finance API.</small>
+                              </div>
+                            )}
                           </Col>
                         </Row>
                       </Card.Body>

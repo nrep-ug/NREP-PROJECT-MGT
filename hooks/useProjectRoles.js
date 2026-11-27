@@ -1,3 +1,4 @@
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 /**
@@ -22,7 +23,7 @@ export function useProjectRoles(projectId, requesterId) {
   return useQuery({
     queryKey: roleKeys.list(projectId),
     queryFn: async () => {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/projects/${projectId}/roles?requesterId=${requesterId}`
       );
       if (!response.ok) {
@@ -44,7 +45,7 @@ export function useCreateProjectRole(projectId) {
 
   return useMutation({
     mutationFn: async (roleData) => {
-      const response = await fetch(`/api/projects/${projectId}/roles`, {
+      const response = await authenticatedFetch(`/api/projects/${projectId}/roles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(roleData),
@@ -69,7 +70,7 @@ export function useUpdateProjectRole(projectId) {
 
   return useMutation({
     mutationFn: async ({ roleId, ...updateData }) => {
-      const response = await fetch(`/api/projects/${projectId}/roles/${roleId}`, {
+      const response = await authenticatedFetch(`/api/projects/${projectId}/roles/${roleId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
@@ -94,7 +95,7 @@ export function useDeleteProjectRole(projectId) {
 
   return useMutation({
     mutationFn: async ({ roleId, requesterId }) => {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/projects/${projectId}/roles/${roleId}?requesterId=${requesterId}`,
         { method: 'DELETE' }
       );

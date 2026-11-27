@@ -2,14 +2,14 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Card, Tabs, Tab, Alert, Container, Badge, Button, Row, Col } from 'react-bootstrap';
+import { Alert, Button } from 'react-bootstrap';
 import { useAuth } from '@/hooks/useAuth';
 import { useProject, useProjectMembers } from '@/hooks/useProjects';
-import { databases, COLLECTIONS, DB_ID } from '@/lib/appwriteClient';
 import { formatDate } from '@/lib/date';
 import AppLayout from '@/components/AppLayout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Toast, { useToast } from '@/components/Toast';
+import StatusBadge from '@/components/ui/StatusBadge';
 import ProjectOverview from '@/components/project/ProjectOverview';
 import ProjectTasks from '@/components/project/ProjectTasks';
 import ProjectMilestones from '@/components/project/ProjectMilestones';
@@ -18,6 +18,33 @@ import ProjectEmbeds from '@/components/project/ProjectEmbeds';
 import ProjectStaffAssignment from '@/components/project/ProjectStaffAssignment';
 import ProjectComponents from '@/components/project/ProjectComponents';
 import ProjectRolesSettings from '@/components/project/ProjectRolesSettings';
+import ProjectFinanceSummary from '@/components/project/ProjectFinanceSummary';
+import CleanCookingTab from '@/components/cleanCooking/CleanCookingTab';
+import { useCleanCookingStatus } from '@/hooks/useCleanCooking';
+import styles from '@/components/project/ProjectViews.module.css';
+
+function getCurrencySymbol(currency) {
+  switch (currency) {
+    case 'USD': return '$';
+    case 'GBP': return '£';
+    case 'EUR': return '€';
+    case 'UGX': return 'Sh';
+    default: return '$';
+  }
+}
+
+const TAB_DEFS = [
+  { key: 'overview', label: 'Overview', icon: 'bi-info-circle' },
+  { key: 'milestones', label: 'Activities', icon: 'bi-flag' },
+  { key: 'components', label: 'Components', icon: 'bi-boxes' },
+  { key: 'tasks', label: 'Tasks', icon: 'bi-list-task' },
+  { key: 'team', label: 'Team', icon: 'bi-people' },
+  { key: 'documents', label: 'Documents', icon: 'bi-file-earmark-text' },
+  { key: 'finance', label: 'Finance', icon: 'bi-cash-coin', requires: 'finance' },
+  { key: 'clean-cooking', label: 'Clean Cooking', icon: 'bi-fire', requires: 'cleanCooking' },
+  { key: 'embeds', label: 'Embeds', icon: 'bi-code-square' },
+  { key: 'settings', label: 'Settings', icon: 'bi-gear', requires: 'settings' },
+];
 
 function ProjectDetailContent() {
   const params = useParams();
@@ -27,375 +54,230 @@ function ProjectDetailContent() {
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(params.id);
   const { data: teamMembers = [] } = useProjectMembers(params.id, user?.authUser?.$id);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showFullDescription, setShowFullDescription] = useState(false);
   const { toast, showToast, hideToast } = useToast();
 
-  // Determine the current user's project team roles
   const currentUserId = user?.accountId || user?.authUser?.$id;
-  const currentUserMember = teamMembers.find(m => m.accountId === currentUserId);
+  const currentUserMember = teamMembers.find((m) => m.accountId === currentUserId);
   const currentUserProjectRoles = currentUserMember?.projectRoles || [];
 
-  // Permission levels based on project team roles:
-  // canModifyProject: Can create/edit tasks, milestones, embeds, components (manager or lead)
-  const canModifyProject = user?.isAdmin || currentUserProjectRoles.some(
-    r => ['manager', 'owner', 'lead'].includes(r)
+  const canModifyProject = user?.isAdmin || currentUserProjectRoles.some((r) => ['manager', 'owner', 'lead'].includes(r));
+  const isProjectMember = user?.isAdmin || (currentUserMember && !currentUserProjectRoles.every((r) => r === 'client_rep'));
+  const canManageTeam = user?.isAdmin || currentUserProjectRoles.some((r) => ['manager', 'owner'].includes(r));
+  const canViewFinance = Boolean(
+    user?.isFinance || user?.isManager || user?.isAdmin ||
+    currentUserProjectRoles.some((role) => ['owner', 'manager'].includes(role))
   );
-  // isProjectMember: Is assigned to the project (any role except client_rep) — can upload docs
-  const isProjectMember = user?.isAdmin || (
-    currentUserMember && !currentUserProjectRoles.every(r => r === 'client_rep')
-  );
-  // canManageTeam: Can add/remove team members (manager or owner)
-  const canManageTeam = user?.isAdmin || currentUserProjectRoles.some(
-    r => ['manager', 'owner'].includes(r)
-  );
+  const isProjectHead = currentUserProjectRoles.some((role) => ['owner', 'manager'].includes(role));
+  const { data: cleanCookingStatus } = useCleanCookingStatus(params.id);
+  // Visible when the module is enabled and the caller may read it; admins also
+  // see it on other projects so they can enable it from the tab.
+  const canViewCleanCooking = Boolean(cleanCookingStatus?.enabled || (user?.isAdmin && cleanCookingStatus && !cleanCookingStatus.unavailable));
 
-  // Set active tab from URL query parameter
+  const visibleTabs = TAB_DEFS.filter((tab) => {
+    if (tab.requires === 'finance') return canViewFinance;
+    if (tab.requires === 'settings') return canManageTeam;
+    if (tab.requires === 'cleanCooking') return canViewCleanCooking;
+    return true;
+  });
+
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['overview', 'team', 'tasks', 'milestones', 'documents', 'embeds', 'components', 'settings'].includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
+    const allowed = visibleTabs.map((t) => t.key);
+    if (tab && allowed.includes(tab)) setActiveTab(tab);
+    else if (tab && !allowed.includes(tab)) setActiveTab('overview');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, canViewFinance, canManageTeam, canViewCleanCooking]);
 
-  const getStatusVariant = (status) => {
-    switch (status) {
-      case 'active': return 'success';
-      case 'completed': return 'info';
-      case 'on_hold': return 'warning';
-      case 'cancelled': return 'danger';
-      case 'planned': return 'secondary';
-      default: return 'secondary';
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return '#198754';
-      case 'completed': return '#0dcaf0';
-      case 'on_hold': return '#ffc107';
-      case 'cancelled': return '#dc3545';
-      case 'planned': return '#6c757d';
-      default: return '#6c757d';
-    }
-  };
-
-  const getCurrencySymbol = (currency) => {
-    switch (currency) {
-      case 'USD': return '$';
-      case 'GBP': return '£';
-      case 'EUR': return '€';
-      case 'UGX': return 'Sh';
-      default: return '$';
-    }
+  const selectTab = (key) => {
+    setActiveTab(key);
+    router.push(`/projects/${project.$id}?tab=${key}`, { scroll: false });
   };
 
   if (authLoading || projectLoading) {
-    return (
-      <AppLayout user={user}>
-        <LoadingSpinner message="Loading project..." />
-      </AppLayout>
-    );
+    return <AppLayout user={user}><LoadingSpinner message="Loading project..." /></AppLayout>;
+  }
+  if (projectError || !project) {
+    return <AppLayout user={user}><Alert variant="danger">{projectError?.message || 'Project not found'}</Alert></AppLayout>;
   }
 
-  if (projectError || !project) {
-    return (
-      <AppLayout user={user}>
-        <Alert variant="danger">{projectError?.message || 'Project not found'}</Alert>
-      </AppLayout>
-    );
-  }
+  // Timeline progress for the facts card: % of the project period elapsed.
+  const timeline = (() => {
+    const start = project.startDate ? new Date(project.startDate).getTime() : NaN;
+    const end = project.endDate ? new Date(project.endDate).getTime() : NaN;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+    const now = Date.now();
+    const percent = Math.round(Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100)));
+    const dayMs = 86_400_000;
+    let label;
+    if (now < start) label = `Starts in ${Math.ceil((start - now) / dayMs)} days`;
+    else if (now > end) label = 'Period ended';
+    else {
+      const daysLeft = Math.ceil((end - now) / dayMs);
+      label = `${percent}% of period elapsed · ${daysLeft} days left`;
+    }
+    return { percent, label };
+  })();
 
   return (
     <AppLayout user={user}>
       <Toast toast={toast} onClose={hideToast} />
 
-      {/* Back Button */}
       <div className="mb-3">
         <Button
-          variant=""
+          variant="secondary"
+          size="sm"
           onClick={() => router.push('/projects')}
-          style={{
-            backgroundColor: 'white',
-            border: '2px solid #cbd5e1',
-            color: '#64748b',
-            padding: '0.5rem 1rem',
-            borderRadius: '8px',
-            fontSize: '0.875rem',
-            fontWeight: '500',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#054653';
-            e.currentTarget.style.color = '#054653';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#cbd5e1';
-            e.currentTarget.style.color = '#64748b';
-          }}
         >
-          <i className="bi bi-arrow-left me-2"></i>
-          Back to Projects
+          <i className="bi bi-arrow-left me-2" />Back to Projects
         </Button>
       </div>
 
-      {/* Project Header Card */}
-      <Card className="border-0 shadow-sm mb-4" style={{ borderRadius: '12px', overflow: 'hidden' }}>
-        {/* Colored Status Bar */}
-        <div style={{
-          height: '6px',
-          backgroundColor: getStatusColor(project.status),
-          width: '100%'
-        }}></div>
+      <div className={styles.detailHeader}>
+        <div className={styles.detailEyebrow}>
+          <span className={styles.codeChip}>{project.code}</span>
+          <StatusBadge status={project.status} />
+          {project.demoSeedId && <span className={styles.demoChip}><i className="bi bi-stars" />Demo</span>}
+        </div>
+        <div className={styles.detailTitleRow}>
+          <h1 className={styles.detailTitle}>{project.name}</h1>
+        </div>
+      </div>
 
-        <Card.Body className="p-4">
-          <Row className="align-items-center">
-            <Col lg={8}>
-              <div className="d-flex align-items-start gap-3">
-                {/* Project Icon */}
-                <div
-                  className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    backgroundColor: '#eff6ff'
-                  }}
-                >
-                  <i className="bi bi-folder-fill" style={{ fontSize: '2rem', color: '#054653' }}></i>
-                </div>
+      <nav className={styles.tabBar} aria-label="Project sections">
+        {visibleTabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            className={`${styles.tabLink} ${activeTab === tab.key ? styles.tabLinkActive : ''}`}
+            aria-current={activeTab === tab.key ? 'page' : undefined}
+            onClick={() => selectTab(tab.key)}
+          >
+            <i className={`bi ${tab.icon}`} />{tab.label}
+          </button>
+        ))}
+      </nav>
 
-                {/* Project Info */}
-                <div className="flex-grow-1">
-                  <div className="d-flex align-items-center gap-2 mb-2">
-                    <Badge
-                      style={{
-                        backgroundColor: '#054653',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        padding: '0.4rem 0.75rem',
-                        borderRadius: '6px'
-                      }}
+      <div>
+        {activeTab === 'overview' && (
+          <div className={styles.overviewStack}>
+            <div className={styles.overviewTop}>
+              <section className={styles.overviewDescription} aria-labelledby="overview-about">
+                <h2 id="overview-about" className={styles.overviewHeading}>About this project</h2>
+                {project.description ? (
+                  <div className={styles.detailDescriptionWrap}>
+                    <p
+                      id="project-description"
+                      className={`${styles.detailDescription} ${showFullDescription ? '' : styles.detailDescriptionClamped}`}
                     >
-                      {project.code}
-                    </Badge>
-                    <Badge
-                      bg={getStatusVariant(project.status)}
-                      className="text-capitalize"
-                      style={{
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        padding: '0.4rem 0.75rem',
-                        borderRadius: '6px'
-                      }}
-                    >
-                      {project.status.replace('_', ' ')}
-                    </Badge>
-                  </div>
-
-                  <h3 className="mb-2 fw-bold" style={{ color: '#1e293b' }}>
-                    {project.name}
-                  </h3>
-
-                  {project.description && (
-                    <p className="text-muted mb-0" style={{ fontSize: '0.95rem' }}>
                       {project.description}
                     </p>
-                  )}
+                    {project.description.length > 220 && (
+                      <button
+                        type="button"
+                        className={styles.readMore}
+                        aria-expanded={showFullDescription}
+                        aria-controls="project-description"
+                        onClick={() => setShowFullDescription((v) => !v)}
+                      >
+                        {showFullDescription ? 'Show less' : 'Read more'}
+                        <i className={`bi ${showFullDescription ? 'bi-chevron-up' : 'bi-chevron-down'} ms-1`} />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <p className={styles.detailDescription}>No description yet.</p>
+                )}
+              </section>
+              <ProjectOverview project={project} user={user} />
+            </div>
+            <div className={styles.factGrid}>
+              {(project.startDate || project.endDate) && (
+                <div className={styles.factCard}>
+                  <span className={styles.factIcon}><i className="bi bi-calendar-range" /></span>
+                  <div className={styles.factBody}>
+                    <span className={styles.factLabel}>Timeline</span>
+                    <span className={styles.factValue}>
+                      {project.startDate ? formatDate(project.startDate) : '—'} – {project.endDate ? formatDate(project.endDate) : '—'}
+                    </span>
+                    {timeline && (
+                      <>
+                        <div className={styles.factProgress} aria-hidden="true"><span style={{ width: `${timeline.percent}%` }} /></div>
+                        <span className={styles.factHint}>{timeline.label}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              {typeof project.budgetAmount === 'number' && (
+                <div className={styles.factCard}>
+                  <span className={styles.factIcon}><i className="bi bi-cash-stack" /></span>
+                  <div className={styles.factBody}>
+                    <span className={styles.factLabel}>Approved budget</span>
+                    <span className={`${styles.factValue} ${styles.factValueLarge}`}>
+                      {getCurrencySymbol(project.budgetCurrency || 'USD')}{project.budgetAmount.toLocaleString()}
+                      <small className={styles.factCurrency}>{project.budgetCurrency || 'USD'}</small>
+                    </span>
+                    {canViewFinance ? (
+                      <button type="button" className={styles.factLink} onClick={() => selectTab('finance')}>
+                        Spending &amp; balances <i className="bi bi-arrow-right" />
+                      </button>
+                    ) : (
+                      <span className={styles.factHint}>Total for the whole project period</span>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className={styles.factCard}>
+                <span className={styles.factIcon}><i className="bi bi-people" /></span>
+                <div className={styles.factBody}>
+                  <span className={styles.factLabel}>Team</span>
+                  <span className={styles.factValue}>{teamMembers.length} member{teamMembers.length === 1 ? '' : 's'}</span>
+                  <span className={styles.factHint}>{isProjectHead ? 'You lead this project' : (currentUserMember ? 'You are on this team' : 'You are not on this team')}</span>
+                  <button type="button" className={styles.factLink} onClick={() => selectTab('team')}>
+                    See the team <i className="bi bi-arrow-right" />
+                  </button>
                 </div>
               </div>
-            </Col>
-
-            <Col lg={4}>
-              <Row className="g-3">
-                {/* Budget */}
-                <Col xs={6} lg={12}>
-                  <div
-                    className="p-3 rounded-3"
-                    style={{ backgroundColor: '#f8fafc' }}
-                  >
-                    <div className="d-flex align-items-center gap-2 mb-1">
-                      <i className="bi bi-cash-stack" style={{ color: '#054653', fontSize: '1.25rem' }}></i>
-                      <small className="text-muted text-uppercase" style={{ fontSize: '0.7rem', fontWeight: '600', letterSpacing: '0.5px' }}>
-                        Budget
-                      </small>
-                    </div>
-                    <div className="fw-bold" style={{ color: '#054653', fontSize: '1.5rem' }}>
-                      {getCurrencySymbol(project.budgetCurrency || 'USD')}{project.budgetAmount?.toLocaleString() || '0'}
-                    </div>
-                  </div>
-                </Col>
-
-                {/* Timeline */}
-                {(project.startDate || project.endDate) && (
-                  <Col xs={6} lg={12}>
-                    <div
-                      className="p-3 rounded-3"
-                      style={{ backgroundColor: '#f8fafc' }}
-                    >
-                      <div className="d-flex align-items-center gap-2 mb-1">
-                        <i className="bi bi-calendar-event" style={{ color: '#14B8A6', fontSize: '1.25rem' }}></i>
-                        <small className="text-muted text-uppercase" style={{ fontSize: '0.7rem', fontWeight: '600', letterSpacing: '0.5px' }}>
-                          Timeline
-                        </small>
-                      </div>
-                      <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
-                        {project.startDate && <div>{formatDate(project.startDate)}</div>}
-                        {project.endDate && <div>to {formatDate(project.endDate)}</div>}
-                      </div>
-                    </div>
-                  </Col>
-                )}
-              </Row>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
-
-      {/* Tabs Section */}
-      <Card className="border-0 shadow-sm" style={{ borderRadius: '12px' }}>
-        <Card.Body className="p-4">
-          <Tabs
-            activeKey={activeTab}
-            onSelect={(k) => {
-              setActiveTab(k);
-              router.push(`/projects/${project.$id}?tab=${k}`, { scroll: false });
-            }}
-            className="mb-4"
-            style={{
-              borderBottom: '2px solid #e9ecef'
-            }}
-          >
-            <Tab
-              eventKey="overview"
-              title={
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <i className="bi bi-info-circle"></i>
-                  <span className="d-none d-sm-inline">Overview</span>
-                </span>
-              }
-            >
-              <ProjectOverview project={project} user={user} showToast={showToast} />
-            </Tab>
-            <Tab
-              eventKey="team"
-              title={
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <i className="bi bi-people"></i>
-                  <span className="d-none d-sm-inline">Team</span>
-                </span>
-              }
-            >
-              <ProjectStaffAssignment
-                projectId={project.$id}
-                projectTeamId={project.projectTeamId}
-                organizationId={user?.organizationId}
-                currentUser={user}
-                canManageTeam={canManageTeam}
-                showToast={showToast}
-              />
-            </Tab>
-            <Tab
-              eventKey="tasks"
-              title={
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <i className="bi bi-list-task"></i>
-                  <span className="d-none d-sm-inline">Tasks</span>
-                </span>
-              }
-            >
-              <ProjectTasks project={project} user={user} showToast={showToast} canModify={canModifyProject} />
-            </Tab>
-            <Tab
-              eventKey="milestones"
-              title={
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <i className="bi bi-flag"></i>
-                  <span className="d-none d-sm-inline">Activity Schedule</span>
-                </span>
-              }
-            >
-              <ProjectMilestones project={project} user={user} showToast={showToast} canModify={canModifyProject} />
-            </Tab>
-            <Tab
-              eventKey="documents"
-              title={
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <i className="bi bi-file-earmark-text"></i>
-                  <span className="d-none d-sm-inline">Documents</span>
-                </span>
-              }
-            >
-              <ProjectDocumentsNew project={project} user={user} showToast={showToast} canManage={canModifyProject} canUpload={isProjectMember} />
-            </Tab>
-            <Tab
-              eventKey="embeds"
-              title={
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <i className="bi bi-code-square"></i>
-                  <span className="d-none d-sm-inline">Embeds</span>
-                </span>
-              }
-            >
-              <ProjectEmbeds project={project} user={user} showToast={showToast} canModify={canModifyProject} />
-            </Tab>
-            <Tab
-              eventKey="components"
-              title={
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <i className="bi bi-boxes"></i>
-                  <span className="d-none d-sm-inline">Components</span>
-                </span>
-              }
-            >
-              <ProjectComponents project={project} user={user} showToast={showToast} canModify={canModifyProject} teamMembers={teamMembers} />
-            </Tab>
-            {/* Settings tab — visible only to admin / manager / owner */}
-            {canManageTeam && (
-              <Tab
-                eventKey="settings"
-                title={
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <i className="bi bi-gear"></i>
-                    <span className="d-none d-sm-inline">Settings</span>
-                  </span>
-                }
-              >
-                <div className="py-3">
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <p className="text-muted mb-0">
-                      Manage project roles, permissions, and advanced settings.
-                    </p>
-                    <Button
-                      variant="outline-secondary"
-                      size="sm"
-                      onClick={() => router.push(`/projects/${project.$id}/settings`)}
-                      style={{ borderRadius: '8px' }}
-                    >
-                      <i className="bi bi-box-arrow-up-right me-1"></i>
-                      Open Full Settings
-                    </Button>
-                  </div>
-                  {/* Inline roles preview */}
-                  <ProjectRolesSettings
-                    projectId={project.$id}
-                    requesterId={currentUserId}
-                    showToast={showToast}
-                  />
-                </div>
-              </Tab>
-            )}
-          </Tabs>
-        </Card.Body>
-      </Card>
+            </div>
+          </div>
+        )}
+        {activeTab === 'team' && (
+          <ProjectStaffAssignment
+            projectId={project.$id}
+            projectTeamId={project.projectTeamId}
+            organizationId={user?.organizationId}
+            currentUser={user}
+            canManageTeam={canManageTeam}
+            showToast={showToast}
+          />
+        )}
+        {activeTab === 'tasks' && <ProjectTasks project={project} user={user} showToast={showToast} canModify={canModifyProject} />}
+        {activeTab === 'milestones' && <ProjectMilestones project={project} user={user} showToast={showToast} canModify={canModifyProject} />}
+        {activeTab === 'documents' && <ProjectDocumentsNew project={project} user={user} showToast={showToast} canManage={canModifyProject} canUpload={isProjectMember} />}
+        {activeTab === 'finance' && canViewFinance && <ProjectFinanceSummary project={project} />}
+        {activeTab === 'clean-cooking' && canViewCleanCooking && <CleanCookingTab project={project} user={user} showToast={showToast} />}
+        {activeTab === 'embeds' && <ProjectEmbeds project={project} user={user} showToast={showToast} canModify={canModifyProject} />}
+        {activeTab === 'components' && <ProjectComponents project={project} user={user} showToast={showToast} canModify={canModifyProject} teamMembers={teamMembers} />}
+        {activeTab === 'settings' && canManageTeam && (
+          <div>
+            <div className="d-flex align-items-center justify-content-between mb-3">
+              <p className="text-muted mb-0">Manage project roles, permissions, and advanced settings.</p>
+              <Button variant="outline-secondary" size="sm" onClick={() => router.push(`/projects/${project.$id}/settings`)}>
+                <i className="bi bi-box-arrow-up-right me-1" />Open Full Settings
+              </Button>
+            </div>
+            <ProjectRolesSettings projectId={project.$id} requesterId={currentUserId} showToast={showToast} />
+          </div>
+        )}
+      </div>
     </AppLayout>
   );
 }
 
 export default function ProjectDetailPage() {
   return (
-    <Suspense fallback={
-      <AppLayout>
-        <LoadingSpinner message="Loading project..." />
-      </AppLayout>
-    }>
+    <Suspense fallback={<AppLayout><LoadingSpinner message="Loading project..." /></AppLayout>}>
       <ProjectDetailContent />
     </Suspense>
   );

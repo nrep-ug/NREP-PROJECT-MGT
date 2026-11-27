@@ -31,6 +31,10 @@ export default function LoginPage() {
 
     try {
       const loginResult = await login(email, password);
+      if (loginResult?.isChampion) {
+        router.push('/field');
+        return;
+      }
       const sessionData = await refreshSession();
 
       if (!sessionData) {
@@ -129,13 +133,18 @@ export default function LoginPage() {
 
           <Form onSubmit={handleSubmit}>
             <div className="form-group-custom">
-              <label className="form-label-custom">EMAIL ADDRESS</label>
+              <label className="form-label-custom" htmlFor="login-identifier">EMAIL OR PHONE NUMBER</label>
               <div className="input-wrapper">
-                <i className="bi bi-envelope input-icon"></i>
+                <i className="bi bi-person input-icon"></i>
                 <input
-                  type="email"
+                  id="login-identifier"
+                  type="text"
+                  inputMode="email"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   className="form-control-custom"
-                  placeholder="Enter your email"
+                  placeholder="Email, or phone e.g. 07XX XXX XXX"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

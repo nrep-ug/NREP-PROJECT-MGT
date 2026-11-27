@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, Button, Row, Col, Badge, Alert, Table, Form, Modal } from 'react-bootstrap';
@@ -51,7 +52,7 @@ export default function TeamMemberDetailPage() {
       setProject(projectDoc);
 
       // Load member from project team
-      const membersResponse = await fetch(`/api/projects/${params.id}/members?requesterId=${requesterId}`);
+      const membersResponse = await authenticatedFetch(`/api/projects/${params.id}/members?requesterId=${requesterId}`);
       const membersData = await membersResponse.json();
 
       if (membersResponse.ok) {
@@ -103,7 +104,7 @@ export default function TeamMemberDetailPage() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/projects/${params.id}/members/update-roles`, {
+      const response = await authenticatedFetch(`/api/projects/${params.id}/members/update-roles`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -258,7 +259,7 @@ export default function TeamMemberDetailPage() {
           <Card className="border-0 shadow-sm h-100">
             <Card.Body className="text-center">
               <div className="mb-2">
-                <i className="bi bi-arrow-clockwise" style={{ fontSize: '2rem', color: '#054653' }}></i>
+                <i className="bi bi-arrow-clockwise" style={{ fontSize: '2rem', color: '#357C9D' }}></i>
               </div>
               <h3 className="mb-1">{stats.inProgress}</h3>
               <div className="text-muted small">In Progress</div>

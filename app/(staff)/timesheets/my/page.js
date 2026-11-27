@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, ButtonGroup, Row, Col } from 'react-bootstrap';
@@ -54,7 +55,7 @@ export default function TimesheetsPage() {
         requesterId,
       });
 
-      const response = await fetch(`/api/projects?${params.toString()}`);
+      const response = await authenticatedFetch(`/api/projects?${params.toString()}`);
       const data = await response.json();
 
       if (response.ok) {

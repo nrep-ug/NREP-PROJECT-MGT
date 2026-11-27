@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, Form, Button, Row, Col, Alert, Modal, InputGroup } from 'react-bootstrap';
@@ -88,7 +89,7 @@ function TimesheetEntryContent() {
         requesterId,
       });
 
-      const response = await fetch(`/api/projects?${params.toString()}`);
+      const response = await authenticatedFetch(`/api/projects?${params.toString()}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -108,7 +109,7 @@ function TimesheetEntryContent() {
     }
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/tasks?requesterId=${requesterId}`);
+      const response = await authenticatedFetch(`/api/projects/${projectId}/tasks?requesterId=${requesterId}`);
       const data = await response.json();
 
       if (response.ok) {

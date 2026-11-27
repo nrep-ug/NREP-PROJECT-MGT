@@ -46,7 +46,7 @@ export default function ProjectTasks({ project, user, showToast, canModify }) {
   const getStatusCardStyles = (status) => {
     const styles = {
       todo: { bg: '#f1f5f9', icon: '#64748b' },
-      in_progress: { bg: '#ecfdf5', icon: '#054653' },
+      in_progress: { bg: '#ecfdf5', icon: '#357C9D' },
       blocked: { bg: '#fee2e2', icon: '#dc3545' },
       done: { bg: '#dcfce7', icon: '#16a34a' }
     };

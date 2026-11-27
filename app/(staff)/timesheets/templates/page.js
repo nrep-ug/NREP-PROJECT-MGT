@@ -1,5 +1,6 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Container, Row, Col, Card, Button, Table, Badge, Modal, Form, Alert } from 'react-bootstrap';
@@ -61,7 +62,7 @@ export default function TemplatesPage() {
       setTemplates(templatesData.templates || []);
 
       // Load projects for display
-      const projectsRes = await fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
+      const projectsRes = await authenticatedFetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`);
       const projectsData = await projectsRes.json();
       if (projectsRes.ok) {
         setProjects(projectsData.projects || []);

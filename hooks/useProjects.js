@@ -1,3 +1,4 @@
+import { authenticatedFetch } from '@/lib/apiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { databases, Query, COLLECTIONS, DB_ID } from '@/lib/appwriteClient';
 
@@ -146,7 +147,7 @@ export function useProjectMembers(projectId, requesterId) {
     return useQuery({
         queryKey: [...projectKeys.team(projectId), requesterId],
         queryFn: async () => {
-            const response = await fetch(`/api/projects/${projectId}/members?requesterId=${requesterId}`);
+            const response = await authenticatedFetch(`/api/projects/${projectId}/members?requesterId=${requesterId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch project members');
             }

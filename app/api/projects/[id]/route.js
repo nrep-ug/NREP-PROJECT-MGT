@@ -7,7 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, adminTeams, adminStorage, DB_ID, BUCKET_VERSIONS, Query } from '@/lib/appwriteAdmin';
-import { verifyAdminAccess, verifyStaffAccess } from '@/lib/authHelpers';
+import { authenticateRequest, forbidOtherOrganization, isStaffContext } from '@/lib/routeAuth';
 
 const COL_PROJECTS = COLLECTIONS.PROJECTS;
 const COL_PROJECT_COMPONENTS = COLLECTIONS.PROJECT_COMPONENTS;
@@ -22,22 +22,19 @@ const COL_DOCUMENT_FOLDERS = COLLECTIONS.DOCUMENT_FOLDERS;
 const COL_EMBEDS = COLLECTIONS.EMBEDS;
 
 export async function GET(request, { params }) {
-// ... keep existing GET untouched
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const requesterId = searchParams.get('requesterId');
 
-    if (!requesterId) {
-      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
-    }
-
-    const isStaff = await verifyStaffAccess(requesterId);
-    if (!isStaff) {
+    if (!isStaffContext(context)) {
       return NextResponse.json({ error: 'Forbidden: Only staff members can view projects' }, { status: 403 });
     }
 
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, id);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     return NextResponse.json({ project });
   } catch (error) {
@@ -50,21 +47,22 @@ export async function GET(request, { params }) {
 }
 
 export async function PATCH(request, { params }) {
-// ... keep existing PATCH untouched
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id } = await params;
     const body = await request.json();
-    const { requesterId } = body;
+    const requesterId = context.accountId;
 
-    if (!requesterId) {
-      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
-    }
+    const existingProject = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, id);
+    const orgError = forbidOtherOrganization(context, existingProject.organizationId);
+    if (orgError) return orgError;
 
     // Verify requester is admin or project manager/owner
-    const isAdmin = await verifyAdminAccess(requesterId);
-    if (!isAdmin) {
+    if (!context.isAdmin) {
       // Check project team membership for manager/owner role
-      const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, id);
+      const project = existingProject;
       if (project.projectTeamId) {
         const memberships = await adminTeams.listMemberships(project.projectTeamId);
         const requesterMembership = memberships.memberships.find(
@@ -128,16 +126,12 @@ async function processByQuery(collection, queries, action) {
 
 export async function DELETE(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const requesterId = searchParams.get('requesterId');
 
-    if (!requesterId) {
-      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
-    }
-
-    const isAdmin = await verifyAdminAccess(requesterId);
-    if (!isAdmin) {
+    if (!context.isAdmin) {
       return NextResponse.json({ error: 'Forbidden: Only administrators can delete projects via this API' }, { status: 403 });
     }
 
@@ -147,6 +141,8 @@ export async function DELETE(request, { params }) {
     } catch (err) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     // 1. Delete associated Document Versions files & records
     const docQueryObject = [Query.equal('projectId', id)];

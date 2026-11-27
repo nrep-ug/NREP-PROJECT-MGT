@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Modal, Form, Button, Row, Col, Alert, InputGroup } from 'react-bootstrap';
+import { authenticatedFetch } from '@/lib/apiClient';
 
 export default function UserCreateForm({ show, onHide, organizationId, currentUser, onUserCreated, showToast }) {
   const [formData, setFormData] = useState({
@@ -61,13 +62,13 @@ export default function UserCreateForm({ show, onHide, organizationId, currentUs
     setCreatedUser(null);
 
     try {
-      const response = await fetch('/api/admin/users', {
+      const response = await authenticatedFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          userType: formData.role === 'client' ? 'client' : 'staff',
           organizationId,
-          requesterId: currentUser?.authUser?.$id || currentUser?.accountId || currentUser?.id
         })
       });
 

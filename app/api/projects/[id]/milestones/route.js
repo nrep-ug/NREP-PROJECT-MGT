@@ -7,8 +7,9 @@
 
 import { NextResponse } from 'next/server';
 import { COLLECTIONS, adminDatabases, DB_ID, ID, Query } from '@/lib/appwriteAdmin';
-import { verifyStaffAccess, verifyAdminAccess, verifyProjectAccess, verifyProjectMembership } from '@/lib/authHelpers';
+import { verifyProjectAccess, verifyProjectMembership } from '@/lib/authHelpers';
 import { getProjectDocPermissions } from '@/lib/rbac';
+import { authenticateRequest, forbidOtherOrganization, isStaffContext } from '@/lib/routeAuth';
 
 const COL_MILESTONES = COLLECTIONS.MILESTONES;
 const COL_PROJECTS = COLLECTIONS.PROJECTS;
@@ -16,6 +17,9 @@ const COL_TASKS = COLLECTIONS.TASKS;
 
 export async function POST(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id: projectId } = await params;
     const body = await request.json();
     const {
@@ -26,29 +30,29 @@ export async function POST(request, { params }) {
       dueDate,
       actualDueDate,
       components,
-      createdBy
     } = body;
+    // The creator is always the authenticated caller.
+    const createdBy = context.accountId;
 
     if (!projectId) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
     }
 
-    if (!name || !createdBy) {
-      return NextResponse.json({ error: 'Name and createdBy are required' }, { status: 400 });
+    if (!name) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    // Optional: Verify user has access to create milestone
-    const isStaff = await verifyStaffAccess(createdBy);
-    if (!isStaff) {
+    if (!isStaffContext(context)) {
       return NextResponse.json({ error: 'Forbidden: Only staff members can create milestones' }, { status: 403 });
     }
 
     // Get project details to set correct permissions
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     // Verify user is a member of this project team (or an admin)
-    const isAdmin = await verifyAdminAccess(createdBy);
-    if (!isAdmin) {
+    if (!context.isAdmin) {
       const isMember = await verifyProjectMembership(createdBy, project.projectTeamId);
       if (!isMember) {
         return NextResponse.json({ error: 'Forbidden: You must be assigned to this project to create activity schedules' }, { status: 403 });
@@ -89,22 +93,22 @@ export async function POST(request, { params }) {
 
 export async function GET(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id: projectId } = await params;
-    const { searchParams } = new URL(request.url);
-    const requesterId = searchParams.get('requesterId');
 
     if (!projectId) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
     }
 
-    if (!requesterId) {
-      return NextResponse.json({ error: 'Unauthorized: requesterId is required' }, { status: 401 });
-    }
-
-    const isStaff = await verifyStaffAccess(requesterId);
-    if (!isStaff) {
+    if (!isStaffContext(context)) {
       return NextResponse.json({ error: 'Forbidden: Only staff members can view milestones' }, { status: 403 });
     }
+
+    const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
 
     const milestonesResponse = await adminDatabases.listDocuments(
       DB_ID,
@@ -134,6 +138,9 @@ export async function GET(request, { params }) {
  */
 export async function PUT(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id: projectId } = await params;
     const body = await request.json();
     const {
@@ -145,12 +152,13 @@ export async function PUT(request, { params }) {
       dueDate,
       actualDueDate,
       components,
-      updatedBy
     } = body;
+    // The editor is always the authenticated caller.
+    const updatedBy = context.accountId;
 
-    if (!projectId || !milestoneId || !updatedBy) {
+    if (!projectId || !milestoneId) {
       return NextResponse.json(
-        { error: 'projectId, milestoneId, and updatedBy are required' },
+        { error: 'projectId and milestoneId are required' },
         { status: 400 }
       );
     }
@@ -163,9 +171,12 @@ export async function PUT(request, { params }) {
     }
 
     // Authorization: admin, project manager, or creator
-    const isAdmin = await verifyAdminAccess(updatedBy);
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
-    const isProjectManager = await verifyProjectAccess(updatedBy, project.projectTeamId, ['owner', 'manager']);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
+    const isAdmin = context.isAdmin;
+    const isProjectManager = isAdmin
+      || await verifyProjectAccess(updatedBy, project.projectTeamId, ['owner', 'manager']);
     const isCreator = milestone.createdBy === updatedBy;
 
     if (!isAdmin && !isProjectManager && !isCreator) {
@@ -209,14 +220,17 @@ export async function PUT(request, { params }) {
  */
 export async function DELETE(request, { params }) {
   try {
+    const { context, response: authError } = await authenticateRequest(request);
+    if (authError) return authError;
+
     const { id: projectId } = await params;
     const { searchParams } = new URL(request.url);
     const milestoneId = searchParams.get('milestoneId');
-    const requesterId = searchParams.get('requesterId');
+    const requesterId = context.accountId;
 
-    if (!projectId || !milestoneId || !requesterId) {
+    if (!projectId || !milestoneId) {
       return NextResponse.json(
-        { error: 'projectId, milestoneId, and requesterId are required' },
+        { error: 'projectId and milestoneId are required' },
         { status: 400 }
       );
     }
@@ -229,9 +243,12 @@ export async function DELETE(request, { params }) {
     }
 
     // Authorization: admin, project manager, or creator
-    const isAdmin = await verifyAdminAccess(requesterId);
     const project = await adminDatabases.getDocument(DB_ID, COL_PROJECTS, projectId);
-    const isProjectManager = await verifyProjectAccess(requesterId, project.projectTeamId, ['owner', 'manager']);
+    const orgError = forbidOtherOrganization(context, project.organizationId);
+    if (orgError) return orgError;
+    const isAdmin = context.isAdmin;
+    const isProjectManager = isAdmin
+      || await verifyProjectAccess(requesterId, project.projectTeamId, ['owner', 'manager']);
     const isCreator = milestone.createdBy === requesterId;
 
     if (!isAdmin && !isProjectManager && !isCreator) {

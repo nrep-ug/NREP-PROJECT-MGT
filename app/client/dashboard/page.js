@@ -159,7 +159,7 @@ export default function ClientDashboardPage() {
       {/* Hero Header */}
       <Card className="border-0 shadow-sm mb-4 overflow-hidden" style={{ borderRadius: '16px' }}>
         <div style={{
-          background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)',
+          background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)',
           padding: '2rem',
           color: 'white'
         }}>

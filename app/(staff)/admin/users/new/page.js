@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { databases, Query, COLLECTIONS, DB_ID } from '@/lib/appwriteClient';
 import AppLayout from '@/components/AppLayout';
 import Toast, { useToast } from '@/components/Toast';
+import { authenticatedFetch } from '@/lib/apiClient';
 
 export default function NewUserPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function NewUserPage() {
     sendEmail: true,
     isSupervisor: false,
     isFinance: false,
+    financeRole: null,
     supervisorId: ''
   });
 
@@ -54,8 +56,8 @@ export default function NewUserPage() {
 
       // Parallel data fetching
       const [orgsRes, projectsRes, supervisorsRes] = await Promise.all([
-        fetch(`/api/admin/organizations?requesterId=${requesterId}&type=client`),
-        fetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`),
+        authenticatedFetch('/api/admin/organizations?type=client'),
+        authenticatedFetch(`/api/projects?organizationId=${user.organizationId}&requesterId=${requesterId}`),
         databases.listDocuments(
           DB_ID,
           COLLECTIONS.USERS,
@@ -136,6 +138,11 @@ export default function NewUserPage() {
       return;
     }
 
+    if (formData.isFinance && !formData.financeRole) {
+      showToast('Choose Finance Officer or Finance Reviewer.', 'warning');
+      return;
+    }
+
     setSubmitting(true);
     setCreatedUser(null);
 
@@ -152,14 +159,13 @@ export default function NewUserPage() {
         roleArray = ['client'];
       }
 
-      const response = await fetch('/api/admin/users', {
+      const response = await authenticatedFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
           role: roleArray, // Send as array
-          organizationId: user.organizationId,
-          requesterId: user.authUser?.$id || user.accountId || user.id
+          organizationId: user.organizationId
         })
       });
 
@@ -231,7 +237,7 @@ export default function NewUserPage() {
 
   const isStaff = formData.userType === 'staff';
   const primaryColor = isStaff ? 'primary' : 'secondary'; // Using secondary (teal) for clients
-  const primaryColorHex = isStaff ? '#054653' : '#14B8A6';
+  const primaryColorHex = isStaff ? '#357C9D' : '#2E9ECC';
 
   return (
     <AppLayout user={user}>
@@ -354,14 +360,14 @@ export default function NewUserPage() {
             variant="link"
             onClick={() => router.push('/admin')}
             className="p-0 mb-3 text-decoration-none"
-            style={{ color: '#054653', fontWeight: '500' }}
+            style={{ color: '#357C9D', fontWeight: '500' }}
           >
             <i className="bi bi-arrow-left me-2"></i>
             Back to Admin Dashboard
           </Button>
 
           {/* Hero Header Card */}
-          <Card className="border-0 shadow-sm" style={{ background: 'linear-gradient(135deg, #054653 0%, #14B8A6 100%)' }}>
+          <Card className="border-0 shadow-sm" style={{ background: 'linear-gradient(135deg, #357C9D 0%, #2E9ECC 100%)' }}>
             <Card.Body className="text-white p-4">
               <div className="d-flex justify-content-between align-items-center">
                 <div className="d-flex align-items-center">
@@ -425,13 +431,13 @@ export default function NewUserPage() {
                       style={{
                         width: '32px',
                         height: '32px',
-                        background: 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)',
+                        background: 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)',
                         boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
                       }}
                     >
                       <i className="bi bi-person-check-fill text-white" style={{ fontSize: '0.9rem' }}></i>
                     </div>
-                    <h6 className="text-uppercase small fw-bold mb-0" style={{ color: '#054653', letterSpacing: '0.5px' }}>
+                    <h6 className="text-uppercase small fw-bold mb-0" style={{ color: '#357C9D', letterSpacing: '0.5px' }}>
                       Account Details
                     </h6>
                   </div>
@@ -452,7 +458,7 @@ export default function NewUserPage() {
                     </div>
                     <div className="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
                       <span className="small fw-medium" style={{ color: '#64748b' }}>Username:</span>
-                      <span className="fw-semibold" style={{ color: '#054653' }}>@{createdUser.user.username}</span>
+                      <span className="fw-semibold" style={{ color: '#357C9D' }}>@{createdUser.user.username}</span>
                     </div>
                     <div className="d-flex justify-content-between align-items-center">
                       <span className="small fw-medium" style={{ color: '#64748b' }}>Role:</span>
@@ -461,7 +467,7 @@ export default function NewUserPage() {
                         style={{
                           background: createdUser.user.role === 'admin'
                             ? 'linear-gradient(135deg, #dc3545 0%, #bb2d3b 100%)'
-                            : 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)',
+                            : 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)',
                           border: 'none',
                           fontWeight: '600',
                           fontSize: '0.85rem',
@@ -555,7 +561,7 @@ export default function NewUserPage() {
                   onClick={() => setCreatedUser(null)}
                   className="px-5 py-2 fw-semibold border-0"
                   style={{
-                    background: 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)',
+                    background: 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)',
                     color: 'white',
                     borderRadius: '8px',
                     boxShadow: '0 4px 15px rgba(37, 99, 235, 0.4)',
@@ -615,13 +621,13 @@ export default function NewUserPage() {
                         style={{
                           width: '36px',
                           height: '36px',
-                          background: 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)',
+                          background: 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)',
                           boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
                         }}
                       >
                         <i className="bi bi-person-fill text-white" style={{ fontSize: '1rem' }}></i>
                       </div>
-                      <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#054653', letterSpacing: '0.5px' }}>
+                      <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#357C9D', letterSpacing: '0.5px' }}>
                         Personal Information
                       </h6>
                     </div>
@@ -680,13 +686,13 @@ export default function NewUserPage() {
                         style={{
                           width: '36px',
                           height: '36px',
-                          background: 'linear-gradient(135deg, #14B8A6 0%, #0f9488 100%)',
-                          boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)'
+                          background: 'linear-gradient(135deg, #2E9ECC 0%, #0f9488 100%)',
+                          boxShadow: '0 2px 8px rgba(46, 158, 204, 0.3)'
                         }}
                       >
                         <i className="bi bi-shield-lock-fill text-white" style={{ fontSize: '1rem' }}></i>
                       </div>
-                      <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#14B8A6', letterSpacing: '0.5px' }}>
+                      <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#2E9ECC', letterSpacing: '0.5px' }}>
                         Account Credentials
                       </h6>
                     </div>
@@ -869,7 +875,11 @@ export default function NewUserPage() {
                               <Col md={6}>
                                 <div
                                   className={`p-3 rounded border cursor-pointer transition-all ${formData.isFinance ? 'border-primary bg-white shadow-sm' : 'border-transparent'}`}
-                                  onClick={() => setFormData({ ...formData, isFinance: !formData.isFinance })}
+                                  onClick={() => setFormData({
+                                    ...formData,
+                                    isFinance: !formData.isFinance,
+                                    financeRole: formData.isFinance ? null : (formData.financeRole || 'preparer'),
+                                  })}
                                   style={{ cursor: 'pointer' }}
                                 >
                                   <Form.Check
@@ -880,7 +890,22 @@ export default function NewUserPage() {
                                     onChange={() => { }}
                                     className="mb-1"
                                   />
-                                  <small className="text-muted d-block ps-4">Can manage organization-wide finances and reports.</small>
+                                  <small className="text-muted d-block ps-4">Assign a controlled Finance Officer or Reviewer role.</small>
+                                  {formData.isFinance && (
+                                    <div className="ps-4 pt-2" onClick={(e) => e.stopPropagation()}>
+                                      <Form.Label className="small mb-1">Finance role</Form.Label>
+                                      <Form.Select
+                                        size="sm"
+                                        value={formData.financeRole || ''}
+                                        onChange={(e) => setFormData({ ...formData, financeRole: e.target.value || null })}
+                                      >
+                                        <option value="">Choose a role</option>
+                                        <option value="preparer">Finance Officer (creates and submits)</option>
+                                        <option value="approver">Finance Reviewer (reviews and decides)</option>
+                                      </Form.Select>
+                                      <small className="text-muted d-block mt-1">Roles are organization-scoped and enforced by the Finance API.</small>
+                                    </div>
+                                  )}
                                 </div>
                               </Col>
                             </Row>
@@ -898,13 +923,13 @@ export default function NewUserPage() {
                             style={{
                               width: '36px',
                               height: '36px',
-                              background: 'linear-gradient(135deg, #14B8A6 0%, #0f9488 100%)',
-                              boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)'
+                              background: 'linear-gradient(135deg, #2E9ECC 0%, #0f9488 100%)',
+                              boxShadow: '0 2px 8px rgba(46, 158, 204, 0.3)'
                             }}
                           >
                             <i className="bi bi-building-fill text-white" style={{ fontSize: '1rem' }}></i>
                           </div>
-                          <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#14B8A6', letterSpacing: '0.5px' }}>
+                          <h6 className="text-uppercase fw-bold small mb-0" style={{ color: '#2E9ECC', letterSpacing: '0.5px' }}>
                             Client Access
                           </h6>
                         </div>
@@ -925,8 +950,8 @@ export default function NewUserPage() {
                                   style={{
                                     width: '32px',
                                     height: '32px',
-                                    background: 'linear-gradient(135deg, #14B8A6 0%, #0f9488 100%)',
-                                    boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)'
+                                    background: 'linear-gradient(135deg, #2E9ECC 0%, #0f9488 100%)',
+                                    boxShadow: '0 2px 8px rgba(46, 158, 204, 0.3)'
                                   }}
                                 >
                                   <i className="bi bi-building text-white" style={{ fontSize: '0.9rem' }}></i>
@@ -948,7 +973,7 @@ export default function NewUserPage() {
                               >
                                 {clientOrganizations.length === 0 ? (
                                   <div className="text-center py-4">
-                                    <i className="bi bi-inbox" style={{ fontSize: '2rem', opacity: 0.3, color: '#14B8A6' }}></i>
+                                    <i className="bi bi-inbox" style={{ fontSize: '2rem', opacity: 0.3, color: '#2E9ECC' }}></i>
                                     <p className="text-muted small mb-0 mt-2">No organizations available</p>
                                   </div>
                                 ) : (
@@ -965,10 +990,10 @@ export default function NewUserPage() {
                                           className="d-flex align-items-center p-3 rounded-3"
                                           style={{
                                             backgroundColor: isSelected ? 'white' : 'rgba(255, 255, 255, 0.5)',
-                                            border: isSelected ? '2px solid #14B8A6' : '2px solid transparent',
+                                            border: isSelected ? '2px solid #2E9ECC' : '2px solid transparent',
                                             cursor: 'pointer',
                                             transition: 'all 0.2s ease',
-                                            boxShadow: isSelected ? '0 2px 8px rgba(20, 184, 166, 0.2)' : 'none'
+                                            boxShadow: isSelected ? '0 2px 8px rgba(46, 158, 204, 0.2)' : 'none'
                                           }}
                                           onMouseEnter={(e) => {
                                             if (!isSelected) {
@@ -988,8 +1013,8 @@ export default function NewUserPage() {
                                             style={{
                                               width: '20px',
                                               height: '20px',
-                                              border: isSelected ? '2px solid #14B8A6' : '2px solid #cbd5e1',
-                                              backgroundColor: isSelected ? '#14B8A6' : 'white',
+                                              border: isSelected ? '2px solid #2E9ECC' : '2px solid #cbd5e1',
+                                              backgroundColor: isSelected ? '#2E9ECC' : 'white',
                                               transition: 'all 0.2s ease'
                                             }}
                                           >
@@ -1012,7 +1037,7 @@ export default function NewUserPage() {
                               {clientOrganizations.length > 0 && (
                                 <div className="mt-3 p-2 bg-white rounded text-center">
                                   <small className="text-muted">
-                                    <i className="bi bi-check-circle me-1" style={{ color: '#14B8A6' }}></i>
+                                    <i className="bi bi-check-circle me-1" style={{ color: '#2E9ECC' }}></i>
                                     {formData.clientOrganizationIds.length} selected
                                   </small>
                                 </div>
@@ -1027,8 +1052,8 @@ export default function NewUserPage() {
                                   style={{
                                     width: '32px',
                                     height: '32px',
-                                    background: 'linear-gradient(135deg, #14B8A6 0%, #0f9488 100%)',
-                                    boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)'
+                                    background: 'linear-gradient(135deg, #2E9ECC 0%, #0f9488 100%)',
+                                    boxShadow: '0 2px 8px rgba(46, 158, 204, 0.3)'
                                   }}
                                 >
                                   <i className="bi bi-folder text-white" style={{ fontSize: '0.9rem' }}></i>
@@ -1063,7 +1088,7 @@ export default function NewUserPage() {
                                       if (filteredProjects.length === 0) {
                                         return (
                                           <div className="text-center py-4">
-                                            <i className="bi bi-folder-x" style={{ fontSize: '2rem', opacity: 0.3, color: '#14B8A6' }}></i>
+                                            <i className="bi bi-folder-x" style={{ fontSize: '2rem', opacity: 0.3, color: '#2E9ECC' }}></i>
                                             <p className="text-muted small mb-0 mt-2">No projects found for selected organizations</p>
                                           </div>
                                         );
@@ -1083,10 +1108,10 @@ export default function NewUserPage() {
                                                 className="d-flex align-items-center p-3 rounded-3"
                                                 style={{
                                                   backgroundColor: isSelected ? 'white' : 'rgba(255, 255, 255, 0.5)',
-                                                  border: isSelected ? '2px solid #14B8A6' : '2px solid transparent',
+                                                  border: isSelected ? '2px solid #2E9ECC' : '2px solid transparent',
                                                   cursor: 'pointer',
                                                   transition: 'all 0.2s ease',
-                                                  boxShadow: isSelected ? '0 2px 8px rgba(20, 184, 166, 0.2)' : 'none'
+                                                  boxShadow: isSelected ? '0 2px 8px rgba(46, 158, 204, 0.2)' : 'none'
                                                 }}
                                                 onMouseEnter={(e) => {
                                                   if (!isSelected) {
@@ -1106,8 +1131,8 @@ export default function NewUserPage() {
                                                   style={{
                                                     width: '20px',
                                                     height: '20px',
-                                                    border: isSelected ? '2px solid #14B8A6' : '2px solid #cbd5e1',
-                                                    backgroundColor: isSelected ? '#14B8A6' : 'white',
+                                                    border: isSelected ? '2px solid #2E9ECC' : '2px solid #cbd5e1',
+                                                    backgroundColor: isSelected ? '#2E9ECC' : 'white',
                                                     transition: 'all 0.2s ease'
                                                   }}
                                                 >
@@ -1116,7 +1141,7 @@ export default function NewUserPage() {
                                                   )}
                                                 </div>
                                                 <div className="flex-grow-1">
-                                                  <div className="fw-semibold" style={{ color: '#14B8A6', fontSize: '0.85rem' }}>
+                                                  <div className="fw-semibold" style={{ color: '#2E9ECC', fontSize: '0.85rem' }}>
                                                     {project.code}
                                                   </div>
                                                   <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: '2px' }}>
@@ -1136,7 +1161,7 @@ export default function NewUserPage() {
                               {formData.projectIds.length > 0 && (
                                 <div className="mt-3 p-2 bg-white rounded text-center">
                                   <small className="text-muted">
-                                    <i className="bi bi-check-circle me-1" style={{ color: '#14B8A6' }}></i>
+                                    <i className="bi bi-check-circle me-1" style={{ color: '#2E9ECC' }}></i>
                                     {formData.projectIds.length} selected
                                   </small>
                                 </div>
@@ -1164,13 +1189,13 @@ export default function NewUserPage() {
                         className="px-5 py-3 fw-semibold position-relative overflow-hidden border-0"
                         style={{
                           background: isStaff
-                            ? 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)'
-                            : 'linear-gradient(135deg, #14B8A6 0%, #0f9488 100%)',
+                            ? 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)'
+                            : 'linear-gradient(135deg, #2E9ECC 0%, #0f9488 100%)',
                           color: 'white',
                           borderRadius: '10px',
                           boxShadow: isStaff
                             ? '0 4px 15px rgba(37, 99, 235, 0.4)'
-                            : '0 4px 15px rgba(20, 184, 166, 0.4)',
+                            : '0 4px 15px rgba(46, 158, 204, 0.4)',
                           fontSize: '1rem',
                           transition: 'all 0.3s ease',
                           transform: 'translateY(0)'
@@ -1179,13 +1204,13 @@ export default function NewUserPage() {
                           e.currentTarget.style.transform = 'translateY(-2px)';
                           e.currentTarget.style.boxShadow = isStaff
                             ? '0 6px 20px rgba(37, 99, 235, 0.5)'
-                            : '0 6px 20px rgba(20, 184, 166, 0.5)';
+                            : '0 6px 20px rgba(46, 158, 204, 0.5)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.transform = 'translateY(0)';
                           e.currentTarget.style.boxShadow = isStaff
                             ? '0 4px 15px rgba(37, 99, 235, 0.4)'
-                            : '0 4px 15px rgba(20, 184, 166, 0.4)';
+                            : '0 4px 15px rgba(46, 158, 204, 0.4)';
                         }}
                       >
                         {submitting ? (
@@ -1247,23 +1272,23 @@ export default function NewUserPage() {
                         style={{
                           width: '36px',
                           height: '36px',
-                          background: 'linear-gradient(135deg, #054653 0%, #1d4ed8 100%)',
+                          background: 'linear-gradient(135deg, #357C9D 0%, #1d4ed8 100%)',
                           boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
                         }}
                       >
                         <i className="bi bi-lightbulb-fill text-white"></i>
                       </div>
-                      <h6 className="fw-bold mb-0" style={{ color: '#054653' }}>Quick Tips</h6>
+                      <h6 className="fw-bold mb-0" style={{ color: '#357C9D' }}>Quick Tips</h6>
                     </div>
                     <ul className="list-unstyled small mb-0 d-flex flex-column gap-3">
                       <li className="d-flex align-items-start">
-                        <i className="bi bi-check-circle-fill me-2 mt-1" style={{ color: '#054653', fontSize: '1rem' }}></i>
+                        <i className="bi bi-check-circle-fill me-2 mt-1" style={{ color: '#357C9D', fontSize: '1rem' }}></i>
                         <span style={{ lineHeight: '1.5' }}>
                           <strong>Usernames</strong> must be unique and contain only letters, numbers, and underscores.
                         </span>
                       </li>
                       <li className="d-flex align-items-start">
-                        <i className="bi bi-check-circle-fill me-2 mt-1" style={{ color: '#14B8A6', fontSize: '1rem' }}></i>
+                        <i className="bi bi-check-circle-fill me-2 mt-1" style={{ color: '#2E9ECC', fontSize: '1rem' }}></i>
                         <span style={{ lineHeight: '1.5' }}>
                           <strong>Staff</strong> members can be assigned to multiple projects and track time.
                         </span>
