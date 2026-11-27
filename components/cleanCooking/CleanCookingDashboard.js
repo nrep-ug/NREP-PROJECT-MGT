@@ -169,6 +169,19 @@ export default function CleanCookingDashboard({ projectId, onNavigate }) {
           description={`${MAP_SITES.length} sites in ${SETTLEMENTS.map((g) => g.settlement).join(' and ')}. Click a point for its details.`}
         >
           <SitesMap sites={MAP_SITES} mode="points" />
+          <div className="mt-2">
+            <div className="small fw-bold text-muted text-uppercase mb-1">Community engagements held</div>
+            <ul className="list-unstyled small mb-0">
+              {MAP_SITES.map((s) => (
+                <li key={s.id} className="d-flex flex-wrap align-items-center gap-1 mb-1">
+                  <span className="fw-semibold me-1">{s.name.split(' (')[0]}:</span>
+                  {s.engagements.length
+                    ? s.engagements.map((e) => <span key={e} className={styles.pill}>{e}</span>)
+                    : <span className="text-muted">not reported yet</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
         </SectionCard>
         <SectionCard
           title={`Who can reach each site (${ACCESS_RADIUS_KM} km)`}

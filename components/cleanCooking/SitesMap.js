@@ -38,11 +38,24 @@ function FitTo({ bounds }) {
   return null;
 }
 
+const engagementText = (site) => (site.engagements?.length ? site.engagements.join(' · ') : 'Engagements not reported yet');
+
+/** Label shown on hover (points map) and always (radius map). */
+function SiteLabel({ site }) {
+  return (
+    <div style={{ lineHeight: 1.3 }}>
+      <div style={{ fontWeight: 700 }}>{site.name}</div>
+      <div style={{ fontSize: 11, color: site.engagements?.length ? '#0F5132' : '#667982' }}>{engagementText(site)}</div>
+    </div>
+  );
+}
+
 function SiteDetails({ site, radiusKm }) {
   return (
     <div style={{ minWidth: 190 }}>
       <div style={{ fontWeight: 700, color: PRIMARY }}>{site.name}</div>
       <div>{site.settlement} · {site.district} district</div>
+      <div style={{ marginTop: 4 }}><strong>Community engagements:</strong> {engagementText(site)}</div>
       {site.note && <div style={{ marginTop: 4 }}>{site.note}</div>}
       <div style={{ marginTop: 4, color: '#667982', fontSize: 12 }}>
         {site.lat.toFixed(5)}, {site.lng.toFixed(5)} · {site.plusCode}
@@ -107,7 +120,7 @@ export default function SitesMap({ sites, mode = 'points', radiusKm = 2, focus =
             radius={mode === 'points' ? 7 : 6}
             pathOptions={{ color: '#fff', weight: 2, fillColor: mode === 'points' ? SECONDARY : PRIMARY, fillOpacity: 1 }}
           >
-            <Tooltip direction="top" offset={[0, -6]} permanent={mode === 'radius'}>{s.name}</Tooltip>
+            <Tooltip direction="top" offset={[0, -6]} permanent={mode === 'radius'}><SiteLabel site={s} /></Tooltip>
             <Popup><SiteDetails site={s} radiusKm={mode === 'radius' ? radiusKm : null} /></Popup>
           </CircleMarker>
         ))}

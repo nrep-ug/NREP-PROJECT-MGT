@@ -10,6 +10,12 @@ test('every site sits inside Uganda with a unique id', () => {
   }
 });
 
+test('every site carries a list of community engagements (empty when not reported)', () => {
+  for (const s of MAP_SITES) assert.ok(Array.isArray(s.engagements), s.name);
+  assert.deepEqual(MAP_SITES.find((s) => s.id === 'bolomoni').engagements, ['Farming', 'Mining (rainy season)', 'Trained agriculturalists']);
+  assert.deepEqual(MAP_SITES.find((s) => s.id === 'kado').engagements, ['Briquette making']);
+});
+
 test('distance is in kilometres', () => {
   // One degree of latitude is about 111 km.
   assert.ok(Math.abs(distanceKm({ lat: 0, lng: 32 }, { lat: 1, lng: 32 }) - 111.2) < 0.5);
